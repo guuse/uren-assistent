@@ -4,6 +4,7 @@ import { TemplateCard } from '../components/TemplateCard'
 import { BookingModal } from './BookingModal'
 import { SettingsPage } from './Settings/SettingsPage'
 import { useAuth } from '../hooks/useAuth'
+import { useSimplicateData } from '../hooks/useSimplicateData'
 import { useAppStore } from '../../store/appStore'
 import type { Template } from '../../domain/entities/Template'
 
@@ -11,6 +12,7 @@ export function HomePage() {
   const { templates, isLoading } = useTemplates()
   const { logout } = useAuth()
   const user = useAppStore((s) => s.user)
+  useSimplicateData()
   const [bookingTemplate, setBookingTemplate] = useState<Template | null>(null)
   const [showSettings, setShowSettings] = useState(false)
 
