@@ -1,10 +1,17 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./index.css";
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { useAppStore } from './store/appStore'
+import { LoginPage } from './ui/pages/LoginPage'
+import { HomePage } from './ui/pages/Home'
+import './index.css'
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+function App() {
+  const user = useAppStore((s) => s.user)
+  return user ? <HomePage /> : <LoginPage />
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-);
+)

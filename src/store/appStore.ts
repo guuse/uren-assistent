@@ -44,14 +44,4 @@ export const useAppStore = create<AppState>()((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
-})) as ReturnType<typeof create<AppState>> & { getInitialState: () => AppState }
-
-// Expose for testing
-;(useAppStore as unknown as { getInitialState: () => AppState }).getInitialState = () => ({
-  ...initialState,
-  setUser: useAppStore.getState().setUser,
-  clearUser: useAppStore.getState().clearUser,
-  setSimplicateData: useAppStore.getState().setSimplicateData,
-  setLoading: useAppStore.getState().setLoading,
-  setError: useAppStore.getState().setError,
-})
+}))
