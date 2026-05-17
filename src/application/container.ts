@@ -5,6 +5,7 @@ import { BookTemplateUseCase } from '../domain/usecases/BookTemplateUseCase'
 import { DeleteTemplateUseCase } from '../domain/usecases/DeleteTemplateUseCase'
 import { FetchSimplicateDataUseCase } from '../domain/usecases/FetchSimplicateDataUseCase'
 import { SaveTemplateUseCase } from '../domain/usecases/SaveTemplateUseCase'
+import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 
 // Repositories
 export const keychainRepo = new KeychainRepository()
@@ -16,7 +17,7 @@ export function createSimplicateRepository(baseUrl: string, apiKey: string, apiS
 }
 
 // Use cases (stateless, created with injected repos)
-export function createUseCases(simplicateRepo: SimplicateRepository) {
+export function createUseCases(simplicateRepo: ISimplicateRepository) {
   return {
     saveTemplate: new SaveTemplateUseCase(templateRepo),
     deleteTemplate: new DeleteTemplateUseCase(templateRepo),

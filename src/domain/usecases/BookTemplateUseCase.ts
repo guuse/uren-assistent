@@ -68,6 +68,9 @@ export class BookTemplateUseCase {
       entries = [{ ...baseEntry, startDate: weekStartDate }]
     } else if (isWeeklyBlockTemplate(template)) {
       entries = [{ ...baseEntry, startDate: addDays(weekStartDate, DAY_OFFSETS[template.day]!) }]
+    } else {
+      const _exhaustive: never = template
+      throw new Error(`Unknown template type: ${(_exhaustive as { type: string }).type}`)
     }
 
     await this.simplicateRepo.bookHours(entries)
