@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTemplates } from '../hooks/useTemplates'
 import { TemplateCard } from '../components/TemplateCard'
 import { BookingModal } from './BookingModal'
+import { SettingsPage } from './Settings/SettingsPage'
 import { useAuth } from '../hooks/useAuth'
 import { useAppStore } from '../../store/appStore'
 import type { Template } from '../../domain/entities/Template'
@@ -11,6 +12,11 @@ export function HomePage() {
   const { logout } = useAuth()
   const user = useAppStore((s) => s.user)
   const [bookingTemplate, setBookingTemplate] = useState<Template | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />
+  }
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white flex flex-col">
@@ -25,11 +31,11 @@ export function HomePage() {
                 key={t.id}
                 template={t}
                 onBook={setBookingTemplate}
-                onEdit={() => {/* settings navigation */}}
+                onEdit={() => setShowSettings(true)}
               />
             ))}
             <button
-              onClick={() => {/* navigate to settings */}}
+              onClick={() => setShowSettings(true)}
               className="bg-[#2d2d44] border border-dashed border-gray-600 rounded-xl p-4 flex items-center justify-center text-gray-500 hover:text-gray-400 hover:border-gray-500 transition-colors text-sm"
             >
               + Template toevoegen
@@ -41,7 +47,7 @@ export function HomePage() {
       <div className="px-6 py-3 border-t border-gray-800 flex justify-between items-center text-xs text-gray-500">
         <span>Ingelogd als {user?.name}</span>
         <div className="flex gap-4">
-          <button onClick={() => {/* navigate to settings */}} className="hover:text-gray-300">⚙ Instellingen</button>
+          <button onClick={() => setShowSettings(true)} className="hover:text-gray-300">⚙ Instellingen</button>
           <button onClick={logout} className="hover:text-gray-300">Uitloggen</button>
         </div>
       </div>
