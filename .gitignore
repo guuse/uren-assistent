@@ -1,7 +1,11 @@
 node_modules/
 dist/
+dist-ssr/
 .env
 *.pem
+*.log
+.DS_Store
 src-tauri/gen/
 src-tauri/target/
 .superpowers/
+coverage/
