@@ -1,14 +1,14 @@
 interface Props {
   label: string
   value: string        // HH:mm
-  onChange: (v: string) => void
-  minTime?: string     // HH:mm — options before this are disabled
+  onChange: (time: string) => void
+  minTime?: string     // HH:mm — options at or before this time are excluded
 }
 
-function generateTimes(min = '07:00', max = '20:00'): string[] {
+function generateTimes(): string[] {
   const times: string[] = []
-  const [minH, minM] = min.split(':').map(Number)
-  const [maxH, maxM] = max.split(':').map(Number)
+  const [minH, minM] = '07:00'.split(':').map(Number)
+  const [maxH, maxM] = '20:00'.split(':').map(Number)
   const minTotal = minH! * 60 + minM!
   const maxTotal = maxH! * 60 + maxM!
   for (let t = minTotal; t <= maxTotal; t += 15) {
