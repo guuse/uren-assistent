@@ -1,4 +1,3 @@
-// src/ui/hooks/useBooking.ts
 import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { keychainRepo, createSimplicateRepository, createUseCases } from '../../application/container'
@@ -23,8 +22,8 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
   const [serviceId, setServiceId] = useState(template.serviceId ?? '')
   const [hourTypeId, setHourTypeId] = useState(template.hourTypeId ?? '')
   const [note, setNote] = useState(template.defaultNote ?? '')
-  const [startTime, setStartTime] = useState(options.initialStartTime ?? template.startTime)
-  const [endTime, setEndTime] = useState(options.initialEndTime ?? template.endTime)
+  const [startTime, setStartTime] = useState<string>(options.initialStartTime ?? template.startTime)
+  const [endTime, setEndTime] = useState<string>(options.initialEndTime ?? template.endTime)
   const [weekStartDate, setWeekStartDate] = useState(() => {
     if (options.initialDate) return options.initialDate
     // Default to this Monday
@@ -66,6 +65,14 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
     await loadServices(pid)
   }
 
+  function handleServiceChange(id: string) {
+    setServiceId(id)
+    const svc = services.find((s) => s.id === id)
+    if (svc && hourTypeId && !svc.hourTypeIds.includes(hourTypeId)) {
+      setHourTypeId('')
+    }
+  }
+
   async function book() {
     if (!simplicateEmployeeId) return
     setStatus('loading')
@@ -78,7 +85,6 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
       const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
       const { bookTemplate } = createUseCases(simplicateRepo)
 
-      // For quick book, pass a modified template with overridden times
       const effectiveTemplate = { ...template, startTime, endTime }
 
       await bookTemplate.execute({
@@ -97,13 +103,7 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
 
   return {
     projectId, setProjectId: handleProjectChange,
-    serviceId, setServiceId: (id: string) => {
-      setServiceId(id)
-      const svc = services.find((s) => s.id === id)
-      if (svc && hourTypeId && !svc.hourTypeIds.includes(hourTypeId)) {
-        setHourTypeId('')
-      }
-    },
+    serviceId, setServiceId: handleServiceChange,
     hourTypeId, setHourTypeId,
     note, setNote,
     startTime, setStartTime,
