@@ -11,6 +11,8 @@ interface AppState {
   user: User | null
   setUser: (user: User) => void
   clearUser: () => void
+  simplicateEmployeeId: string | null
+  setSimplicateEmployeeId: (id: string) => void
 
   // Simplicate data cache
   projects: SimplicateProject[]
@@ -31,6 +33,7 @@ interface AppState {
 
 const initialState = {
   user: null,
+  simplicateEmployeeId: null,
   projects: [],
   services: [],
   hourTypes: [],
@@ -43,7 +46,9 @@ export const useAppStore = create<AppState>()((set) => ({
   ...initialState,
 
   setUser: (user) => set({ user }),
-  clearUser: () => set({ user: null }),
+  clearUser: () => set({ user: null, simplicateEmployeeId: null }),
+
+  setSimplicateEmployeeId: (simplicateEmployeeId) => set({ simplicateEmployeeId }),
 
   setSimplicateData: (data) => set(data),
 

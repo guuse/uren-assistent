@@ -10,6 +10,7 @@ export interface SimplicateService {
   id: string
   name: string
   projectId: string
+  hourTypeIds: string[]  // hourstype ids available on this service
 }
 
 export interface SimplicateHourType {

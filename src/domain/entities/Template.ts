@@ -10,8 +10,8 @@ export interface BaseTemplate {
   serviceId?: string
   hourTypeId?: string
   defaultNote?: string
-  startTime: string // HH:mm
-  endTime: string   // HH:mm
+  startTime?: string  // HH:mm — undefined = user picks at booking time
+  endTime?: string    // HH:mm — undefined = user picks at booking time
 }
 
 export interface RecurringTemplate extends BaseTemplate {

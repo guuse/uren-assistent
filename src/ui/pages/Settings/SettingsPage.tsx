@@ -8,10 +8,11 @@ type Tab = 'templates' | 'account'
 
 interface Props {
   onBack: () => void
+  initialTab?: Tab
 }
 
-export function SettingsPage({ onBack }: Props) {
-  const [tab, setTab] = useState<Tab>('templates')
+export function SettingsPage({ onBack, initialTab = 'templates' }: Props) {
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [editing, setEditing] = useState<Template | null | 'new'>(null)
   const { templates, remove } = useTemplates()
 

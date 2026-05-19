@@ -1,5 +1,6 @@
 export interface HourEntry {
   employeeId: string
+  projectId: string
   projectServiceId: string
   hourTypeId: string
   hours: number        // decimal, e.g. 0.5

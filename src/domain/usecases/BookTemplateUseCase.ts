@@ -23,7 +23,7 @@ interface BookTemplateInput {
   template: Template
   employeeId: string
   note: string
-  weekStartDate: string // YYYY-MM-DD, always a Monday
+  weekStartDate: string // YYYY-MM-DD, always a Monday or selected date
   overrides?: {
     projectId?: string
     serviceId?: string
@@ -40,20 +40,25 @@ export class BookTemplateUseCase {
     const projectId = overrides.projectId ?? template.projectId
     const serviceId = overrides.serviceId ?? template.serviceId
     const hourTypeId = overrides.hourTypeId ?? template.hourTypeId
+    const startTime = template.startTime
+    const endTime = template.endTime
 
     const missing: string[] = []
     if (!projectId) missing.push('projectId')
     if (!serviceId) missing.push('serviceId')
     if (!hourTypeId) missing.push('hourTypeId')
+    if (!startTime) missing.push('startTime')
+    if (!endTime) missing.push('endTime')
     if (missing.length > 0) throw new Error(`Missing required fields: ${missing.join(', ')}`)
 
     const baseEntry = {
       employeeId,
+      projectId: projectId!,
       projectServiceId: serviceId!,
       hourTypeId: hourTypeId!,
-      hours: hoursFromTimes(template.startTime, template.endTime),
-      startTime: template.startTime,
-      endTime: template.endTime,
+      hours: hoursFromTimes(startTime!, endTime!),
+      startTime: startTime!,
+      endTime: endTime!,
       note,
     }
 

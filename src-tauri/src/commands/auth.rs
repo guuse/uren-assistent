@@ -3,6 +3,7 @@ use rand::RngCore;
 use sha2::{Digest, Sha256};
 use std::net::TcpListener;
 use tauri::AppHandle;
+use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener as AsyncTcpListener;
 
@@ -43,7 +44,7 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
     );
 
     // Open browser
-    tauri::opener::open_url(&auth_url, None::<&str>).map_err(|e| e.to_string())?;
+    app.opener().open_url(&auth_url, None::<&str>).map_err(|e| e.to_string())?;
 
     // Wait for callback
     let listener = AsyncTcpListener::bind(format!("127.0.0.1:{}", port))

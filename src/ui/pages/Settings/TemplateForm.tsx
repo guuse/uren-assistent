@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useTemplates } from '../../hooks/useTemplates'
 import { useAppStore } from '../../../store/appStore'
+import { keychainRepo, createSimplicateRepository } from '../../../application/container'
 import { DayPicker } from '../../components/DayPicker'
-import { FieldSelector } from '../../components/FieldSelector'
+import { SearchableSelect } from '../../components/SearchableSelect'
 import type { Template, TemplateType, Day } from '../../../domain/entities/Template'
+import type { SimplicateService } from '../../../domain/repositories/ISimplicateRepository'
 
+const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 const COLORS = ['#6c63ff', '#63c5ff', '#63ffb4', '#f59e0b', '#f87171', '#a78bfa']
 const TYPE_LABELS: Record<TemplateType, string> = {
   recurring: 'Herhalend (ma–vr)',
@@ -26,8 +29,8 @@ export function TemplateForm({ initial, onDone }: Props) {
   const [name, setName] = useState(initial?.name ?? '')
   const [type, setType] = useState<TemplateType>(initial?.type ?? 'recurring')
   const [color, setColor] = useState(initial?.color ?? COLORS[0]!)
-  const [startTime, setStartTime] = useState(initial?.startTime ?? '09:00')
-  const [endTime, setEndTime] = useState(initial?.endTime ?? '09:30')
+  const [startTime, setStartTime] = useState<string | undefined>(initial?.startTime)
+  const [endTime, setEndTime] = useState<string | undefined>(initial?.endTime)
   const [projectId, setProjectId] = useState(initial?.projectId ?? '')
   const [serviceId, setServiceId] = useState(initial?.serviceId ?? '')
   const [hourTypeId, setHourTypeId] = useState(initial?.hourTypeId ?? '')
@@ -38,7 +41,39 @@ export function TemplateForm({ initial, onDone }: Props) {
   const [day, setDay] = useState<Day>(
     initial?.type === 'weekly-block' ? initial.day : 'mon',
   )
+  const [services, setServices] = useState<SimplicateService[]>([])
+  const [loadingServices, setLoadingServices] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load services when projectId changes
+  useEffect(() => {
+    if (!projectId) {
+      setServices([])
+      setServiceId('')
+      return
+    }
+    setLoadingServices(true)
+    async function load() {
+      try {
+        const key = await keychainRepo.get('simplicate-api-key')
+        const secret = await keychainRepo.get('simplicate-api-secret')
+        if (!key || !secret) return
+        const repo = createSimplicateRepository(SIMPLICATE_BASE_URL, key, secret)
+        const result = await repo.getServices(projectId)
+        setServices(result)
+      } catch {
+        setServices([])
+      } finally {
+        setLoadingServices(false)
+      }
+    }
+    void load()
+  }, [projectId])
+
+  function handleProjectChange(id: string) {
+    setProjectId(id)
+    setServiceId('')
+  }
 
   async function handleSave() {
     setError(null)
@@ -47,8 +82,8 @@ export function TemplateForm({ initial, onDone }: Props) {
         id: initial?.id ?? uuidv4(),
         name,
         color,
-        startTime,
-        endTime,
+        ...(startTime !== undefined ? { startTime } : {}),
+        ...(endTime !== undefined ? { endTime } : {}),
         ...(projectId ? { projectId } : {}),
         ...(serviceId ? { serviceId } : {}),
         ...(hourTypeId ? { hourTypeId } : {}),
@@ -112,31 +147,79 @@ export function TemplateForm({ initial, onDone }: Props) {
 
       <div className="flex gap-3">
         <div className="flex-1 flex flex-col gap-1">
-          <label className="text-xs uppercase tracking-widest text-gray-400">Starttijd</label>
-          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
-            className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none" />
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-widest text-gray-400">Starttijd</label>
+            <button
+              type="button"
+              onClick={() => setStartTime(startTime !== undefined ? undefined : '09:00')}
+              className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                startTime === undefined
+                  ? 'bg-[#6c63ff] text-white'
+                  : 'bg-[#1a1a2e] text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Dynamisch
+            </button>
+          </div>
+          {startTime !== undefined ? (
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+            />
+          ) : (
+            <div className="bg-[#1a1a2e] text-gray-500 text-sm rounded-lg px-3 py-2 border border-gray-700 border-dashed">
+              Kiest gebruiker bij boeking
+            </div>
+          )}
         </div>
+
         <div className="flex-1 flex flex-col gap-1">
-          <label className="text-xs uppercase tracking-widest text-gray-400">Eindtijd</label>
-          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
-            className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none" />
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-widest text-gray-400">Eindtijd</label>
+            <button
+              type="button"
+              onClick={() => setEndTime(endTime !== undefined ? undefined : '09:30')}
+              className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                endTime === undefined
+                  ? 'bg-[#6c63ff] text-white'
+                  : 'bg-[#1a1a2e] text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Dynamisch
+            </button>
+          </div>
+          {endTime !== undefined ? (
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+            />
+          ) : (
+            <div className="bg-[#1a1a2e] text-gray-500 text-sm rounded-lg px-3 py-2 border border-gray-700 border-dashed">
+              Kiest gebruiker bij boeking
+            </div>
+          )}
         </div>
       </div>
 
-      <FieldSelector
+      <SearchableSelect
         label="Project (optioneel)"
         options={projects.map((p) => ({ id: p.id, label: `${p.organizationName} · ${p.name}` }))}
         value={projectId || undefined}
-        onChange={setProjectId}
+        onChange={handleProjectChange}
       />
-      <FieldSelector
-        label="Dienst (optioneel)"
-        options={[]}
+      <SearchableSelect
+        label={loadingServices ? 'Dienst (laden...)' : 'Dienst (optioneel)'}
+        options={services.map((s) => ({ id: s.id, label: s.name }))}
         value={serviceId || undefined}
         onChange={setServiceId}
-        disabled={!projectId}
+        disabled={!projectId || loadingServices}
+        placeholder={!projectId ? 'Kies eerst een project' : 'Kies...'}
       />
-      <FieldSelector
+      <SearchableSelect
         label="Urensoort (optioneel)"
         options={hourTypes.map((h) => ({ id: h.id, label: h.label }))}
         value={hourTypeId || undefined}

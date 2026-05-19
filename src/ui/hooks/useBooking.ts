@@ -22,8 +22,12 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
   const [serviceId, setServiceId] = useState(template.serviceId ?? '')
   const [hourTypeId, setHourTypeId] = useState(template.hourTypeId ?? '')
   const [note, setNote] = useState(template.defaultNote ?? '')
-  const [startTime, setStartTime] = useState<string>(options.initialStartTime ?? template.startTime)
-  const [endTime, setEndTime] = useState<string>(options.initialEndTime ?? template.endTime)
+  const [startTime, setStartTime] = useState<string>(
+    options.initialStartTime ?? template.startTime ?? '09:00'
+  )
+  const [endTime, setEndTime] = useState<string>(
+    options.initialEndTime ?? template.endTime ?? '09:30'
+  )
   const [weekStartDate, setWeekStartDate] = useState(() => {
     if (options.initialDate) return options.initialDate
     // Default to this Monday
