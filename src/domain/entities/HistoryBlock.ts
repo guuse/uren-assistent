@@ -1,4 +1,3 @@
-// src/domain/entities/HistoryBlock.ts
 export interface HistoryBlock {
   date: string           // YYYY-MM-DD
   urlPattern: string     // normalised, e.g. "github.com/Harborn-digital/eindhoven-doet"
