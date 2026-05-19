@@ -1,20 +1,19 @@
+import { invoke } from '@tauri-apps/api/core'
 import { readTextFile, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs'
-import { appDataDir } from '@tauri-apps/api/path'
 import type { ITemplateRepository } from '../../domain/repositories/ITemplateRepository'
 import type { Template } from '../../domain/entities/Template'
 
 const FILENAME = 'templates.json'
+const BASE = BaseDirectory.AppData
+
+async function ensureDir() {
+  await invoke('ensure_app_data_dir')
+}
 
 export class TemplateStorageRepository implements ITemplateRepository {
-  private async filePath(): Promise<string> {
-    const dir = await appDataDir()
-    return `${dir}/${FILENAME}`
-  }
-
   async getAll(): Promise<Template[]> {
     try {
-      const path = await this.filePath()
-      const raw = await readTextFile(path)
+      const raw = await readTextFile(FILENAME, { baseDir: BASE })
       return JSON.parse(raw) as Template[]
     } catch {
       return []
@@ -22,6 +21,7 @@ export class TemplateStorageRepository implements ITemplateRepository {
   }
 
   async save(template: Template): Promise<void> {
+    await ensureDir()
     const all = await this.getAll()
     const index = all.findIndex((t) => t.id === template.id)
     if (index >= 0) {
@@ -29,18 +29,13 @@ export class TemplateStorageRepository implements ITemplateRepository {
     } else {
       all.push(template)
     }
-    const path = await this.filePath()
-    await writeTextFile(path, JSON.stringify(all, null, 2), {
-      baseDir: BaseDirectory.AppData,
-    })
+    await writeTextFile(FILENAME, JSON.stringify(all, null, 2), { baseDir: BASE })
   }
 
   async delete(id: string): Promise<void> {
+    await ensureDir()
     const all = await this.getAll()
     const filtered = all.filter((t) => t.id !== id)
-    const path = await this.filePath()
-    await writeTextFile(path, JSON.stringify(filtered, null, 2), {
-      baseDir: BaseDirectory.AppData,
-    })
+    await writeTextFile(FILENAME, JSON.stringify(filtered, null, 2), { baseDir: BASE })
   }
 }

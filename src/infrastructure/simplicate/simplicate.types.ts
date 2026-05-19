@@ -2,12 +2,22 @@ export interface SimplicateProjectResponse {
   id: string
   name: string
   organization: { name: string }
+  project_status: { label: string }
+  end_date: string | null
 }
 
 export interface SimplicateServiceResponse {
   id: string
   name: string
-  project: { id: string }
+  project_id: string
+  write_hours_end_date: string | null  // YYYY-MM-DD or null
+  hour_types: Array<{
+    hourstype: {
+      id: string
+      label: string
+      blocked: boolean
+    }
+  }>
 }
 
 export interface SimplicateHourTypeResponse {
