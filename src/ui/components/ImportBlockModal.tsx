@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { SearchableSelect } from './SearchableSelect'
 
@@ -24,15 +24,8 @@ export default function ImportBlockModal({
   const [note, setNote] = useState(block.note ?? block.summary ?? '')
   const [startTime, setStartTime] = useState(block.startTime)
   const [endTime, setEndTime] = useState(block.endTime)
-
-  // Reset local state when block changes
-  useEffect(() => {
-    setProjectId(block.projectId ?? '')
-    setServiceId(block.serviceId ?? '')
-    setNote(block.note ?? block.summary ?? '')
-    setStartTime(block.startTime)
-    setEndTime(block.endTime)
-  }, [block])
+  // No useEffect needed: parent renders this modal with key={selectedBlockIndex},
+  // so React remounts the component (and resets state) when a different block is opened.
 
   const projectServices = services.filter(s => s.projectId === projectId)
   const canBook = !!projectId && !!serviceId && bookingResult !== 'success'
