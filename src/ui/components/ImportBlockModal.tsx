@@ -182,7 +182,7 @@ export default function ImportBlockModal({
               cursor: canBook ? 'pointer' : 'not-allowed',
             }}
           >
-            {bookingResult === 'success' ? '✓ Geboekt' : bookingResult ? `Fout: ${bookingResult}` : 'Boeken →'}
+            {bookingResult === 'success' ? '✓ Geboekt' : bookingResult ? `Fout: ${bookingResult}` : 'Boek alle klare →'}
           </button>
         </div>
       </div>
