@@ -1,14 +1,14 @@
-// src/ui/pages/ImportPage.tsx
-import { useRef } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useImport } from '../hooks/useImport'
-import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { useAppStore } from '../../store/appStore'
+import ImportBlockModal from '../components/ImportBlockModal'
+import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
-function rowStatusColor(block: ClassifiedBlock): string {
-  if (!block.projectId || !block.serviceId) return 'border-l-4 border-red-500'
-  if (block.origin === 'cache') return 'border-l-4 border-green-500'
-  if (block.confidence < 0.6) return 'border-l-4 border-orange-400'
-  return 'border-l-4 border-green-400'
+function blockStatusColor(block: ClassifiedBlock): string {
+  if (!block.projectId || !block.serviceId) return '#ff6584'
+  if (block.origin === 'cache') return '#43b89c'
+  if (block.confidence < 0.6) return '#f59e0b'
+  return '#43b89c'
 }
 
 export default function ImportPage() {
@@ -18,23 +18,53 @@ export default function ImportPage() {
   const {
     status, error, blocks, minVisits, setMinVisits,
     analyseFile, updateBlock, removeBlock, bookAll, bookingResults,
+    selectedBlockIndex, openBlock, closeBlock,
   } = useImport()
+
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   async function handleFile(file: File) {
     const text = await file.text()
     await analyseFile(text)
+    setSelectedDay(null)
   }
 
-  const hasUnclassified = blocks.some(b => !b.projectId || !b.serviceId)
   const isLoading = status === 'parsing' || status === 'classifying' || status === 'booking'
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Importeer uit browsergeschiedenis</h1>
+  // Group blocks by day
+  const dayMap = useMemo(() => {
+    const map = new Map<string, number[]>()
+    blocks.forEach((b, i) => {
+      if (!map.has(b.date)) map.set(b.date, [])
+      map.get(b.date)!.push(i)
+    })
+    return map
+  }, [blocks])
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+  const days = useMemo(() => [...dayMap.keys()].sort(), [dayMap])
+
+  // Auto-select first day when blocks load
+  const activeDay = selectedDay && dayMap.has(selectedDay) ? selectedDay : days[0] ?? null
+
+  const dayBlocks = activeDay ? (dayMap.get(activeDay) ?? []).map(i => ({ i, block: blocks[i]! })) : []
+
+  const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] ?? null : null
+
+  function handleBookSingle() {
+    void bookAll()
+  }
+
+  const totalReady = blocks.filter(b => b.projectId && b.serviceId).length
+
+  return (
+    <div className="flex flex-col h-screen" style={{ background: '#12121e', color: '#ccc' }}>
+      {/* Top bar */}
+      <div className="flex items-center gap-4 px-6 py-4 border-b" style={{ borderColor: '#2d2d44' }}>
+        <h1 className="text-lg font-bold text-white">Importeer browsergeschiedenis</h1>
+
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+          className="flex-1 border-2 border-dashed rounded-lg px-4 py-2 text-center cursor-pointer text-sm transition-colors"
+          style={{ borderColor: '#3d3d5c', color: '#888' }}
           onDragOver={e => e.preventDefault()}
           onDrop={e => {
             e.preventDefault()
@@ -43,164 +73,166 @@ export default function ImportPage() {
           }}
           onClick={() => fileInputRef.current?.click()}
         >
-          <p className="text-gray-500">Sleep een Chrome history CSV hiernaartoe, of klik om te selecteren</p>
+          Sleep Chrome history CSV hiernaartoe of klik
           <input
             ref={fileInputRef}
             type="file"
             accept=".csv"
             className="hidden"
-            onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) handleFile(file)
-            }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
           />
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <label className="text-sm text-gray-600">Minimum aantal bezoeken:</label>
+        <div className="flex items-center gap-2">
+          <label className="text-xs" style={{ color: '#888' }}>Min. bezoeken:</label>
           <input
             type="number"
             min={1}
             value={minVisits}
             onChange={e => setMinVisits(Number(e.target.value))}
-            className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+            className="w-14 rounded px-2 py-1 text-sm text-white border"
+            style={{ background: '#1a1a2e', borderColor: '#3d3d5c' }}
           />
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="mt-4 text-sm text-blue-600">
-            {status === 'parsing' && 'Bezig met analyseren...'}
-            {status === 'classifying' && 'Bezig met classificeren via Copilot...'}
-            {status === 'booking' && 'Bezig met boeken...'}
-          </div>
+        {blocks.length > 0 && (
+          <button
+            onClick={bookAll}
+            disabled={totalReady === 0 || isLoading || status === 'done'}
+            className="px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{
+              background: totalReady > 0 && !isLoading ? '#6c63ff' : '#2d2d44',
+              color: totalReady > 0 && !isLoading ? '#fff' : '#555',
+              cursor: totalReady > 0 && !isLoading ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Boek {totalReady} klaar
+          </button>
         )}
       </div>
 
+      {/* Status messages */}
+      {error && (
+        <div className="mx-6 mt-3 p-3 rounded-lg text-sm" style={{ background: '#2a1a1e', color: '#ff6584', border: '1px solid #4a2a2e' }}>
+          {error}
+        </div>
+      )}
+      {isLoading && (
+        <div className="mx-6 mt-3 p-3 rounded-lg text-sm" style={{ background: '#1a1a2e', color: '#6c63ff' }}>
+          {status === 'parsing' && 'Bezig met analyseren...'}
+          {status === 'classifying' && 'Bezig met classificeren via Copilot...'}
+          {status === 'booking' && 'Bezig met boeken...'}
+        </div>
+      )}
+
+      {/* Main content: sidebar + blocks */}
       {blocks.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left p-3 font-medium text-gray-600">Datum</th>
-                  <th className="text-left p-3 font-medium text-gray-600">Tijdblok</th>
-                  <th className="text-left p-3 font-medium text-gray-600">Uren</th>
-                  <th className="text-left p-3 font-medium text-gray-600">URL-patroon</th>
-                  <th className="text-left p-3 font-medium text-gray-600">Project</th>
-                  <th className="text-left p-3 font-medium text-gray-600">Dienst</th>
-                  <th className="text-left p-3 font-medium text-gray-600">Notitie</th>
-                  <th className="p-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {blocks.map((block, i) => {
-                  const projectServices = services.filter(s => s.projectId === block.projectId)
-                  const bookResult = bookingResults[i]
-                  return (
-                    <tr key={i} className={`border-b border-gray-100 ${rowStatusColor(block)}`}>
-                      <td className="p-3 font-mono text-xs text-gray-600">{block.date}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="time"
-                            value={block.startTime}
-                            onChange={e => updateBlock(i, { startTime: e.target.value })}
-                            className="border border-gray-200 rounded px-1 py-0.5 text-xs w-20"
-                          />
-                          <span className="text-gray-400">–</span>
-                          <input
-                            type="time"
-                            value={block.endTime}
-                            onChange={e => updateBlock(i, { endTime: e.target.value })}
-                            className="border border-gray-200 rounded px-1 py-0.5 text-xs w-20"
-                          />
-                        </div>
-                      </td>
-                      <td className="p-3 text-gray-600">{block.hours}u</td>
-                      <td className="p-3 font-mono text-xs text-gray-500 max-w-[200px] truncate" title={block.urlPattern}>
-                        {block.urlPattern}
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={block.projectId ?? ''}
-                          onChange={e => {
-                            updateBlock(i, { projectId: e.target.value })
-                            updateBlock(i, { serviceId: undefined } as unknown as Partial<ClassifiedBlock>)
-                          }}
-                          className="border border-gray-200 rounded px-2 py-1 text-xs w-full"
-                        >
-                          <option value="">Selecteer project</option>
-                          {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={block.serviceId ?? ''}
-                          onChange={e => updateBlock(i, { serviceId: e.target.value })}
-                          disabled={!block.projectId}
-                          className="border border-gray-200 rounded px-2 py-1 text-xs w-full disabled:opacity-50"
-                        >
-                          <option value="">Selecteer dienst</option>
-                          {projectServices.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          value={block.note ?? ''}
-                          onChange={e => updateBlock(i, { note: e.target.value })}
-                          placeholder="Notitie..."
-                          className="border border-gray-200 rounded px-2 py-1 text-xs w-full"
-                        />
-                      </td>
-                      <td className="p-3">
-                        {bookResult === 'success' ? (
-                          <span className="text-green-600 text-xs">&#10003;</span>
-                        ) : bookResult ? (
-                          <span className="text-red-600 text-xs" title={bookResult}>&#10007;</span>
-                        ) : (
-                          <button
-                            onClick={() => removeBlock(i)}
-                            className="text-gray-400 hover:text-red-500 text-xs"
-                          >
-                            &#x2715;
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Day sidebar */}
+          <div className="w-40 flex-none overflow-y-auto p-3 border-r" style={{ borderColor: '#2d2d44' }}>
+            <div className="text-xs uppercase tracking-wider mb-3" style={{ color: '#555' }}>Dagen</div>
+            {days.map(day => {
+              const indices = dayMap.get(day) ?? []
+              const dayBlks = indices.map(i => blocks[i]!)
+              const allBooked = dayBlks.every((_, idx) => bookingResults[indices[idx]!] === 'success')
+              const hasUnready = dayBlks.some(b => !b.projectId || !b.serviceId)
+              const dotColor = allBooked ? '#43b89c' : hasUnready ? '#ff6584' : '#6c63ff'
+              const isActive = day === activeDay
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className="w-full text-left rounded-lg px-3 py-2 mb-1 text-xs transition-colors"
+                  style={{
+                    background: isActive ? '#6c63ff' : '#1a1a2e',
+                    color: isActive ? '#fff' : '#888',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: dotColor }} />
+                    <span className="font-medium">{day.slice(5)}</span>
+                  </div>
+                  <div className="mt-0.5 pl-3" style={{ color: isActive ? '#ccc' : '#555' }}>
+                    {indices.length} {indices.length === 1 ? 'blok' : 'blokken'}
+                  </div>
+                </button>
+              )
+            })}
           </div>
 
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              {blocks.length} blokken &mdash; {blocks.filter(b => b.projectId && b.serviceId).length} klaar om te boeken
-            </p>
-            <button
-              onClick={bookAll}
-              disabled={hasUnclassified || isLoading || status === 'done'}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Boek alle
-            </button>
+          {/* Blocks for selected day */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeDay && (
+              <>
+                <div className="text-xs uppercase tracking-wider mb-4" style={{ color: '#555' }}>
+                  {activeDay} — {dayBlocks.length} {dayBlocks.length === 1 ? 'blok' : 'blokken'}
+                </div>
+                <div className="flex flex-col gap-3">
+                  {dayBlocks.map(({ i, block }) => {
+                    const statusColor = blockStatusColor(block)
+                    const result = bookingResults[i]
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => openBlock(i)}
+                        className="text-left rounded-lg p-4 w-full"
+                        style={{ background: '#1e1e32', borderLeft: `3px solid ${statusColor}` }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-white text-sm truncate">{block.blockName}</div>
+                            {block.summary && (
+                              <div className="text-xs mt-0.5 truncate" style={{ color: '#888' }}>{block.summary}</div>
+                            )}
+                          </div>
+                          <div className="flex-none text-right">
+                            <div className="text-xs font-mono" style={{ color: '#6c63ff' }}>{block.hours}u</div>
+                            <div className="text-xs" style={{ color: '#555' }}>{block.startTime}–{block.endTime}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          {block.projectId
+                            ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#252540', color: '#6c63ff' }}>
+                                {projects.find(p => p.id === block.projectId)?.name ?? block.projectId}
+                              </span>
+                            : <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#2a1a1e', color: '#ff6584' }}>Geen project</span>
+                          }
+                          {result === 'success' && (
+                            <span className="text-xs" style={{ color: '#43b89c' }}>✓ Geboekt</span>
+                          )}
+                          {result && result !== 'success' && (
+                            <span className="text-xs" style={{ color: '#ff6584' }}>✗ Fout</span>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {blocks.length === 0 && status === 'ready' && (
-        <p className="text-gray-500 text-sm">Geen bruikbare data gevonden. Probeer een lagere minimum bezoeken drempel.</p>
+        <div className="p-6 text-sm" style={{ color: '#555' }}>
+          Geen bruikbare blokken gevonden. Probeer een lagere minimum bezoeken drempel.
+        </div>
+      )}
+
+      {/* Modal — key={selectedBlockIndex} ensures remount when switching blocks */}
+      {selectedBlock !== null && selectedBlockIndex !== null && (
+        <ImportBlockModal
+          key={selectedBlockIndex}
+          block={selectedBlock}
+          projects={projects}
+          services={services}
+          {...(bookingResults[selectedBlockIndex] !== undefined ? { bookingResult: bookingResults[selectedBlockIndex] } : {})}
+          onSave={updates => updateBlock(selectedBlockIndex, updates)}
+          onBook={handleBookSingle}
+          onRemove={() => { removeBlock(selectedBlockIndex); closeBlock() }}
+          onClose={closeBlock}
+        />
       )}
     </div>
   )
