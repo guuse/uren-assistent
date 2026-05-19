@@ -30,6 +30,8 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
       : {},
   )
 
+  const showTimePickers = isQuickBook || !template.startTime || !template.endTime
+
   if (booking.status === 'success') {
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -52,8 +54,8 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg">✕</button>
         </div>
 
-        {/* Quick book: date + time pickers */}
-        {isQuickBook && (
+        {/* Date + time pickers: shown for quick book or when template has no fixed times */}
+        {showTimePickers && (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-gray-400">Datum</label>
@@ -70,7 +72,6 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
                 value={booking.startTime}
                 onChange={(time) => {
                   booking.setStartTime(time)
-                  // If endTime is no longer after startTime, bump it one slot
                   if (booking.endTime <= time) {
                     const [h, m] = time.split(':').map(Number)
                     const next = (h! * 60 + m! + 15)
@@ -120,8 +121,8 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
           />
         )}
 
-        {/* Week selector for recurring templates (not shown for quick book) */}
-        {!isQuickBook && isRecurringTemplate(template) && (
+        {/* Week selector for recurring templates (not shown when time pickers are visible) */}
+        {!showTimePickers && isRecurringTemplate(template) && (
           <div className="flex flex-col gap-1">
             <label className="text-xs uppercase tracking-widest text-gray-400">Week</label>
             <div className="flex gap-2">
