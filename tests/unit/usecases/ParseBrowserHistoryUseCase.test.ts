@@ -23,15 +23,13 @@ describe('ParseBrowserHistoryUseCase', () => {
     const csv = [
       HEADER,
       makeRow(1, '2026-05-11 08:00:00', 'Eindhoven Doet', 'https://github.com/Harborn-digital/eindhoven-doet/pull/1', 5),
-      makeRow(2, '2026-05-11 09:30:00', 'Eindhoven Doet PR', 'https://github.com/Harborn-digital/eindhoven-doet/pull/2', 5),
-      makeRow(3, '2026-05-11 10:00:00', 'Google', 'https://www.google.com/search?q=test', 5),
+      makeRow(2, '2026-05-11 08:20:00', 'Eindhoven Doet PR', 'https://github.com/Harborn-digital/eindhoven-doet/pull/2', 5),
     ].join('\n')
 
     const result = await useCase.execute(csv, 3)
-    const ghBlock = result.find(b => b.urlPattern === 'github.com/Harborn-digital/eindhoven-doet/pull')
-    expect(ghBlock).toBeDefined()
-    expect(ghBlock!.date).toBe('2026-05-11')
-    expect(ghBlock!.visitCount).toBe(10)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.date).toBe('2026-05-11')
+    expect(result[0]!.visitCount).toBe(10)
   })
 
   it('filters blocks with fewer visits than minVisits', async () => {
@@ -54,26 +52,27 @@ describe('ParseBrowserHistoryUseCase', () => {
     expect(result[0]!.urlPattern).toBe('github.com/org/repo/pull')
   })
 
-  it('calculates hours from first to last visit, rounded to 0.25, minimum 0.25', async () => {
+  it('calculates hours from first to last visit, rounded to 0.5, minimum 0.5', async () => {
     const csv = [
       HEADER,
       makeRow(1, '2026-05-11 08:00:00', 'A', 'https://github.com/org/repo/work/item1', 5),
-      makeRow(2, '2026-05-11 09:30:00', 'B', 'https://github.com/org/repo/work/item2', 5),
+      makeRow(2, '2026-05-11 08:20:00', 'B', 'https://github.com/org/repo/work/item2', 5),
     ].join('\n')
 
     const result = await useCase.execute(csv, 3)
-    expect(result[0]!.hours).toBe(1.5)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.hours).toBe(0.5)
     expect(result[0]!.firstVisitTime).toBe('08:00')
   })
 
-  it('sets minimum 0.25 hours when all visits at same time', async () => {
+  it('sets minimum 0.5 hours when all visits at same time', async () => {
     const csv = [
       HEADER,
       makeRow(1, '2026-05-11 08:00:00', 'A', 'https://github.com/org/repo/a', 5),
     ].join('\n')
 
     const result = await useCase.execute(csv, 3)
-    expect(result[0]!.hours).toBe(0.25)
+    expect(result[0]!.hours).toBe(0.5)
   })
 
   it('splits blocks by day', async () => {

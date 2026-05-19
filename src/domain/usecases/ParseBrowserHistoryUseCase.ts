@@ -7,9 +7,9 @@ export class ParseError extends Error {
   }
 }
 
-const EXPECTED_HEADERS = [
-  'Order', 'ID', 'Last Visit Time', 'Title',
-]
+const EXPECTED_HEADERS = ['Order', 'ID', 'Last Visit Time', 'Title']
+
+const WINDOW_MINUTES = 30
 
 function normaliseUrl(url: string): string {
   try {
@@ -21,17 +21,21 @@ function normaliseUrl(url: string): string {
   }
 }
 
-function roundToQuarter(hours: number): number {
-  return Math.max(0.25, Math.round(hours * 4) / 4)
+function roundToHalf(date: Date): string {
+  const h = date.getHours()
+  const m = date.getMinutes()
+  const roundedM = m < 15 ? 0 : m < 45 ? 30 : 0
+  const roundedH = m >= 45 ? (h + 1) % 24 : h
+  return `${String(roundedH).padStart(2, '0')}:${String(roundedM).padStart(2, '0')}`
+}
+
+function roundHoursDuration(minutes: number): number {
+  return Math.max(0.5, Math.round(minutes / 60 * 2) / 2)
 }
 
 function parseDateTime(raw: string): Date | null {
   const d = new Date(raw)
   return isNaN(d.getTime()) ? null : d
-}
-
-function toHHMM(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function parseCsvLine(line: string): string[] {
@@ -56,7 +60,7 @@ function parseCsvLine(line: string): string[] {
 interface RawRow {
   visitTime: Date
   title: string
-  url: string
+  normalisedUrl: string
   visitCount: number
 }
 
@@ -77,7 +81,9 @@ export class ParseBrowserHistoryUseCase {
     const timeIdx = headerCols.indexOf('Last Visit Time')
     const titleIdx = headerCols.indexOf('Title')
     const urlIdx = headerCols.findIndex(h => h === 'URL')
-    const visitsIdx = headerCols.findIndex((_, i) => i > titleIdx && headerCols[i]?.includes('times') && !headerCols[i]?.includes('address'))
+    const visitsIdx = headerCols.findIndex(
+      (_, i) => i > titleIdx && headerCols[i]?.includes('times') && !headerCols[i]?.includes('address')
+    )
 
     const rows: RawRow[] = []
     for (const line of lines.slice(1)) {
@@ -90,49 +96,81 @@ export class ParseBrowserHistoryUseCase {
       rows.push({
         visitTime,
         title: cols[titleIdx] ?? '',
-        url,
+        normalisedUrl: normaliseUrl(url),
         visitCount: parseInt(cols[visitsIdx] ?? '1', 10) || 1,
       })
     }
 
-    // Group by date + normalised URL pattern
-    type Key = string
-    const groups = new Map<Key, { rows: RawRow[] }>()
+    // Sort rows by time
+    rows.sort((a, b) => a.visitTime.getTime() - b.visitTime.getTime())
 
+    // Group by day first, then apply time-window overlap within each day
+    const byDay = new Map<string, RawRow[]>()
     for (const row of rows) {
-      const date = row.visitTime.toISOString().split('T')[0]!
-      const pattern = normaliseUrl(row.url)
-      const key = `${date}__${pattern}`
-      if (!groups.has(key)) groups.set(key, { rows: [] })
-      groups.get(key)!.rows.push(row)
+      const d = row.visitTime
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      if (!byDay.has(date)) byDay.set(date, [])
+      byDay.get(date)!.push(row)
     }
 
     const blocks: HistoryBlock[] = []
 
-    for (const [key, { rows: groupRows }] of groups) {
-      const totalVisits = groupRows.reduce((sum, r) => sum + r.visitCount, 0)
-      if (totalVisits < minVisits) continue
+    for (const [date, dayRows] of byDay) {
+      // Sliding window: start new block when gap > WINDOW_MINUTES
+      const windows: RawRow[][] = []
+      let current: RawRow[] = []
 
-      const [date, pattern] = key.split('__') as [string, string]
-      const sorted = groupRows.slice().sort((a, b) => a.visitTime.getTime() - b.visitTime.getTime())
-      const first = sorted[0]!
-      const last = sorted[sorted.length - 1]!
+      for (const row of dayRows) {
+        if (current.length === 0) {
+          current.push(row)
+          continue
+        }
+        const lastTime = current[current.length - 1]!.visitTime.getTime()
+        const gapMinutes = (row.visitTime.getTime() - lastTime) / 60000
+        if (gapMinutes <= WINDOW_MINUTES) {
+          current.push(row)
+        } else {
+          windows.push(current)
+          current = [row]
+        }
+      }
+      if (current.length > 0) windows.push(current)
 
-      const diffMinutes = (last.visitTime.getTime() - first.visitTime.getTime()) / 60000
-      const hours = roundToQuarter(diffMinutes / 60)
+      for (const windowRows of windows) {
+        const totalVisits = windowRows.reduce((sum, r) => sum + r.visitCount, 0)
+        if (totalVisits < minVisits) continue
 
-      const titles = [...new Set(groupRows.map(r => r.title).filter(Boolean))]
+        const first = windowRows[0]!
+        const last = windowRows[windowRows.length - 1]!
+        const diffMinutes = (last.visitTime.getTime() - first.visitTime.getTime()) / 60000
+        const hours = roundHoursDuration(diffMinutes)
 
-      blocks.push({
-        date,
-        urlPattern: pattern,
-        titles,
-        visitCount: totalVisits,
-        firstVisitTime: toHHMM(first.visitTime),
-        hours,
-      })
+        // Collect unique URL patterns, track visit counts per pattern
+        const urlCounts = new Map<string, number>()
+        for (const r of windowRows) {
+          urlCounts.set(r.normalisedUrl, (urlCounts.get(r.normalisedUrl) ?? 0) + r.visitCount)
+        }
+        const urls = [...urlCounts.keys()]
+        // Primary pattern = most visited
+        const urlPattern = [...urlCounts.entries()].sort((a, b) => b[1] - a[1])[0]![0]
+
+        const titles = [...new Set(windowRows.map(r => r.title).filter(Boolean))]
+
+        blocks.push({
+          date,
+          urlPattern,
+          urls,
+          titles,
+          visitCount: totalVisits,
+          firstVisitTime: roundToHalf(first.visitTime),
+          lastVisitTime: roundToHalf(last.visitTime),
+          hours,
+        })
+      }
     }
 
-    return blocks.sort((a, b) => a.date.localeCompare(b.date) || a.firstVisitTime.localeCompare(b.firstVisitTime))
+    return blocks.sort((a, b) =>
+      a.date.localeCompare(b.date) || a.firstVisitTime.localeCompare(b.firstVisitTime)
+    )
   }
 }
