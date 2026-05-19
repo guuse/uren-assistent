@@ -1,51 +1,48 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useState } from 'react'
+import { useAppStore } from './store/appStore'
+import { LoginPage } from './ui/pages/LoginPage'
+import { HomePage } from './ui/pages/Home'
+import ImportPage from './ui/pages/ImportPage'
+
+type Page = 'home' | 'import'
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const user = useAppStore((s) => s.user)
+  const [currentPage, setCurrentPage] = useState<Page>('home')
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  if (!user) {
+    return <LoginPage />
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+        <button
+          onClick={() => setCurrentPage('home')}
+          className={`text-sm font-medium px-3 py-1.5 rounded transition-colors ${
+            currentPage === 'home'
+              ? 'bg-blue-100 text-blue-700'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Home
+        </button>
+        <button
+          onClick={() => setCurrentPage('import')}
+          className={`text-sm font-medium px-3 py-1.5 rounded transition-colors ${
+            currentPage === 'import'
+              ? 'bg-blue-100 text-blue-700'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Importeer
+        </button>
+      </nav>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+      {currentPage === 'home' && <HomePage />}
+      {currentPage === 'import' && <ImportPage />}
+    </div>
+  )
 }
 
-export default App;
+export default App
