@@ -30,8 +30,8 @@ export class ClassifyHistoryBlocksUseCase {
       if (cached) {
         cacheHits.push({
           ...block,
-          blockName: block.urlPattern,
-          summary: '',
+          blockName: cached.blockName ?? block.urlPattern,
+          summary: cached.summary ?? '',
           startTime: block.firstVisitTime,
           endTime: block.lastVisitTime || addHoursToTime(block.firstVisitTime, block.hours),
           projectId: cached.projectId,

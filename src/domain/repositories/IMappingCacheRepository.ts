@@ -2,6 +2,8 @@ export interface CachedMapping {
   projectId: string
   serviceId: string
   note: string
+  blockName?: string   // LLM-generated human-readable name, persisted for reuse
+  summary?: string     // LLM-generated summary, persisted for reuse
 }
 
 export interface IMappingCacheRepository {

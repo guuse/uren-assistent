@@ -100,7 +100,13 @@ export function useImport(): ImportState {
   }, [])
 
   const confirmBlock = useCallback(async (index: number, mapping: CachedMapping) => {
-    await mappingCacheRepo.set(blocks[index]!.urlPattern, mapping)
+    await mappingCacheRepo.set(blocks[index]!.urlPattern, {
+      projectId: mapping.projectId,
+      serviceId: mapping.serviceId,
+      note: mapping.note,
+      blockName: blocks[index]!.blockName,
+      summary: blocks[index]!.summary,
+    })
     updateBlock(index, {
       projectId: mapping.projectId,
       serviceId: mapping.serviceId,
@@ -153,6 +159,8 @@ export function useImport(): ImportState {
           projectId: block.projectId,
           serviceId: block.serviceId,
           note: block.note ?? '',
+          blockName: block.blockName,
+          summary: block.summary,
         })
       } catch (e) {
         results[i] = e instanceof Error ? e.message : 'error'
