@@ -50,10 +50,6 @@ export default function ImportPage() {
 
   const selectedBlock = selectedBlockIndex !== null ? blocks[selectedBlockIndex] ?? null : null
 
-  function handleBookSingle() {
-    void bookAll()
-  }
-
   const totalReady = blocks.filter(b => b.projectId && b.serviceId).length
 
   return (
@@ -229,7 +225,7 @@ export default function ImportPage() {
           services={services}
           {...(bookingResults[selectedBlockIndex] !== undefined ? { bookingResult: bookingResults[selectedBlockIndex] } : {})}
           onSave={updates => updateBlock(selectedBlockIndex, updates)}
-          onBook={handleBookSingle}
+          onBook={() => void bookAll()}
           onRemove={() => { removeBlock(selectedBlockIndex); closeBlock() }}
           onClose={closeBlock}
         />
