@@ -18,6 +18,10 @@ interface AppState {
   hourTypes: SimplicateHourType[]
   setSimplicateData: (data: { projects: SimplicateProject[]; services: SimplicateService[]; hourTypes: SimplicateHourType[] }) => void
 
+  // Copilot
+  copilotToken: string | null
+  setCopilotToken: (token: string) => void
+
   // UI
   isLoading: boolean
   setLoading: (loading: boolean) => void
@@ -30,6 +34,7 @@ const initialState = {
   projects: [],
   services: [],
   hourTypes: [],
+  copilotToken: null,
   isLoading: false,
   error: null,
 }
@@ -41,6 +46,8 @@ export const useAppStore = create<AppState>()((set) => ({
   clearUser: () => set({ user: null }),
 
   setSimplicateData: (data) => set(data),
+
+  setCopilotToken: (copilotToken) => set({ copilotToken }),
 
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
