@@ -1,11 +1,13 @@
 import { useBooking } from '../hooks/useBooking'
 import { FieldSelector } from '../components/FieldSelector'
+import { TimeSelect } from '../components/TimeSelect'
 import { isRecurringTemplate } from '../../domain/entities/Template'
 import type { Template } from '../../domain/entities/Template'
 
 interface Props {
   template: Template
   onClose: () => void
+  isQuickBook?: boolean
 }
 
 function getMondayOfWeek(offset: number): string {
@@ -16,8 +18,17 @@ function getMondayOfWeek(offset: number): string {
   return today.toISOString().split('T')[0]!
 }
 
-export function BookingModal({ template, onClose }: Props) {
-  const booking = useBooking(template)
+function todayString(): string {
+  return new Date().toISOString().split('T')[0]!
+}
+
+export function BookingModal({ template, onClose, isQuickBook = false }: Props) {
+  const booking = useBooking(
+    template,
+    isQuickBook
+      ? { initialDate: todayString(), initialStartTime: '09:00', initialEndTime: '09:30' }
+      : {},
+  )
 
   if (booking.status === 'success') {
     return (
@@ -40,6 +51,44 @@ export function BookingModal({ template, onClose }: Props) {
           <div className="text-white font-bold">{template.name}</div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg">✕</button>
         </div>
+
+        {/* Quick book: date + time pickers */}
+        {isQuickBook && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs uppercase tracking-widest text-gray-400">Datum</label>
+              <input
+                type="date"
+                value={booking.weekStartDate}
+                onChange={(e) => booking.setWeekStartDate(e.target.value)}
+                className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <TimeSelect
+                label="Van"
+                value={booking.startTime}
+                onChange={(time) => {
+                  booking.setStartTime(time)
+                  // If endTime is no longer after startTime, bump it one slot
+                  if (booking.endTime <= time) {
+                    const [h, m] = time.split(':').map(Number)
+                    const next = (h! * 60 + m! + 15)
+                    const nh = Math.floor(next / 60).toString().padStart(2, '0')
+                    const nm = (next % 60).toString().padStart(2, '0')
+                    booking.setEndTime(`${nh}:${nm}`)
+                  }
+                }}
+              />
+              <TimeSelect
+                label="Tot"
+                value={booking.endTime}
+                onChange={booking.setEndTime}
+                minTime={booking.startTime}
+              />
+            </div>
+          </>
+        )}
 
         {/* Missing fields */}
         {!template.projectId && (
@@ -71,8 +120,8 @@ export function BookingModal({ template, onClose }: Props) {
           />
         )}
 
-        {/* Week selector for recurring templates */}
-        {isRecurringTemplate(template) && (
+        {/* Week selector for recurring templates (not shown for quick book) */}
+        {!isQuickBook && isRecurringTemplate(template) && (
           <div className="flex flex-col gap-1">
             <label className="text-xs uppercase tracking-widest text-gray-400">Week</label>
             <div className="flex gap-2">
@@ -120,7 +169,7 @@ export function BookingModal({ template, onClose }: Props) {
           disabled={!booking.canBook || booking.status === 'loading'}
           className="bg-[#6c63ff] hover:bg-[#5a52e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
         >
-          {booking.status === 'loading' ? 'Bezig...' : `Boeken →`}
+          {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
         </button>
       </div>
     </div>
