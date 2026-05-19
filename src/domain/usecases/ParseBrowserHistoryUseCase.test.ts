@@ -98,4 +98,13 @@ describe('ParseBrowserHistoryUseCase', () => {
     expect(result[0]!.firstVisitTime).toBe('09:00')
     expect(result[1]!.firstVisitTime).toBe('11:00')
   })
+
+  it('caps time rounding at 23:30, does not roll over to next day', async () => {
+    const csv = makeCsv([
+      { time: '2024-05-13T23:47:00', title: 'GitHub', url: 'https://github.com/org/repo', visits: 3 },
+    ])
+    const result = await uc.execute(csv, 1)
+    expect(result[0]!.firstVisitTime).toBe('23:30')
+    expect(result[0]!.date).toBe('2024-05-13')
+  })
 })

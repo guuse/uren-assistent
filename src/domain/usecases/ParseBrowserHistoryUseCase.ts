@@ -24,9 +24,11 @@ function normaliseUrl(url: string): string {
 function roundToHalf(date: Date): string {
   const h = date.getHours()
   const m = date.getMinutes()
-  const roundedM = m < 15 ? 0 : m < 45 ? 30 : 0
-  const roundedH = m >= 45 ? (h + 1) % 24 : h
-  return `${String(roundedH).padStart(2, '0')}:${String(roundedM).padStart(2, '0')}`
+  // Round to nearest :00 or :30, cap at 23:30 (no cross-day rollover)
+  if (m < 15) return `${String(h).padStart(2, '0')}:00`
+  if (m < 45) return `${String(h).padStart(2, '0')}:30`
+  if (h === 23) return '23:30'   // cap: don't roll over to next day
+  return `${String(h + 1).padStart(2, '0')}:00`
 }
 
 function roundHoursDuration(minutes: number): number {
@@ -84,7 +86,7 @@ export class ParseBrowserHistoryUseCase {
     const visitsIdx = headerCols.findIndex(
       (_, i) => i > titleIdx && headerCols[i]?.includes('times') && !headerCols[i]?.includes('address')
     )
-
+    // visitsIdx may be -1 if the column pattern doesn't match; cols[-1] is undefined, so visitCount safely falls back to 1
     const rows: RawRow[] = []
     for (const line of lines.slice(1)) {
       if (!line.trim()) continue

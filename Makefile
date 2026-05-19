@@ -16,3 +16,10 @@ run: prepare
 
 clean:
 	rm -rf node_modules dist src-tauri/target
+
+
+env: ## Copy env file from git root to local path.
+	@$(eval MAIN_PATH=$(shell git worktree list | head -n 1 | awk '{print $$1}'))
+	@echo "Copying .env file from $(MAIN_PATH) to local path..."
+	@cp "$(MAIN_PATH)/.env" .env
+
