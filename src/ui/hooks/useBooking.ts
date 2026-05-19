@@ -1,3 +1,4 @@
+// src/ui/hooks/useBooking.ts
 import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { keychainRepo, createSimplicateRepository, createUseCases } from '../../application/container'
@@ -7,16 +8,25 @@ const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
 export type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
 
-export function useBooking(template: Template) {
-  const user = useAppStore((s) => s.user)
+export interface UseBookingOptions {
+  initialDate?: string       // YYYY-MM-DD, overrides Monday calculation
+  initialStartTime?: string  // HH:mm, overrides template.startTime
+  initialEndTime?: string    // HH:mm, overrides template.endTime
+}
+
+export function useBooking(template: Template, options: UseBookingOptions = {}) {
+  const simplicateEmployeeId = useAppStore((s) => s.simplicateEmployeeId)
   const projects = useAppStore((s) => s.projects)
-  const hourTypes = useAppStore((s) => s.hourTypes)
+  const allHourTypes = useAppStore((s) => s.hourTypes)
 
   const [projectId, setProjectId] = useState(template.projectId ?? '')
   const [serviceId, setServiceId] = useState(template.serviceId ?? '')
   const [hourTypeId, setHourTypeId] = useState(template.hourTypeId ?? '')
   const [note, setNote] = useState(template.defaultNote ?? '')
+  const [startTime, setStartTime] = useState(options.initialStartTime ?? template.startTime)
+  const [endTime, setEndTime] = useState(options.initialEndTime ?? template.endTime)
   const [weekStartDate, setWeekStartDate] = useState(() => {
+    if (options.initialDate) return options.initialDate
     // Default to this Monday
     const today = new Date()
     const day = today.getDay()
@@ -24,9 +34,15 @@ export function useBooking(template: Template) {
     today.setDate(today.getDate() + diff)
     return today.toISOString().split('T')[0]!
   })
-  const [services, setServices] = useState<{ id: string; name: string }[]>([])
+  const [services, setServices] = useState<{ id: string; name: string; hourTypeIds: string[] }[]>([])
   const [status, setStatus] = useState<BookingStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Filter hour types to those available on the selected service
+  const selectedService = services.find((s) => s.id === serviceId)
+  const hourTypes = selectedService
+    ? allHourTypes.filter((ht) => selectedService.hourTypeIds.includes(ht.id))
+    : allHourTypes
 
   const missingFields = [
     !projectId && 'project',
@@ -46,11 +62,12 @@ export function useBooking(template: Template) {
   async function handleProjectChange(pid: string) {
     setProjectId(pid)
     setServiceId('')
+    setHourTypeId('')
     await loadServices(pid)
   }
 
   async function book() {
-    if (!user?.id) return
+    if (!simplicateEmployeeId) return
     setStatus('loading')
     setErrorMessage(null)
     try {
@@ -61,9 +78,12 @@ export function useBooking(template: Template) {
       const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
       const { bookTemplate } = createUseCases(simplicateRepo)
 
+      // For quick book, pass a modified template with overridden times
+      const effectiveTemplate = { ...template, startTime, endTime }
+
       await bookTemplate.execute({
-        template,
-        employeeId: user.id,
+        template: effectiveTemplate,
+        employeeId: simplicateEmployeeId,
         note,
         weekStartDate,
         overrides: { projectId, serviceId, hourTypeId },
@@ -77,9 +97,17 @@ export function useBooking(template: Template) {
 
   return {
     projectId, setProjectId: handleProjectChange,
-    serviceId, setServiceId,
+    serviceId, setServiceId: (id: string) => {
+      setServiceId(id)
+      const svc = services.find((s) => s.id === id)
+      if (svc && hourTypeId && !svc.hourTypeIds.includes(hourTypeId)) {
+        setHourTypeId('')
+      }
+    },
     hourTypeId, setHourTypeId,
     note, setNote,
+    startTime, setStartTime,
+    endTime, setEndTime,
     weekStartDate, setWeekStartDate,
     services,
     status,
