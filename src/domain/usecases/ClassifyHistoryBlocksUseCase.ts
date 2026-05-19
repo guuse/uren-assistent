@@ -30,6 +30,8 @@ export class ClassifyHistoryBlocksUseCase {
       if (cached) {
         cacheHits.push({
           ...block,
+          blockName: block.urlPattern,
+          summary: '',
           startTime: block.firstVisitTime,
           endTime: addHoursToTime(block.firstVisitTime, block.hours),
           projectId: cached.projectId,
@@ -54,6 +56,8 @@ export class ClassifyHistoryBlocksUseCase {
       } catch {
         llmResults = needsLLM.map(block => ({
           ...block,
+          blockName: block.urlPattern,
+          summary: '',
           startTime: block.firstVisitTime,
           endTime: addHoursToTime(block.firstVisitTime, block.hours),
           confidence: 0,
