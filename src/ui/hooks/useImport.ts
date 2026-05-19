@@ -24,6 +24,9 @@ export interface ImportState {
   confirmBlock: (index: number, mapping: CachedMapping) => Promise<void>
   bookAll: () => Promise<void>
   bookingResults: Record<number, 'success' | 'error' | string>
+  selectedBlockIndex: number | null
+  openBlock: (index: number) => void
+  closeBlock: () => void
 }
 
 export function useImport(): ImportState {
@@ -32,6 +35,15 @@ export function useImport(): ImportState {
   const [blocks, setBlocks] = useState<ClassifiedBlock[]>([])
   const [minVisits, setMinVisits] = useState(3)
   const [bookingResults, setBookingResults] = useState<Record<number, 'success' | 'error' | string>>({})
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null)
+
+  const openBlock = useCallback((index: number) => {
+    setSelectedBlockIndex(index)
+  }, [])
+
+  const closeBlock = useCallback(() => {
+    setSelectedBlockIndex(null)
+  }, [])
 
   const projects = useAppStore(s => s.projects)
   const services = useAppStore(s => s.services)
@@ -163,5 +175,8 @@ export function useImport(): ImportState {
     confirmBlock,
     bookAll,
     bookingResults,
+    selectedBlockIndex,
+    openBlock,
+    closeBlock,
   }
 }
