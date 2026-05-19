@@ -33,7 +33,7 @@ export class ClassifyHistoryBlocksUseCase {
           blockName: block.urlPattern,
           summary: '',
           startTime: block.firstVisitTime,
-          endTime: addHoursToTime(block.firstVisitTime, block.hours),
+          endTime: block.lastVisitTime || addHoursToTime(block.firstVisitTime, block.hours),
           projectId: cached.projectId,
           serviceId: cached.serviceId,
           note: cached.note,

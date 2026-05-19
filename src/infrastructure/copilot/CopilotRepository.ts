@@ -100,6 +100,10 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
       throw new Error('Copilot returned invalid JSON')
     }
 
+    if (!Array.isArray(results)) {
+      throw new Error('Copilot returned unexpected response format (not an array)')
+    }
+
     const addHours = (time: string, hours: number): string => {
       const [h, m] = time.split(':').map(Number) as [number, number]
       const total = h * 60 + m + Math.round(hours * 60)
