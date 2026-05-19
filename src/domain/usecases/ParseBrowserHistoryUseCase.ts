@@ -14,7 +14,7 @@ const EXPECTED_HEADERS = [
 function normaliseUrl(url: string): string {
   try {
     const parsed = new URL(url)
-    const segments = parsed.pathname.split('/').filter(Boolean).slice(0, 2)
+    const segments = parsed.pathname.split('/').filter(Boolean).slice(0, 3)
     return [parsed.hostname, ...segments].join('/')
   } catch {
     return url

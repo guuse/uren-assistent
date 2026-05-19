@@ -28,7 +28,7 @@ describe('ParseBrowserHistoryUseCase', () => {
     ].join('\n')
 
     const result = await useCase.execute(csv, 3)
-    const ghBlock = result.find(b => b.urlPattern === 'github.com/Harborn-digital/eindhoven-doet')
+    const ghBlock = result.find(b => b.urlPattern === 'github.com/Harborn-digital/eindhoven-doet/pull')
     expect(ghBlock).toBeDefined()
     expect(ghBlock!.date).toBe('2026-05-11')
     expect(ghBlock!.visitCount).toBe(10)
@@ -57,8 +57,8 @@ describe('ParseBrowserHistoryUseCase', () => {
   it('calculates hours from first to last visit, rounded to 0.25, minimum 0.25', async () => {
     const csv = [
       HEADER,
-      makeRow(1, '2026-05-11 08:00:00', 'A', 'https://github.com/org/repo/a', 5),
-      makeRow(2, '2026-05-11 09:30:00', 'B', 'https://github.com/org/repo/b', 5),
+      makeRow(1, '2026-05-11 08:00:00', 'A', 'https://github.com/org/repo/work/item1', 5),
+      makeRow(2, '2026-05-11 09:30:00', 'B', 'https://github.com/org/repo/work/item2', 5),
     ].join('\n')
 
     const result = await useCase.execute(csv, 3)
