@@ -10,6 +10,9 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 vi.mock('@tauri-apps/api/path', () => ({
   appDataDir: vi.fn().mockResolvedValue('/mock/app-data'),
 }))
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockResolvedValue(undefined),
+}))
 
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
