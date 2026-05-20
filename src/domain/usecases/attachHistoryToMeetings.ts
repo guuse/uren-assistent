@@ -47,7 +47,7 @@ export function attachHistoryToMeetings(
       const ev = eventWindows[i]!
       const attachable =
         blockStart < ev.end + ATTACH_MINUTES &&
-        blockStart + ATTACH_MINUTES >= ev.start - ATTACH_MINUTES
+        blockEnd > ev.start - ATTACH_MINUTES
       if (attachable) {
         candidates.push({ idx: i, distance: Math.abs(blockMid - ev.mid) })
       }

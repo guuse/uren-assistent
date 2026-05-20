@@ -52,15 +52,16 @@ describe('attachHistoryToMeetings', () => {
   })
 
   it('assigns a block to the nearest of two meetings', () => {
-    const blocks = [makeBlock('10:00', '10:05')]
+    const blocks = [makeBlock('10:05', '10:10')]
     const events = [
-      makeEvent('Morning', '09:00', '09:30'),  // midpoint 09:15, distance to block mid 10:02 = 47min
-      makeEvent('Midday', '10:30', '11:00'),   // midpoint 10:45, distance = 43min
+      makeEvent('Morning', '09:30', '10:00'),  // ends 10:00, gap to block = 5min (within window)
+      makeEvent('Midday', '10:15', '10:45'),   // starts 10:15, gap from block = 5min (within window)
     ]
     const { groups } = attachHistoryToMeetings(blocks, events)
-    // block midpoint 10:02 — closer to Midday (10:45) than Morning (09:15)
-    expect(groups[0]!.historyBlocks).toHaveLength(0) // Morning gets nothing
-    expect(groups[1]!.historyBlocks).toHaveLength(1) // Midday gets it
+    // block mid 10:07.5 — equidistant from Morning (09:45) and Midday (10:30), both 22.5 min
+    // tie broken by earlier event = Morning
+    expect(groups[0]!.historyBlocks).toHaveLength(1) // Morning gets it (earlier, tie)
+    expect(groups[1]!.historyBlocks).toHaveLength(0) // Midday gets nothing
   })
 
   it('handles zero events — all blocks unclaimed', () => {
