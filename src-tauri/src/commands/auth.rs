@@ -38,7 +38,7 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
          ?client_id={client_id}\
          &redirect_uri={redirect_uri}\
          &response_type=code\
-         &scope=openid%20email%20profile\
+         &scope=openid%20email%20profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly\
          &code_challenge={challenge}\
          &code_challenge_method=S256",
     );

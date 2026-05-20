@@ -3,14 +3,20 @@ import { SimplicateRepository } from '../infrastructure/simplicate/SimplicateRep
 import { TemplateStorageRepository } from '../infrastructure/storage/TemplateStorageRepository'
 import { MappingCacheRepository } from '../infrastructure/storage/MappingCacheRepository'
 import { CopilotRepository } from '../infrastructure/copilot/CopilotRepository'
+import { GoogleCalendarRepository } from '../infrastructure/googlecalendar/GoogleCalendarRepository'
 import { BookTemplateUseCase } from '../domain/usecases/BookTemplateUseCase'
 import { DeleteTemplateUseCase } from '../domain/usecases/DeleteTemplateUseCase'
 import { FetchSimplicateDataUseCase } from '../domain/usecases/FetchSimplicateDataUseCase'
 import { SaveTemplateUseCase } from '../domain/usecases/SaveTemplateUseCase'
 import { ParseBrowserHistoryUseCase } from '../domain/usecases/ParseBrowserHistoryUseCase'
 import { ClassifyHistoryBlocksUseCase } from '../domain/usecases/ClassifyHistoryBlocksUseCase'
+import { FetchCalendarEventsUseCase } from '../domain/usecases/FetchCalendarEventsUseCase'
+import { ClassifyCalendarBlocksUseCase } from '../domain/usecases/ClassifyCalendarBlocksUseCase'
 import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 import type { ICopilotRepository } from '../domain/repositories/ICopilotRepository'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
+const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string
 
 // Repositories
 export const keychainRepo = new KeychainRepository()
@@ -24,6 +30,18 @@ export function createSimplicateRepository(baseUrl: string, apiKey: string, apiS
 
 export function createCopilotRepository(token: string): ICopilotRepository {
   return new CopilotRepository(token)
+}
+
+export function createCalendarRepository() {
+  return new GoogleCalendarRepository(keychainRepo, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+}
+
+export function createFetchCalendarEventsUseCase() {
+  return new FetchCalendarEventsUseCase(createCalendarRepository())
+}
+
+export function createClassifyCalendarBlocksUseCase(copilotRepo: ICopilotRepository) {
+  return new ClassifyCalendarBlocksUseCase(copilotRepo)
 }
 
 // Use cases (stateless, created with injected repos)
