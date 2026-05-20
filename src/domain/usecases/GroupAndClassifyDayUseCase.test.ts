@@ -142,4 +142,17 @@ describe('GroupAndClassifyDayUseCase', () => {
     expect(llmItem).toBeDefined()
     expect(copilotRepo.classifyDay).toHaveBeenCalledOnce()
   })
+
+  it('uses the highest-visitCount block urlPattern in the meeting cacheKey', async () => {
+    const lowBlock = makeBlock({ urlPattern: 'low.com', visitCount: 2, firstVisitTime: '10:05', lastVisitTime: '10:10' })
+    const highBlock = makeBlock({ urlPattern: 'dominant.com', visitCount: 5, firstVisitTime: '10:15', lastVisitTime: '10:25' })
+    const event = makeEvent({ title: 'Standup', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T10:30:00') })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    await useCase.execute('2024-01-15', [lowBlock, highBlock], [event])
+
+    const calledItems = (copilotRepo.classifyDay as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { kind: string; cacheKey: string }[]
+    const meetingItem = calledItems.find(i => i.kind === 'meeting')!
+    expect(meetingItem.cacheKey).toBe('Standup:dominant.com')
+  })
 })

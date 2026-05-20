@@ -91,7 +91,7 @@ export class GroupAndClassifyDayUseCase {
     // Call LLM for remaining items
     const llmResults: ClassifiedBlock[] = []
     if (llmItems.length > 0) {
-      const results = await this.copilotRepo.classifyDay(        date,
+      const results = await this.copilotRepo.classifyDay(date,
         llmItems,
         this.availableProjects,
         this.availableServices,
