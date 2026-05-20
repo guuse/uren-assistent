@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from './store/appStore'
+import { useAppInit } from './ui/hooks/useAppInit'
 import { LoginPage } from './ui/pages/LoginPage'
 import { HomePage } from './ui/pages/Home'
 import ImportPage from './ui/pages/ImportPage'
@@ -7,6 +8,7 @@ import ImportPage from './ui/pages/ImportPage'
 type Page = 'home' | 'import'
 
 function App() {
+  useAppInit()
   const user = useAppStore((s) => s.user)
   const [currentPage, setCurrentPage] = useState<Page>('home')
 
