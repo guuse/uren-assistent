@@ -106,12 +106,10 @@ export function useImport(): ImportState {
       try {
         const calendarRepo = createCalendarRepository()
         const hasScope = await calendarRepo.hasCalendarScope()
-        console.log('[Calendar] hasCalendarScope:', hasScope)
         setHasCalendarScope(hasScope)
         if (hasScope) {
           const calendarUc = createFetchCalendarEventsUseCase()
           calendarEvents = await calendarUc.execute(startDate, endDate)
-          console.log('[Calendar] fetched events:', calendarEvents.length, calendarEvents.map(e => `${e.start.toISOString()} ${e.title}`))
         }
       } catch (err) {
         console.error('[Calendar] fetch failed:', err)

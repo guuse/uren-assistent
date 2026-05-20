@@ -44,10 +44,11 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
       const token = await this.getValidToken()
       if (!token) return false
       const res = await fetch(`${TOKEN_INFO_URL}?access_token=${encodeURIComponent(token)}`)
+      const data = await res.json() as { scope?: string; error?: string }
       if (!res.ok) return false
-      const data = await res.json() as { scope?: string }
       return (data.scope ?? '').includes(CALENDAR_SCOPE)
-    } catch {
+    } catch (err) {
+      console.error('[CalendarRepo] hasCalendarScope error:', err)
       return false
     }
   }
@@ -72,15 +73,21 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
       headers: { Authorization: `Bearer ${token}` },
     })
 
-    if (!res.ok) throw new Error(`Calendar API error: ${res.status}`)
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('[CalendarRepo] Calendar API error:', res.status, text)
+      throw new Error(`Calendar API error: ${res.status}`)
+    }
 
     const data = await res.json() as GoogleEventsListResponse
     const items = data.items ?? []
 
-    return items
+    const events = items
       .filter(ev => this.isAttending(ev))
       .map(ev => this.toCalendarEvent(ev))
       .filter((ev): ev is CalendarEvent => ev !== null)
+
+    return events
   }
 
   private isAttending(ev: GoogleEvent): boolean {
