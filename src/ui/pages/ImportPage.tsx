@@ -18,6 +18,7 @@ export default function ImportPage() {
     status, error, blocks, minVisits, setMinVisits,
     analyseFile, updateBlock, removeBlock, bookAll, bookingResults,
     selectedBlockIndex, openBlock, closeBlock, fetchServices,
+    hasCalendarScope,
   } = useImport()
 
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -119,6 +120,22 @@ export default function ImportPage() {
           {status === 'booking' && 'Bezig met boeken...'}
         </div>
       )}
+      {!hasCalendarScope && status !== 'idle' && (
+        <div className="mx-6 mt-3 p-3 rounded-lg text-sm flex items-center gap-2" style={{ background: '#1a1a2e', color: '#f59e0b', border: '1px solid #3d3020' }}>
+          <span>⚠️</span>
+          <span>
+            Geen toegang tot Google Agenda. Koppel je agenda opnieuw via{' '}
+            <a
+              href="#"
+              onClick={e => { e.preventDefault(); /* navigate to settings */ }}
+              style={{ color: '#6c63ff', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              Instellingen
+            </a>{' '}
+            om vergaderingen te importeren.
+          </span>
+        </div>
+      )}
 
       {/* Main content: sidebar + blocks */}
       {blocks.length > 0 && (
@@ -197,6 +214,11 @@ export default function ImportPage() {
                           )}
                           {result && result !== 'success' && (
                             <span className="text-xs" style={{ color: '#ff6584' }}>✗ Fout</span>
+                          )}
+                          {block.origin === 'calendar' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#1a2a3a', color: '#60a5fa' }}>
+                              📅 Vergadering
+                            </span>
                           )}
                         </div>
                       </button>
