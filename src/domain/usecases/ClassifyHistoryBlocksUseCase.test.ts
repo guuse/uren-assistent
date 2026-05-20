@@ -28,7 +28,7 @@ describe('ClassifyHistoryBlocksUseCase', () => {
       getAll: vi.fn().mockReturnValue({}),
     }
 
-    const mockCopilot = { classify: vi.fn() }
+    const mockCopilot = { classify: vi.fn(), classifyDay: vi.fn() }
     const uc = new ClassifyHistoryBlocksUseCase(mockCopilot, mockCache)
     const result = await uc.execute([block], [], [])
 

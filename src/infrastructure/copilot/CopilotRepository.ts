@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { ICopilotRepository, Project, Service } from '../../domain/repositories/ICopilotRepository'
+import type { ICopilotRepository, Project, Service, DayItem, DayClassificationResult } from '../../domain/repositories/ICopilotRepository'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
@@ -147,5 +147,120 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
       if (match?.note) classified.note = match.note
       return classified
     })
+  }
+
+  async classifyDay(
+    date: string,
+    items: DayItem[],
+    availableProjects: Project[],
+    availableServices: Service[],
+    cacheHints: Record<string, { projectName: string; serviceName: string }>,
+  ): Promise<DayClassificationResult[]> {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+
+    const projectList = availableProjects
+      .map(p => `- id: "${p.id}", name: "${p.name}"`)
+      .join('\n')
+    const serviceList = availableServices
+      .map(s => `- id: "${s.id}", name: "${s.name}", projectId: "${s.projectId}"`)
+      .join('\n')
+
+    const meetingItems = items.filter((i): i is DayItem & { kind: 'meeting' } => i.kind === 'meeting')
+    const standaloneItems = items.filter((i): i is DayItem & { kind: 'standalone' } => i.kind === 'standalone')
+
+    let meetingsSection = ''
+    if (meetingItems.length > 0) {
+      meetingsSection = '## Vergaderingen met browser-context\n\n'
+      for (const item of meetingItems) {
+        meetingsSection += `### [${item.index}] ${item.event.title} (${toTime(item.event.start)}–${toTime(item.event.end)})\n`
+        if (item.historyBlocks.length === 0) {
+          meetingsSection += `(geen browser-activiteit rondom deze vergadering)\n\n`
+        } else {
+          meetingsSection += `Browser-activiteit rondom deze vergadering:\n`
+          for (const b of item.historyBlocks) {
+            const titles = b.titles.slice(0, 3).join('", "')
+            meetingsSection += `- ${b.urlPattern} (${b.visitCount}x) — "${titles}"\n`
+          }
+          meetingsSection += '\n'
+        }
+      }
+    }
+
+    let standaloneSection = ''
+    if (standaloneItems.length > 0) {
+      standaloneSection = '## Losse browser-activiteit\n\n'
+      for (const item of standaloneItems) {
+        const b = item.block
+        standaloneSection += `### [${item.index}] ${b.firstVisitTime}–${b.lastVisitTime} (${b.hours}u)\n`
+        for (const url of b.urls.slice(0, 5)) {
+          standaloneSection += `- ${url} (${b.visitCount}x)\n`
+        }
+        const titles = b.titles.slice(0, 3).join('", "')
+        if (titles) standaloneSection += `  Titels: "${titles}"\n`
+        standaloneSection += '\n'
+      }
+    }
+
+    const hintLines = Object.entries(cacheHints)
+      .map(([key, val]) => `- ${key} → project: "${val.projectName}", dienst: "${val.serviceName}"`)
+      .join('\n')
+    const hintsSection = hintLines
+      ? `## Cache-hints (eerder geboekte patronen)\n${hintLines}\n\n`
+      : ''
+
+    const prompt = `Je bent een tijdregistratie-assistent die een developer helpt zijn werkuren te registreren.
+
+Datum: ${date}
+
+Voor elk genummerd item hieronder geef je één boekingsblok terug.
+- Vergadering-items: gebruik de vergader-duur voor startTime/endTime/hours
+- Losse items: gebruik de browse-duur
+
+${meetingsSection}${standaloneSection}${hintsSection}Beschikbare projecten:
+${projectList}
+
+Beschikbare diensten (gekoppeld aan projecten via projectId):
+${serviceList}
+
+Geef een JSON-array terug. Elk item heeft:
+- index (number, exact overeenkomend met het [N]-nummer hierboven)
+- blockName (string, leesbare naam max 60 tekens, bv. "Standup — PR review")
+- summary (string, korte samenvatting wat er gedaan is, max 120 tekens, Nederlands)
+- projectId (string | null, moet een van de beschikbare project-ID's zijn)
+- serviceId (string | null, moet een dienst-ID zijn waarvan projectId overeenkomt)
+- note (string, korte boekingsnotitie max 80 tekens)
+- confidence (number 0-1, hoe zeker je bent van de projectkeuze)
+
+Gebruik de cache-hints als leidraad maar overschrijf ze als de context duidelijk op een ander project wijst.
+Geef ALLEEN een geldige JSON-array terug, geen markdown, geen uitleg.`
+
+    const responseText = await invoke<string>('copilot_request', {
+      args: {
+        token: this.copilotToken,
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        }),
+      },
+    })
+
+    const data = JSON.parse(responseText) as CopilotResponse
+    const raw = data.choices[0]?.message.content ?? '[]'
+    const content = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+
+    let results: DayClassificationResult[]
+    try {
+      results = JSON.parse(content) as DayClassificationResult[]
+    } catch {
+      throw new Error('Copilot returned invalid JSON for classifyDay')
+    }
+
+    if (!Array.isArray(results)) {
+      throw new Error('Copilot classifyDay returned unexpected format (not an array)')
+    }
+
+    return results
   }
 }
