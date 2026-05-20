@@ -15,5 +15,5 @@ export function useAppInit(): void {
       }
     }
     void init()
-  }, [])
+  }, [setCopilotToken])
 }
