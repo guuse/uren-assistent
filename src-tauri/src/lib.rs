@@ -1,6 +1,7 @@
 mod commands;
 
 use commands::auth::start_google_oauth;
+use commands::copilot::copilot_request;
 use commands::keychain::{delete_secret, get_secret, set_secret};
 use commands::simplicate::simplicate_request;
 use commands::storage::ensure_app_data_dir;
@@ -16,8 +17,9 @@ pub fn run() {
             delete_secret,
             start_google_oauth,
             simplicate_request,
+            copilot_request,
             ensure_app_data_dir,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running tauri application")
 }

@@ -14,11 +14,10 @@ function blockStatusColor(block: ClassifiedBlock): string {
 export default function ImportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const projects = useAppStore(s => s.projects)
-  const services = useAppStore(s => s.services)
   const {
     status, error, blocks, minVisits, setMinVisits,
     analyseFile, updateBlock, removeBlock, bookAll, bookingResults,
-    selectedBlockIndex, openBlock, closeBlock,
+    selectedBlockIndex, openBlock, closeBlock, fetchServices,
   } = useImport()
 
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -222,7 +221,7 @@ export default function ImportPage() {
           key={selectedBlockIndex}
           block={selectedBlock}
           projects={projects}
-          services={services}
+          fetchServices={fetchServices}
           {...(bookingResults[selectedBlockIndex] !== undefined ? { bookingResult: bookingResults[selectedBlockIndex] } : {})}
           onSave={updates => updateBlock(selectedBlockIndex, updates)}
           onBook={() => void bookAll()}

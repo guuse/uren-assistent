@@ -1,9 +1,7 @@
-import { fetch } from '@tauri-apps/plugin-http'
+import { invoke } from '@tauri-apps/api/core'
 import type { ICopilotRepository, Project, Service } from '../../domain/repositories/ICopilotRepository'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
-
-const COPILOT_API_URL = 'https://api.githubcopilot.com/chat/completions'
 
 interface CopilotChoice {
   message: { content: string }
@@ -70,25 +68,18 @@ Return a JSON array. Each item must have:
 
 Return ONLY a valid JSON array, no markdown, no explanation.`
 
-    const response = await fetch(COPILOT_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.copilotToken}`,
-        'Content-Type': 'application/json',
-        'Copilot-Integration-Id': 'quiet-wizard',
+    const responseText = await invoke<string>('copilot_request', {
+      args: {
+        token: this.copilotToken,
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        }),
       },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-      }),
     })
 
-    if (!response.ok) {
-      throw new Error(`Copilot API error: ${response.status}`)
-    }
-
-    const data = await response.json() as CopilotResponse
+    const data = JSON.parse(responseText) as CopilotResponse
     const raw = data.choices[0]?.message.content ?? '[]'
     // Strip markdown code fences if present
     const content = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()

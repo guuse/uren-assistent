@@ -11,6 +11,7 @@ export function AccountSettings() {
   const user = useAppStore((s) => s.user)
   const setSimplicateData = useAppStore((s) => s.setSimplicateData)
   const setSimplicateEmployeeId = useAppStore((s) => s.setSimplicateEmployeeId)
+  const setCopilotToken = useAppStore((s) => s.setCopilotToken)
   const { logout } = useAuth()
 
   const [apiKey, setApiKey] = useState('')
@@ -20,14 +21,20 @@ export function AccountSettings() {
   const [testState, setTestState] = useState<TestState>('idle')
   const [testError, setTestError] = useState<string | null>(null)
 
+  const [copilotTokenInput, setCopilotTokenInput] = useState('')
+  const [hasCopilotToken, setHasCopilotToken] = useState(false)
+  const [copilotSaved, setCopilotSaved] = useState(false)
+
   useEffect(() => {
     async function loadExisting() {
       const key = await keychainRepo.get('simplicate-api-key')
       const secret = await keychainRepo.get('simplicate-api-secret')
       if (key && secret) setHasExisting(true)
+      const ct = await keychainRepo.get('copilot-token')
+      if (ct) { setHasCopilotToken(true); setCopilotToken(ct) }
     }
     void loadExisting()
-  }, [])
+  }, [setCopilotToken])
 
   async function save() {
     await keychainRepo.set('simplicate-api-key', apiKey)
@@ -72,6 +79,14 @@ export function AccountSettings() {
 
   const canSave = apiKey.length > 0 && apiSecret.length > 0
   const canTest = canSave || hasExisting
+
+  async function saveCopilotToken() {
+    await keychainRepo.set('copilot-token', copilotTokenInput)
+    setCopilotToken(copilotTokenInput)
+    setHasCopilotToken(true)
+    setCopilotSaved(true)
+    setTimeout(() => setCopilotSaved(false), 2000)
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -131,6 +146,35 @@ export function AccountSettings() {
             {testError ?? 'Verbinding mislukt'}
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="text-xs uppercase tracking-widest text-gray-400">GitHub Copilot token</div>
+        <div className="text-xs text-gray-500">
+          Verkrijg via: <code className="bg-[#1a1a2e] px-1 rounded">gh auth token</code> in een terminal.
+        </div>
+
+        {hasCopilotToken && copilotTokenInput === '' && (
+          <div className="text-xs text-gray-500 bg-[#1a1a2e] rounded-lg px-3 py-2 border border-gray-700">
+            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+          </div>
+        )}
+
+        <input
+          type="password"
+          value={copilotTokenInput}
+          onChange={e => setCopilotTokenInput(e.target.value)}
+          placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
+          className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+        />
+
+        <button
+          onClick={saveCopilotToken}
+          disabled={copilotTokenInput.length === 0}
+          className="bg-[#6c63ff] disabled:opacity-40 text-white text-sm font-medium py-2 rounded-lg"
+        >
+          {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
+        </button>
       </div>
 
       <button

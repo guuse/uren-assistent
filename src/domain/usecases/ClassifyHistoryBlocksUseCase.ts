@@ -47,23 +47,11 @@ export class ClassifyHistoryBlocksUseCase {
 
     let llmResults: ClassifiedBlock[] = []
     if (needsLLM.length > 0) {
-      try {
-        const raw = await this.copilot.classify(needsLLM, projects, services)
-        llmResults = raw.map(r => ({
-          ...r,
-          confidence: Math.min(1, Math.max(0, r.confidence)),
-        }))
-      } catch {
-        llmResults = needsLLM.map(block => ({
-          ...block,
-          blockName: block.urlPattern,
-          summary: '',
-          startTime: block.firstVisitTime,
-          endTime: addHoursToTime(block.firstVisitTime, block.hours),
-          confidence: 0,
-          origin: 'manual' as const,
-        }))
-      }
+      const raw = await this.copilot.classify(needsLLM, projects, services)
+      llmResults = raw.map(r => ({
+        ...r,
+        confidence: Math.min(1, Math.max(0, r.confidence)),
+      }))
     }
 
     const resultMap = new Map<string, ClassifiedBlock>()

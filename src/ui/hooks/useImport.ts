@@ -27,6 +27,7 @@ export interface ImportState {
   selectedBlockIndex: number | null
   openBlock: (index: number) => void
   closeBlock: () => void
+  fetchServices: (projectId: string) => Promise<{ id: string; name: string }[]>
 }
 
 export function useImport(): ImportState {
@@ -43,6 +44,14 @@ export function useImport(): ImportState {
 
   const closeBlock = useCallback(() => {
     setSelectedBlockIndex(null)
+  }, [])
+
+  const fetchServices = useCallback(async (projectId: string) => {
+    const apiKey = await keychainRepo.get('simplicate-api-key')
+    const apiSecret = await keychainRepo.get('simplicate-api-secret')
+    if (!apiKey || !apiSecret) return []
+    const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
+    return simplicateRepo.getServices(projectId)
   }, [])
 
   const projects = useAppStore(s => s.projects)
@@ -74,7 +83,12 @@ export function useImport(): ImportState {
         return
       }
 
-      const token = copilotToken ?? ''
+      const token = copilotToken
+      if (!token) {
+        setError('Stel eerst een GitHub Copilot token in via de instellingen.')
+        setStatus('idle')
+        return
+      }
       const copilotRepo = createCopilotRepository(token)
       const classifyUseCase = new ClassifyHistoryBlocksUseCase(copilotRepo, mappingCacheRepo)
 
@@ -85,7 +99,7 @@ export function useImport(): ImportState {
       if (e instanceof ParseError) {
         setError(e.message)
       } else {
-        setError('Er is een onverwachte fout opgetreden.')
+        setError(e instanceof Error ? e.message : String(e))
       }
       setStatus('idle')
     }
@@ -186,5 +200,6 @@ export function useImport(): ImportState {
     selectedBlockIndex,
     openBlock,
     closeBlock,
+    fetchServices,
   }
 }

@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { SearchableSelect } from './SearchableSelect'
 
 interface Project { id: string; name: string }
-interface Service { id: string; name: string; projectId: string }
+interface Service { id: string; name: string }
 
 interface Props {
   block: ClassifiedBlock
   projects: Project[]
-  services: Service[]
+  fetchServices: (projectId: string) => Promise<Service[]>
   bookingResult?: 'success' | 'error' | string
   onSave: (updates: Partial<ClassifiedBlock>) => void
   onBook: () => void
@@ -17,17 +17,19 @@ interface Props {
 }
 
 export default function ImportBlockModal({
-  block, projects, services, bookingResult, onSave, onBook, onRemove, onClose,
+  block, projects, fetchServices, bookingResult, onSave, onBook, onRemove, onClose,
 }: Props) {
   const [projectId, setProjectId] = useState(block.projectId ?? '')
   const [serviceId, setServiceId] = useState(block.serviceId ?? '')
   const [note, setNote] = useState(block.note ?? block.summary ?? '')
   const [startTime, setStartTime] = useState(block.startTime)
   const [endTime, setEndTime] = useState(block.endTime)
-  // No useEffect needed: parent renders this modal with key={selectedBlockIndex},
-  // so React remounts the component (and resets state) when a different block is opened.
+  const [projectServices, setProjectServices] = useState<Service[]>([])
 
-  const projectServices = services.filter(s => s.projectId === projectId)
+  useEffect(() => {
+    if (!projectId) { setProjectServices([]); return }
+    void fetchServices(projectId).then(setProjectServices)
+  }, [projectId, fetchServices])
   const canBook = !!projectId && !!serviceId && bookingResult !== 'success'
 
   function handleProjectChange(id: string) {

@@ -66,15 +66,11 @@ describe('ClassifyHistoryBlocksUseCase', () => {
     expect(result[0]!.confidence).toBe(0.85)
   })
 
-  it('marks blocks as manual when LLM fails', async () => {
+  it('propagates error when LLM fails', async () => {
     vi.mocked(mockCache.get).mockReturnValue(undefined)
     vi.mocked(mockCopilot.classify).mockRejectedValue(new Error('API unreachable'))
 
-    const result = await useCase.execute([block], projects, services)
-
-    expect(result[0]!.origin).toBe('manual')
-    expect(result[0]!.confidence).toBe(0)
-    expect(result[0]!.projectId).toBeUndefined()
+    await expect(useCase.execute([block], projects, services)).rejects.toThrow('API unreachable')
   })
 
   it('mixes cache hits and LLM calls in one batch', async () => {
