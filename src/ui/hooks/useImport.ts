@@ -8,10 +8,9 @@ import {
   createSimplicateRepository,
   createCalendarRepository,
   createFetchCalendarEventsUseCase,
-  createClassifyCalendarBlocksUseCase,
+  createGroupAndClassifyDayUseCase,
 } from '../../application/container'
 import { ParseBrowserHistoryUseCase, ParseError } from '../../domain/usecases/ParseBrowserHistoryUseCase'
-import { ClassifyHistoryBlocksUseCase } from '../../domain/usecases/ClassifyHistoryBlocksUseCase'
 import { BookTemplateUseCase } from '../../domain/usecases/BookTemplateUseCase'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
@@ -107,37 +106,39 @@ export function useImport(): ImportState {
       try {
         const calendarRepo = createCalendarRepository()
         const hasScope = await calendarRepo.hasCalendarScope()
+        console.log('[Calendar] hasCalendarScope:', hasScope)
         setHasCalendarScope(hasScope)
         if (hasScope) {
           const calendarUc = createFetchCalendarEventsUseCase()
           calendarEvents = await calendarUc.execute(startDate, endDate)
+          console.log('[Calendar] fetched events:', calendarEvents.length, calendarEvents.map(e => `${e.start.toISOString()} ${e.title}`))
         }
-      } catch {
+      } catch (err) {
+        console.error('[Calendar] fetch failed:', err)
         calendarEvents = []
       }
 
       setStatus('classifying')
 
       const copilotRepo = createCopilotRepository(token)
-      const classifyUseCase = new ClassifyHistoryBlocksUseCase(copilotRepo, mappingCacheRepo)
+      const groupAndClassifyUseCase = createGroupAndClassifyDayUseCase(copilotRepo, projects, services)
 
-      // Classify history blocks (with calendar context injected)
-      const classifiedHistory = await classifyUseCase.execute(
-        historyBlocks,
-        projects,
-        services,
-        calendarEvents,
-      )
+      // Group unique dates, classify each day
+      const uniqueDates = [...new Set(historyBlocks.map(b => b.date))].sort()
+      const allDayBlocks: ClassifiedBlock[] = []
 
-      // Classify calendar events as their own bookable blocks
-      let calendarBlocks: ClassifiedBlock[] = []
-      if (calendarEvents.length > 0) {
-        const classifyCalendarUc = createClassifyCalendarBlocksUseCase(copilotRepo)
-        calendarBlocks = await classifyCalendarUc.execute(calendarEvents, projects, services)
+      for (const date of uniqueDates) {
+        const dayBlocks = historyBlocks.filter(b => b.date === date)
+        const dayEvents = calendarEvents.filter(e => {
+          const evDate = `${e.start.getFullYear()}-${String(e.start.getMonth() + 1).padStart(2, '0')}-${String(e.start.getDate()).padStart(2, '0')}`
+          return evDate === date
+        })
+        const classified = await groupAndClassifyUseCase.execute(date, dayBlocks, dayEvents)
+        allDayBlocks.push(...classified)
       }
 
-      // Merge and sort by date + startTime
-      const allBlocks = [...classifiedHistory, ...calendarBlocks].sort((a, b) => {
+      // Sort by date + startTime
+      const allBlocks = allDayBlocks.sort((a, b) => {
         const dateCompare = a.date.localeCompare(b.date)
         if (dateCompare !== 0) return dateCompare
         return a.startTime.localeCompare(b.startTime)

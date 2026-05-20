@@ -12,8 +12,10 @@ import { ParseBrowserHistoryUseCase } from '../domain/usecases/ParseBrowserHisto
 import { ClassifyHistoryBlocksUseCase } from '../domain/usecases/ClassifyHistoryBlocksUseCase'
 import { FetchCalendarEventsUseCase } from '../domain/usecases/FetchCalendarEventsUseCase'
 import { ClassifyCalendarBlocksUseCase } from '../domain/usecases/ClassifyCalendarBlocksUseCase'
+import { GroupAndClassifyDayUseCase } from '../domain/usecases/GroupAndClassifyDayUseCase'
 import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 import type { ICopilotRepository } from '../domain/repositories/ICopilotRepository'
+import type { Project, Service } from '../domain/repositories/ICopilotRepository'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string
@@ -42,6 +44,14 @@ export function createFetchCalendarEventsUseCase() {
 
 export function createClassifyCalendarBlocksUseCase(copilotRepo: ICopilotRepository) {
   return new ClassifyCalendarBlocksUseCase(copilotRepo)
+}
+
+export function createGroupAndClassifyDayUseCase(
+  copilotRepo: ICopilotRepository,
+  projects: Project[],
+  services: Service[],
+): GroupAndClassifyDayUseCase {
+  return new GroupAndClassifyDayUseCase(copilotRepo, mappingCacheRepo, projects, services)
 }
 
 // Use cases (stateless, created with injected repos)
