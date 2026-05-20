@@ -1,5 +1,6 @@
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
+import type { CalendarEvent } from '../entities/CalendarEvent'
 
 export interface Project {
   id: string
@@ -17,5 +18,6 @@ export interface ICopilotRepository {
     blocks: HistoryBlock[],
     availableProjects: Project[],
     availableServices: Service[],
+    calendarEvents?: CalendarEvent[],
   ): Promise<ClassifiedBlock[]>
 }

@@ -1,5 +1,6 @@
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
+import type { CalendarEvent } from '../entities/CalendarEvent'
 import type { ICopilotRepository, Project, Service } from '../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
 
@@ -9,6 +10,24 @@ function addHoursToTime(time: string, hours: number): string {
   const endH = Math.floor(totalMinutes / 60) % 24
   const endM = totalMinutes % 60
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+}
+
+function getOverlappingMeetings(block: HistoryBlock, events: CalendarEvent[]): CalendarEvent[] {
+  const toMinutes = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number) as [number, number]
+    return h * 60 + m
+  }
+  const blockStart = toMinutes(block.firstVisitTime)
+  const blockEnd = toMinutes(block.lastVisitTime || addHoursToTime(block.firstVisitTime, block.hours))
+
+  return events.filter(ev => {
+    const evDate = ev.start.toISOString().slice(0, 10)
+    if (evDate !== block.date) return false
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const evStart = toMinutes(`${pad(ev.start.getHours())}:${pad(ev.start.getMinutes())}`)
+    const evEnd = toMinutes(`${pad(ev.end.getHours())}:${pad(ev.end.getMinutes())}`)
+    return evStart < blockEnd && evEnd > blockStart
+  })
 }
 
 export class ClassifyHistoryBlocksUseCase {
@@ -21,6 +40,7 @@ export class ClassifyHistoryBlocksUseCase {
     blocks: HistoryBlock[],
     projects: Project[],
     services: Service[],
+    calendarEvents: CalendarEvent[] = [],
   ): Promise<ClassifiedBlock[]> {
     const cacheHits: ClassifiedBlock[] = []
     const needsLLM: HistoryBlock[] = []
@@ -39,6 +59,7 @@ export class ClassifyHistoryBlocksUseCase {
           note: cached.note,
           confidence: 1.0,
           origin: 'cache',
+          overlappingMeetings: getOverlappingMeetings(block, calendarEvents),
         })
       } else {
         needsLLM.push(block)
@@ -47,7 +68,12 @@ export class ClassifyHistoryBlocksUseCase {
 
     let llmResults: ClassifiedBlock[] = []
     if (needsLLM.length > 0) {
-      const raw = await this.copilot.classify(needsLLM, projects, services)
+      // Attach overlapping meetings to each block before sending to LLM
+      const blocksWithMeetings = needsLLM.map(b => ({
+        ...b,
+        overlappingMeetings: getOverlappingMeetings(b, calendarEvents),
+      }))
+      const raw = await this.copilot.classify(blocksWithMeetings, projects, services, calendarEvents)
       llmResults = raw.map(r => ({
         ...r,
         confidence: Math.min(1, Math.max(0, r.confidence)),

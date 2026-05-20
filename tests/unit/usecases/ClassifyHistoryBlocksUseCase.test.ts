@@ -61,7 +61,12 @@ describe('ClassifyHistoryBlocksUseCase', () => {
 
     const result = await useCase.execute([block], projects, services)
 
-    expect(mockCopilot.classify).toHaveBeenCalledWith([block], projects, services)
+    expect(mockCopilot.classify).toHaveBeenCalledWith(
+      [expect.objectContaining({ urlPattern: block.urlPattern, overlappingMeetings: [] })],
+      projects,
+      services,
+      [],
+    )
     expect(result[0]!.origin).toBe('llm')
     expect(result[0]!.confidence).toBe(0.85)
   })
@@ -98,7 +103,12 @@ describe('ClassifyHistoryBlocksUseCase', () => {
     expect(result).toHaveLength(2)
     expect(result.find(r => r.urlPattern === 'github.com/Harborn-digital/eindhoven-doet')!.origin).toBe('cache')
     expect(result.find(r => r.urlPattern === 'hosting.harborn.com/dashboard')!.origin).toBe('llm')
-    expect(mockCopilot.classify).toHaveBeenCalledWith([unknownBlock], projects, services)
+    expect(mockCopilot.classify).toHaveBeenCalledWith(
+      [expect.objectContaining({ urlPattern: unknownBlock.urlPattern, overlappingMeetings: [] })],
+      projects,
+      services,
+      [],
+    )
   })
 
   it('sets startTime and endTime from firstVisitTime and hours', async () => {
