@@ -19,9 +19,8 @@ function toMinutes(hhmm: string): number {
 }
 
 function eventToMinutes(ev: CalendarEvent): { start: number; end: number; mid: number } {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const start = toMinutes(`${pad(ev.start.getHours())}:${pad(ev.start.getMinutes())}`)
-  const end = toMinutes(`${pad(ev.end.getHours())}:${pad(ev.end.getMinutes())}`)
+  const start = ev.start.getHours() * 60 + ev.start.getMinutes()
+  const end = ev.end.getHours() * 60 + ev.end.getMinutes()
   return { start, end, mid: (start + end) / 2 }
 }
 
@@ -45,6 +44,8 @@ export function attachHistoryToMeetings(
     const candidates: { idx: number; distance: number }[] = []
     for (let i = 0; i < eventWindows.length; i++) {
       const ev = eventWindows[i]!
+      // Attach if block overlaps the event window extended by ATTACH_MINUTES on each side.
+      // This captures both: browsing *before* a meeting starts, and wrap-up *after* it ends.
       const attachable =
         blockStart < ev.end + ATTACH_MINUTES &&
         blockEnd > ev.start - ATTACH_MINUTES

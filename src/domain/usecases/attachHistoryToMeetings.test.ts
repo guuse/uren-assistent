@@ -89,4 +89,12 @@ describe('attachHistoryToMeetings', () => {
     const totalClaimed = groups.reduce((sum, g) => sum + g.historyBlocks.length, 0)
     expect(totalClaimed).toBe(1)
   })
+
+  it('claims a block within 15 min after a meeting ends', () => {
+    const blocks = [makeBlock('09:20', '09:25')]
+    const events = [makeEvent('Standup', '09:00', '09:15')]
+    const { groups, unclaimed } = attachHistoryToMeetings(blocks, events)
+    expect(groups[0]!.historyBlocks).toHaveLength(1)
+    expect(unclaimed).toHaveLength(0)
+  })
 })
