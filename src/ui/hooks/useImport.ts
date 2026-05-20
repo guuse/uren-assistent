@@ -1,11 +1,20 @@
 // src/ui/hooks/useImport.ts
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { mappingCacheRepo, createCopilotRepository, keychainRepo, createSimplicateRepository } from '../../application/container'
+import {
+  mappingCacheRepo,
+  createCopilotRepository,
+  keychainRepo,
+  createSimplicateRepository,
+  createCalendarRepository,
+  createFetchCalendarEventsUseCase,
+  createClassifyCalendarBlocksUseCase,
+} from '../../application/container'
 import { ParseBrowserHistoryUseCase, ParseError } from '../../domain/usecases/ParseBrowserHistoryUseCase'
 import { ClassifyHistoryBlocksUseCase } from '../../domain/usecases/ClassifyHistoryBlocksUseCase'
 import { BookTemplateUseCase } from '../../domain/usecases/BookTemplateUseCase'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
+import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 import type { CachedMapping } from '../../domain/repositories/IMappingCacheRepository'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
@@ -28,6 +37,7 @@ export interface ImportState {
   openBlock: (index: number) => void
   closeBlock: () => void
   fetchServices: (projectId: string) => Promise<{ id: string; name: string }[]>
+  hasCalendarScope: boolean
 }
 
 export function useImport(): ImportState {
@@ -37,6 +47,7 @@ export function useImport(): ImportState {
   const [minVisits, setMinVisits] = useState(3)
   const [bookingResults, setBookingResults] = useState<Record<number, 'success' | 'error' | string>>({})
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null)
+  const [hasCalendarScope, setHasCalendarScope] = useState(true)
 
   const openBlock = useCallback((index: number) => {
     setSelectedBlockIndex(index)
@@ -57,8 +68,6 @@ export function useImport(): ImportState {
   const projects = useAppStore(s => s.projects)
   const services = useAppStore(s => s.services)
   const copilotToken = useAppStore(s => s.copilotToken)
-  // TODO: store.user is not yet in appStore — using keychainRepo for employee lookup in bookAll
-  // store.simplicateEmployeeId is also missing; we retrieve employee id at booking time
 
   const analyseFile = useCallback(async (csvContent: string) => {
     setError(null)
@@ -75,8 +84,6 @@ export function useImport(): ImportState {
         return
       }
 
-      setStatus('classifying')
-
       if (projects.length === 0) {
         setError('Laad eerst je projecten via de instellingen.')
         setStatus('idle')
@@ -89,11 +96,54 @@ export function useImport(): ImportState {
         setStatus('idle')
         return
       }
+
+      // Determine date range from parsed blocks
+      const dates = historyBlocks.map(b => b.date).sort()
+      const startDate = new Date(dates[0]! + 'T00:00:00')
+      const endDate = new Date(dates[dates.length - 1]! + 'T23:59:59')
+
+      // Fetch calendar events — never blocks the import on failure
+      let calendarEvents: CalendarEvent[] = []
+      try {
+        const calendarRepo = createCalendarRepository()
+        const hasScope = await calendarRepo.hasCalendarScope()
+        setHasCalendarScope(hasScope)
+        if (hasScope) {
+          const calendarUc = createFetchCalendarEventsUseCase()
+          calendarEvents = await calendarUc.execute(startDate, endDate)
+        }
+      } catch {
+        calendarEvents = []
+      }
+
+      setStatus('classifying')
+
       const copilotRepo = createCopilotRepository(token)
       const classifyUseCase = new ClassifyHistoryBlocksUseCase(copilotRepo, mappingCacheRepo)
 
-      const classified = await classifyUseCase.execute(historyBlocks, projects, services)
-      setBlocks(classified)
+      // Classify history blocks (with calendar context injected)
+      const classifiedHistory = await classifyUseCase.execute(
+        historyBlocks,
+        projects,
+        services,
+        calendarEvents,
+      )
+
+      // Classify calendar events as their own bookable blocks
+      let calendarBlocks: ClassifiedBlock[] = []
+      if (calendarEvents.length > 0) {
+        const classifyCalendarUc = createClassifyCalendarBlocksUseCase(copilotRepo)
+        calendarBlocks = await classifyCalendarUc.execute(calendarEvents, projects, services)
+      }
+
+      // Merge and sort by date + startTime
+      const allBlocks = [...classifiedHistory, ...calendarBlocks].sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date)
+        if (dateCompare !== 0) return dateCompare
+        return a.startTime.localeCompare(b.startTime)
+      })
+
+      setBlocks(allBlocks)
       setStatus('ready')
     } catch (e) {
       if (e instanceof ParseError) {
@@ -134,7 +184,6 @@ export function useImport(): ImportState {
     setStatus('booking')
     const results: Record<number, 'success' | 'error' | string> = {}
 
-    // Retrieve credentials at booking time (same pattern as useBooking)
     const apiKey = await keychainRepo.get('simplicate-api-key')
     const apiSecret = await keychainRepo.get('simplicate-api-secret')
     const employeeId = await keychainRepo.get('simplicate-employee-id')
@@ -156,7 +205,7 @@ export function useImport(): ImportState {
         await bookTemplate.execute({
           template: {
             id: `import-${i}`,
-            name: block.urlPattern,
+            name: block.blockName,
             type: 'single',
             color: '#6c63ff',
             projectId: block.projectId,
@@ -169,13 +218,16 @@ export function useImport(): ImportState {
           weekStartDate: block.date,
         })
         results[i] = 'success'
-        await mappingCacheRepo.set(block.urlPattern, {
-          projectId: block.projectId,
-          serviceId: block.serviceId,
-          note: block.note ?? '',
-          blockName: block.blockName,
-          summary: block.summary,
-        })
+        // Only cache mappings for non-calendar blocks (calendar blocks have synthetic urlPattern)
+        if (block.origin !== 'calendar') {
+          await mappingCacheRepo.set(block.urlPattern, {
+            projectId: block.projectId,
+            serviceId: block.serviceId,
+            note: block.note ?? '',
+            blockName: block.blockName,
+            summary: block.summary,
+          })
+        }
       } catch (e) {
         results[i] = e instanceof Error ? e.message : 'error'
       }
@@ -201,5 +253,6 @@ export function useImport(): ImportState {
     openBlock,
     closeBlock,
     fetchServices,
+    hasCalendarScope,
   }
 }
