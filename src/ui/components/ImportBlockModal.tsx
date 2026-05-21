@@ -68,104 +68,107 @@ export default function ImportBlockModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
-        className="rounded-xl p-5 w-[380px] flex flex-col gap-4 text-sm shadow-2xl"
-        style={{ background: '#2d2d44' }}
+        className="rounded-xl w-[380px] flex flex-col text-sm shadow-2xl"
+        style={{ background: '#2d2d44', maxHeight: 'calc(100vh - 48px)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="text-white font-bold text-base leading-tight">{block.blockName}</div>
-            <div className="text-gray-400 text-xs mt-1">
-              {block.date} &middot; {block.origin === 'cache' ? 'cache' : block.origin === 'manual' ? 'handmatig' : 'Copilot'}
+        {/* Scrollable content */}
+        <div className="flex flex-col gap-4 p-5 overflow-y-auto flex-1 min-h-0">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="text-white font-bold text-base leading-tight">{block.blockName}</div>
+              <div className="text-gray-400 text-xs mt-1">
+                {block.date} &middot; {block.origin === 'cache' ? 'cache' : block.origin === 'manual' ? 'handmatig' : 'Copilot'}
+              </div>
             </div>
+            <button className="text-gray-500 hover:text-white text-lg leading-none" onClick={onClose}>✕</button>
           </div>
-          <button className="text-gray-500 hover:text-white text-lg leading-none" onClick={onClose}>✕</button>
-        </div>
 
-        {/* Evidence */}
-        <EvidencePanel rawTitles={block.rawTitles} rawUrls={block.rawUrls} />
+          {/* Evidence */}
+          <EvidencePanel rawTitles={block.rawTitles} rawUrls={block.rawUrls} />
 
-        {/* LLM summary */}
-        {block.summary && (
-          <div
-            className="rounded-lg p-3"
-            style={{ background: '#1a1a2e', borderLeft: `3px solid ${statusBorderColor}` }}
-          >
-            <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Samenvatting</div>
-            <div className="text-gray-300 text-xs leading-relaxed">{block.summary}</div>
-          </div>
-        )}
-
-        {/* Times */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Van</div>
-            <input
-              type="time"
-              value={startTime}
-              onChange={e => handleStartTimeChange(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-white text-sm border"
-              style={{ background: '#1a1a2e', borderColor: '#444' }}
-            />
-          </div>
-          <div className="flex-1">
-            <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Tot</div>
-            <input
-              type="time"
-              value={endTime}
-              onChange={e => handleEndTimeChange(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-white text-sm border"
-              style={{ background: '#1a1a2e', borderColor: '#444' }}
-            />
-          </div>
-          <div className="flex-none w-16">
-            <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Uren</div>
+          {/* LLM summary */}
+          {block.summary && (
             <div
-              className="rounded-lg px-3 py-2 text-center font-bold text-sm"
-              style={{ background: '#1a1a2e', color: '#6c63ff', border: '1px solid #444' }}
+              className="rounded-lg p-3"
+              style={{ background: '#1a1a2e', borderLeft: `3px solid ${statusBorderColor}` }}
             >
-              {block.hours}u
+              <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Samenvatting</div>
+              <div className="text-gray-300 text-xs leading-relaxed">{block.summary}</div>
             </div>
+          )}
+
+          {/* Times */}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Van</div>
+              <input
+                type="time"
+                value={startTime}
+                onChange={e => handleStartTimeChange(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-white text-sm border"
+                style={{ background: '#1a1a2e', borderColor: '#444' }}
+              />
+            </div>
+            <div className="flex-1">
+              <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Tot</div>
+              <input
+                type="time"
+                value={endTime}
+                onChange={e => handleEndTimeChange(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-white text-sm border"
+                style={{ background: '#1a1a2e', borderColor: '#444' }}
+              />
+            </div>
+            <div className="flex-none w-16">
+              <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Uren</div>
+              <div
+                className="rounded-lg px-3 py-2 text-center font-bold text-sm"
+                style={{ background: '#1a1a2e', color: '#6c63ff', border: '1px solid #444' }}
+              >
+                {block.hours}u
+              </div>
+            </div>
+          </div>
+
+          {/* Project */}
+          <SearchableSelect
+            label={`Project${!projectId ? ' *' : ''}`}
+            options={projects.map(p => ({ id: p.id, label: p.name }))}
+            value={projectId}
+            onChange={handleProjectChange}
+            placeholder="Selecteer project..."
+          />
+
+          {/* Service */}
+          <div style={{ opacity: projectId ? 1 : 0.4 }}>
+            <SearchableSelect
+              label={`Dienst${!serviceId ? ' *' : ''}`}
+              options={projectServices.map(s => ({ id: s.id, label: s.name }))}
+              value={serviceId}
+              onChange={handleServiceChange}
+              placeholder={projectId ? 'Selecteer dienst...' : 'Kies eerst een project'}
+              disabled={!projectId}
+            />
+          </div>
+
+          {/* Note */}
+          <div>
+            <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Toelichting</div>
+            <input
+              type="text"
+              value={note}
+              onChange={e => handleNoteChange(e.target.value)}
+              placeholder="Korte omschrijving..."
+              className="w-full rounded-lg px-3 py-2 text-white text-sm border"
+              style={{ background: '#1a1a2e', borderColor: '#444' }}
+            />
           </div>
         </div>
 
-        {/* Project */}
-        <SearchableSelect
-          label={`Project${!projectId ? ' *' : ''}`}
-          options={projects.map(p => ({ id: p.id, label: p.name }))}
-          value={projectId}
-          onChange={handleProjectChange}
-          placeholder="Selecteer project..."
-        />
-
-        {/* Service */}
-        <div style={{ opacity: projectId ? 1 : 0.4 }}>
-          <SearchableSelect
-            label={`Dienst${!serviceId ? ' *' : ''}`}
-            options={projectServices.map(s => ({ id: s.id, label: s.name }))}
-            value={serviceId}
-            onChange={handleServiceChange}
-            placeholder={projectId ? 'Selecteer dienst...' : 'Kies eerst een project'}
-            disabled={!projectId}
-          />
-        </div>
-
-        {/* Note */}
-        <div>
-          <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Toelichting</div>
-          <input
-            type="text"
-            value={note}
-            onChange={e => handleNoteChange(e.target.value)}
-            placeholder="Korte omschrijving..."
-            className="w-full rounded-lg px-3 py-2 text-white text-sm border"
-            style={{ background: '#1a1a2e', borderColor: '#444' }}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-1">
+        {/* Actions — fixed at bottom */}
+        <div className="flex gap-2 px-5 py-4 border-t" style={{ borderColor: '#3d3d5c' }}>
           <button
             onClick={onRemove}
             className="flex-none px-3 py-2 rounded-lg text-xs font-medium"
