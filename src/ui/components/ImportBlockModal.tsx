@@ -94,11 +94,6 @@ export default function ImportBlockModal({
           >
             <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Samenvatting</div>
             <div className="text-gray-300 text-xs leading-relaxed">{block.summary}</div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {block.urls.slice(0, 4).map(u => (
-                <span key={u} className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#252540', color: '#888' }}>{u}</span>
-              ))}
-            </div>
           </div>
         )}
 
