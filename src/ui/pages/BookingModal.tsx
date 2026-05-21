@@ -35,10 +35,10 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
   if (booking.status === 'success') {
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-[#2d2d44] rounded-xl p-6 w-80 text-center flex flex-col gap-4">
+        <div className="bg-white rounded-xl p-6 w-80 text-center flex flex-col gap-4">
           <div className="text-green-400 text-4xl">✓</div>
-          <div className="text-white font-semibold">Uren geboekt!</div>
-          <button onClick={onClose} className="bg-[#6c63ff] text-white py-2 rounded-lg text-sm font-medium">
+          <div className="text-[#3a3530] font-semibold">Uren geboekt!</div>
+          <button onClick={onClose} className="bg-[#3a3530] text-[#faf8f4] py-2 rounded-lg text-sm font-medium">
             Sluiten
           </button>
         </div>
@@ -48,22 +48,22 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#2d2d44] rounded-xl p-6 w-96 flex flex-col gap-4">
+      <div className="bg-white rounded-xl p-6 w-96 flex flex-col gap-4">
         <div className="flex justify-between items-center">
-          <div className="text-white font-bold">{template.name}</div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg">✕</button>
+          <div className="text-[#3a3530] font-bold">{template.name}</div>
+          <button onClick={onClose} className="text-[#c0b8b0] hover:text-[#3a3530] text-lg">✕</button>
         </div>
 
         {/* Date + time pickers: shown for quick book or when template has no fixed times */}
         {showTimePickers && (
           <>
             <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-widest text-gray-400">Datum</label>
+              <label className="text-xs uppercase tracking-widest text-[#a09890]">Datum</label>
               <input
                 type="date"
                 value={booking.weekStartDate}
                 onChange={(e) => booking.setWeekStartDate(e.target.value)}
-                className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+                className="bg-[#f2ede6] text-[#3a3530] text-sm rounded-lg px-3 py-2 border border-[#e8e2d9] focus:border-[#a09890] focus:outline-none"
               />
             </div>
             <div className="flex gap-3">
@@ -124,7 +124,7 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
         {/* Week selector for recurring templates (not shown when time pickers are visible) */}
         {!showTimePickers && isRecurringTemplate(template) && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-widest text-gray-400">Week</label>
+            <label className="text-xs uppercase tracking-widest text-[#a09890]">Week</label>
             <div className="flex gap-2">
               {[0, -1].map((offset) => {
                 const monday = getMondayOfWeek(offset)
@@ -135,8 +135,8 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
                     onClick={() => booking.setWeekStartDate(monday)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       booking.weekStartDate === monday
-                        ? 'bg-[#6c63ff] text-white'
-                        : 'bg-[#1a1a2e] text-gray-400 hover:text-white'
+                        ? 'bg-[#3a3530] text-[#faf8f4]'
+                        : 'bg-[#f2ede6] text-[#a09890] hover:text-[#3a3530]'
                     }`}
                   >
                     {label}
@@ -149,13 +149,13 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
 
         {/* Note */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs uppercase tracking-widest text-gray-400">Toelichting</label>
+          <label className="text-xs uppercase tracking-widest text-[#a09890]">Toelichting</label>
           <input
             type="text"
             value={booking.note}
             onChange={(e) => booking.setNote(e.target.value)}
             placeholder="Optioneel"
-            className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+            className="bg-[#f2ede6] text-[#3a3530] text-sm rounded-lg px-3 py-2 border border-[#e8e2d9] focus:border-[#a09890] focus:outline-none"
           />
         </div>
 
@@ -168,7 +168,7 @@ export function BookingModal({ template, onClose, isQuickBook = false }: Props) 
         <button
           onClick={booking.book}
           disabled={!booking.canBook || booking.status === 'loading'}
-          className="bg-[#6c63ff] hover:bg-[#5a52e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
+          className="bg-[#3a3530] hover:bg-[#2e2b26] disabled:opacity-40 disabled:cursor-not-allowed text-[#faf8f4] font-semibold py-2.5 rounded-lg transition-colors text-sm"
         >
           {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
         </button>
