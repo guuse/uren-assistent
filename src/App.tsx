@@ -4,6 +4,8 @@ import { useAppInit } from './ui/hooks/useAppInit'
 import { LoginPage } from './ui/pages/LoginPage'
 import { HomePage } from './ui/pages/Home'
 import ImportPage from './ui/pages/ImportPage'
+import { Sidebar } from './ui/components/Sidebar'
+import { SettingsPage } from './ui/pages/Settings/SettingsPage'
 
 type Page = 'home' | 'import'
 
@@ -11,38 +13,28 @@ function App() {
   useAppInit()
   const user = useAppStore((s) => s.user)
   const [currentPage, setCurrentPage] = useState<Page>('home')
+  const [showSettings, setShowSettings] = useState(false)
 
-  if (!user) {
-    return <LoginPage />
+  if (!user) return <LoginPage />
+
+  if (showSettings) {
+    return (
+      <div className="h-screen flex overflow-hidden bg-[#faf8f4]">
+        <Sidebar current={currentPage} onNavigate={setCurrentPage} onSettings={() => setShowSettings(true)} />
+        <div className="flex-1 overflow-hidden">
+          <SettingsPage onBack={() => setShowSettings(false)} />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
-        <button
-          onClick={() => setCurrentPage('home')}
-          className={`text-sm font-medium px-3 py-1.5 rounded transition-colors ${
-            currentPage === 'home'
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Home
-        </button>
-        <button
-          onClick={() => setCurrentPage('import')}
-          className={`text-sm font-medium px-3 py-1.5 rounded transition-colors ${
-            currentPage === 'import'
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Importeer
-        </button>
-      </nav>
-
-      {currentPage === 'home' && <div className="flex-1 overflow-hidden"><HomePage /></div>}
-      {currentPage === 'import' && <div className="flex-1 overflow-hidden"><ImportPage /></div>}
+    <div className="h-screen flex overflow-hidden bg-[#faf8f4]">
+      <Sidebar current={currentPage} onNavigate={setCurrentPage} onSettings={() => setShowSettings(true)} />
+      <div className="flex-1 overflow-hidden">
+        {currentPage === 'home' && <HomePage onOpenSettings={() => setShowSettings(true)} />}
+        {currentPage === 'import' && <ImportPage />}
+      </div>
     </div>
   )
 }
