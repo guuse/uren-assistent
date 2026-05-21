@@ -11,4 +11,6 @@ export interface ClassifiedBlock extends HistoryBlock {
   confidence: number
   origin: 'llm' | 'cache' | 'manual' | 'calendar'
   overlappingMeetings?: import('./CalendarEvent').CalendarEvent[]
+  rawTitles?: string[]
+  rawUrls?: string[]
 }
