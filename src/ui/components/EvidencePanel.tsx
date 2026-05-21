@@ -30,7 +30,7 @@ export default function EvidencePanel({ rawTitles, rawUrls }: Props) {
       <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Wat je deed</div>
       <ul className="flex flex-col gap-1.5">
         {hasUrls && rawUrls!.map((url, i) => (
-          <li key={i} className="flex flex-col gap-0.5">
+          <li key={url} className="flex flex-col gap-0.5">
             <span className="text-xs font-mono" style={{ color: '#6c63ff' }}>
               {displayUrl(url)}
             </span>
@@ -41,8 +41,8 @@ export default function EvidencePanel({ rawTitles, rawUrls }: Props) {
             )}
           </li>
         ))}
-        {hasTitles && !hasUrls && rawTitles!.map((title, i) => (
-          <li key={i} className="text-gray-400 text-xs leading-tight">
+        {hasTitles && !hasUrls && rawTitles!.map((title) => (
+          <li key={title} className="text-gray-400 text-xs leading-tight">
             {truncate(title, 80)}
           </li>
         ))}
