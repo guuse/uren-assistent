@@ -4,7 +4,7 @@ import { isRecurringTemplate, isWeeklyBlockTemplate } from '../../domain/entitie
 interface Props {
   template: Template
   onBook: (template: Template) => void
-  onEdit: (template: Template) => void
+  onEdit: () => void
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -30,29 +30,29 @@ function actionLabel(template: Template): string {
 export function TemplateCard({ template, onBook, onEdit }: Props) {
   return (
     <div
-      className="bg-[#2d2d44] rounded-xl p-4 flex flex-col gap-2 cursor-pointer group hover:bg-[#35355a] transition-colors"
-      style={{ borderLeft: `3px solid ${template.color}` }}
+      className="bg-white border border-[#e8e2d9] rounded-[10px] p-[14px] flex flex-col gap-2 cursor-pointer group hover:border-[#d0c9c0] transition-colors"
     >
       <div className="flex items-start justify-between">
-        <div className="text-white font-semibold text-sm">{template.name}</div>
+        <div
+          className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+          style={{ backgroundColor: template.color }}
+        />
         <button
-          onClick={(e) => { e.stopPropagation(); onEdit(template) }}
-          className="text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          className="text-[#c8c0b8] hover:text-[#a09890] opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
+          title="Bewerken"
         >
           ✏
         </button>
       </div>
-      <div className="text-gray-400 text-xs">{templateSubtitle(template)}</div>
-      {(template.projectId ?? template.serviceId) ? (
-        <div className="text-gray-500 text-xs">
-          {template.projectId ?? '—'} · {template.serviceId ?? '—'}
-        </div>
-      ) : (
-        <div className="text-amber-400 text-xs">⚠ Velden ontbreken</div>
+      <div className="text-[#3a3530] text-[12px] font-semibold leading-tight">{template.name}</div>
+      <div className="text-[#a09890] text-[11px]">{templateSubtitle(template)}</div>
+      {!(template.projectId ?? template.serviceId) && (
+        <div className="text-[#c4956a] text-[10px]">Velden ontbreken</div>
       )}
       <button
         onClick={() => onBook(template)}
-        className="mt-1 text-white text-xs font-medium py-1.5 px-3 rounded-md self-start transition-colors"
+        className="mt-1 text-[#faf8f4] text-[10px] font-semibold py-[5px] px-[10px] rounded-md self-start transition-opacity hover:opacity-80 cursor-pointer"
         style={{ backgroundColor: template.color }}
       >
         {actionLabel(template)}
