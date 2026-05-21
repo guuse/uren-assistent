@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { SearchableSelect } from './SearchableSelect'
+import EvidencePanel from './EvidencePanel'
 
 interface Project { id: string; name: string }
 interface Service { id: string; name: string }
@@ -81,6 +82,9 @@ export default function ImportBlockModal({
           </div>
           <button className="text-gray-500 hover:text-white text-lg leading-none" onClick={onClose}>✕</button>
         </div>
+
+        {/* Evidence */}
+        <EvidencePanel rawTitles={block.rawTitles} rawUrls={block.rawUrls} />
 
         {/* LLM summary */}
         {block.summary && (
