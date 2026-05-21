@@ -3,10 +3,6 @@ interface Props {
   rawUrls?: string[] | undefined
 }
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max) + '…' : text
-}
-
 function displayUrl(url: string): string {
   try {
     const u = new URL(url)
@@ -16,34 +12,33 @@ function displayUrl(url: string): string {
   }
 }
 
-export default function EvidencePanel({ rawTitles, rawUrls }: Props) {
-  const hasTitles = rawTitles && rawTitles.length > 0
-  const hasUrls = rawUrls && rawUrls.length > 0
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max) + '…' : text
+}
 
-  if (!hasTitles && !hasUrls) return null
+export default function EvidencePanel({ rawTitles, rawUrls }: Props) {
+  const hasUrls = rawUrls && rawUrls.length > 0
+  const hasTitles = rawTitles && rawTitles.length > 0
+
+  if (!hasUrls && !hasTitles) return null
+
+  const items = hasUrls ? rawUrls!.slice(0, 5) : rawTitles!.slice(0, 5)
 
   return (
-    <div
-      className="rounded-lg p-3"
-      style={{ background: '#1a1a2e', borderLeft: '3px solid #444' }}
-    >
-      <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Wat je deed</div>
-      <ul className="flex flex-col gap-1.5">
-        {hasUrls && rawUrls!.map((url, i) => (
-          <li key={url} className="flex flex-col gap-0.5">
-            <span className="text-xs font-mono" style={{ color: '#6c63ff' }}>
-              {displayUrl(url)}
+    <div className="bg-[#faf8f4] border border-[#e8e2d9] rounded-lg px-3 py-2.5">
+      <div className="text-[#c0b8b0] text-[9px] font-semibold uppercase tracking-[0.07em] mb-1.5">
+        Wat je deed
+      </div>
+      <ul className="flex flex-col gap-1">
+        {items.map((item, i) => (
+          <li key={item} className="flex items-center gap-1.5 min-w-0">
+            <span className="w-[3px] h-[3px] rounded-full bg-[#c0b8b0] flex-shrink-0" />
+            <span className="text-[#a09890] text-[10px] truncate">
+              {hasUrls ? displayUrl(item) : truncate(item, 80)}
+              {hasUrls && hasTitles && rawTitles![i] && (
+                <span className="text-[#c0b8b0]"> — {truncate(rawTitles![i]!, 50)}</span>
+              )}
             </span>
-            {hasTitles && rawTitles![i] && (
-              <span className="text-gray-400 text-xs leading-tight pl-1">
-                {truncate(rawTitles![i]!, 80)}
-              </span>
-            )}
-          </li>
-        ))}
-        {hasTitles && !hasUrls && rawTitles!.map((title) => (
-          <li key={title} className="text-gray-400 text-xs leading-tight">
-            {truncate(title, 80)}
           </li>
         ))}
       </ul>
