@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTemplates } from '../hooks/useTemplates'
 import { TemplateCard } from '../components/TemplateCard'
 import { BookingModal } from './BookingModal'
-import { SettingsPage } from './Settings/SettingsPage'
 import { useAuth } from '../hooks/useAuth'
 import { useSimplicateData } from '../hooks/useSimplicateData'
 import { useAppStore } from '../../store/appStore'
@@ -13,77 +12,65 @@ const QUICK_BOOK_TEMPLATE: SingleTemplate = {
   id: '__quick__',
   name: 'Vrij boeken',
   type: 'single',
-  color: '#6c63ff',
+  color: '#3a3530',
   startTime: '09:00',
   endTime: '09:30',
 }
 
-export function HomePage() {
-  const { templates, isLoading, reload } = useTemplates()
+interface Props {
+  onOpenSettings: () => void
+}
+
+export function HomePage({ onOpenSettings }: Props) {
+  const { templates, isLoading } = useTemplates()
   const { logout } = useAuth()
   const user = useAppStore((s) => s.user)
   const projects = useAppStore((s) => s.projects)
-  const { needsCredentials, isSyncing, syncError, sync } = useSimplicateData()
+  const { isSyncing, syncError, sync } = useSimplicateData()
   const [bookingTemplate, setBookingTemplate] = useState<Template | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'templates' | 'account'>('templates')
 
-  useEffect(() => {
-    if (needsCredentials) {
-      setSettingsTab('account')
-      setShowSettings(true)
-    }
-  }, [needsCredentials])
-
-  if (showSettings) {
-    return (
-      <SettingsPage
-        initialTab={settingsTab}
-        onBack={() => {
-          setShowSettings(false)
-          setSettingsTab('templates')
-          void sync()
-          void reload()
-        }}
-      />
-    )
-  }
+  const today = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div className="h-full bg-[#1a1a2e] text-white flex flex-col overflow-hidden">
-      <div className="p-6 flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-xs text-gray-500 uppercase tracking-widest">Uren schrijven</div>
-          <div className="flex items-center gap-3">
-            {isSyncing && (
-              <div className="text-xs text-gray-500">Synchroniseren...</div>
-            )}
-            {syncError && !isSyncing && (
-              <div className="text-xs text-red-400" title={syncError}>Sync mislukt</div>
-            )}
-            <button
-              onClick={() => setBookingTemplate(QUICK_BOOK_TEMPLATE)}
-              className="bg-[#6c63ff] hover:bg-[#5a52e0] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-            >
-              + Boeken
-            </button>
+    <div className="h-full bg-[#faf8f4] flex flex-col overflow-hidden">
+      <div className="px-6 pt-5 pb-4 flex-1 overflow-y-auto flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[#3a3530] text-[15px] font-bold tracking-tight">Uren schrijven</div>
+            <div className="text-[#a09890] text-[11px] mt-0.5 capitalize">{today}</div>
           </div>
+          <button
+            onClick={() => setBookingTemplate(QUICK_BOOK_TEMPLATE)}
+            className="bg-[#3a3530] text-[#faf8f4] rounded-md px-[14px] py-[7px] text-[11px] font-semibold hover:bg-[#2e2b26] transition-colors cursor-pointer"
+          >
+            + Boeken
+          </button>
         </div>
+
+        {/* Sync/error messages */}
+        {syncError && !isSyncing && (
+          <div className="text-[11px] text-[#d97757] bg-[#fff8f5] border border-[#f0ddd5] rounded-lg px-3 py-2">
+            Sync mislukt — {syncError}
+          </div>
+        )}
+
+        {/* Template grid */}
         {isLoading ? (
-          <div className="text-gray-400 text-sm">Laden...</div>
+          <div className="text-[#a09890] text-[11px]">Laden...</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-[10px]">
             {templates.map((t) => (
               <TemplateCard
                 key={t.id}
                 template={t}
                 onBook={setBookingTemplate}
-                onEdit={() => setShowSettings(true)}
+                onEdit={onOpenSettings}
               />
             ))}
             <button
-              onClick={() => setShowSettings(true)}
-              className="bg-[#2d2d44] border border-dashed border-gray-600 rounded-xl p-4 flex items-center justify-center text-gray-500 hover:text-gray-400 hover:border-gray-500 transition-colors text-sm"
+              onClick={onOpenSettings}
+              className="border border-dashed border-[#e0d9d0] rounded-[10px] p-[14px] flex items-center justify-center text-[#c8c0b8] text-[11px] hover:border-[#d0c9c0] hover:text-[#b0a898] transition-colors cursor-pointer"
             >
               + Template toevoegen
             </button>
@@ -91,19 +78,20 @@ export function HomePage() {
         )}
       </div>
 
-      <div className="px-6 py-3 border-t border-gray-800 flex justify-between items-center text-xs text-gray-500">
-        <span>Ingelogd als {user?.name}</span>
+      {/* Status bar */}
+      <div className="px-6 py-[10px] border-t border-[#e8e2d9] flex items-center justify-between">
+        <span className="text-[#c0b8b0] text-[10px]">Ingelogd als {user?.name}</span>
         <div className="flex gap-4 items-center">
           <button
             onClick={() => { void sync() }}
             disabled={isSyncing}
-            className="hover:text-gray-300 disabled:opacity-40"
-            title={`${projects.length} projecten geladen`}
+            className="text-[#c0b8b0] text-[10px] hover:text-[#a09890] disabled:opacity-40 cursor-pointer transition-colors"
           >
             {isSyncing ? 'Synchroniseren...' : `↻ Sync${projects.length > 0 ? ` (${projects.length})` : ''}`}
           </button>
-          <button onClick={() => { setSettingsTab('templates'); setShowSettings(true) }} className="hover:text-gray-300">⚙ Instellingen</button>
-          <button onClick={logout} className="hover:text-gray-300">Uitloggen</button>
+          <button onClick={logout} className="text-[#c0b8b0] text-[10px] hover:text-[#a09890] cursor-pointer transition-colors">
+            Uitloggen
+          </button>
         </div>
       </div>
 
