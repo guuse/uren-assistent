@@ -5,6 +5,15 @@ import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import { attachHistoryToMeetings } from './attachHistoryToMeetings'
 
+function sanitizeUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return u.origin + u.pathname
+  } catch {
+    return url
+  }
+}
+
 function toTime(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
@@ -105,11 +114,13 @@ export class GroupAndClassifyDayUseCase {
         if (matchedItem.kind === 'meeting') {
           const event = matchedItem.event
           const hBlocks = matchedItem.historyBlocks
+          const meetingUrls = hBlocks.flatMap(b => b.urls)
+          const meetingTitles = hBlocks.flatMap(b => b.titles)
           const classified: ClassifiedBlock = {
             date,
             urlPattern: matchedItem.cacheKey,
-            urls: hBlocks.flatMap(b => b.urls),
-            titles: hBlocks.flatMap(b => b.titles),
+            urls: meetingUrls,
+            titles: meetingTitles,
             visitCount: hBlocks.reduce((sum, b) => sum + b.visitCount, 0),
             firstVisitTime: toTime(event.start),
             lastVisitTime: toTime(event.end),
@@ -122,6 +133,8 @@ export class GroupAndClassifyDayUseCase {
             confidence: result.confidence,
             origin: 'llm',
             overlappingMeetings: [event],
+            rawTitles: meetingTitles.slice(0, 5),
+            rawUrls: meetingUrls.slice(0, 5).map(sanitizeUrl),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
@@ -137,6 +150,8 @@ export class GroupAndClassifyDayUseCase {
             note: result.note,
             confidence: result.confidence,
             origin: 'llm',
+            rawTitles: block.titles.slice(0, 5),
+            rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
