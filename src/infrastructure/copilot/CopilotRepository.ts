@@ -22,6 +22,15 @@ interface LLMBlockResult {
   confidence: number
 }
 
+function sanitizeUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return u.origin + u.pathname
+  } catch {
+    return url
+  }
+}
+
 function formatCalendarContext(calendarEvents: CalendarEvent[], blockDate: string): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -141,6 +150,8 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
         endTime: block.lastVisitTime || addHours(block.firstVisitTime, block.hours),
         confidence: Math.min(1, Math.max(0, match?.confidence ?? 0)),
         origin: 'llm' as const,
+        rawTitles: block.titles.slice(0, 5),
+        rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
       }
       if (match?.projectId) classified.projectId = match.projectId
       if (match?.serviceId) classified.serviceId = match.serviceId
