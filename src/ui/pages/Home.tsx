@@ -50,8 +50,8 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] text-white flex flex-col">
-      <div className="p-6 flex-1">
+    <div className="h-full bg-[#1a1a2e] text-white flex flex-col overflow-hidden">
+      <div className="p-6 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="text-xs text-gray-500 uppercase tracking-widest">Uren schrijven</div>
           <div className="flex items-center gap-3">

@@ -53,7 +53,7 @@ export default function ImportPage() {
   const totalReady = blocks.filter(b => b.projectId && b.serviceId).length
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#12121e', color: '#ccc' }}>
+    <div className="flex flex-col h-full" style={{ background: '#12121e', color: '#ccc' }}>
       {/* Top bar */}
       <div className="flex items-center gap-4 px-6 py-4 border-b" style={{ borderColor: '#2d2d44' }}>
         <h1 className="text-lg font-bold text-white">Importeer browsergeschiedenis</h1>
