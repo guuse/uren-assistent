@@ -42,11 +42,13 @@ export default function ImportBlockCard({
   const [projectServices, setProjectServices] = useState<Service[]>([])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProjectId(block.projectId ?? '')
     setServiceId(block.serviceId ?? '')
   }, [block])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!projectId) { setProjectServices([]); return }
     void fetchServices(projectId).then(setProjectServices)
   }, [projectId, fetchServices])

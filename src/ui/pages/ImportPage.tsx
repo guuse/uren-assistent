@@ -61,7 +61,7 @@ export default function ImportPage() {
     const end = Math.min(blocks.length - 1, start + MAX_DOTS - 1)
     start = Math.max(0, end - MAX_DOTS + 1)
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
-  }, [blocks.length, currentIndex])
+  }, [blocks, currentIndex])
 
   const currentBlock = blocks[currentIndex] ?? null
   const totalReady = [...confirmed].filter(i => {
