@@ -1,43 +1,18 @@
-import { HomeIcon, ArrowDownTrayIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon } from '@heroicons/react/24/outline'
 import { useAppStore } from '../../store/appStore'
 
-type Page = 'home' | 'import'
-
 interface Props {
-  current: Page
-  onNavigate: (page: Page) => void
   onSettings: () => void
 }
 
-export function Sidebar({ current, onNavigate, onSettings }: Props) {
+export function Sidebar({ onSettings }: Props) {
   const user = useAppStore((s) => s.user)
   const initials = user?.name?.charAt(0).toUpperCase() ?? '?'
-
-  function navItem(page: Page, Icon: React.ElementType, label: string) {
-    const active = current === page
-    return (
-      <button
-        title={label}
-        onClick={() => onNavigate(page)}
-        className={`w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-          active ? 'bg-[#2e2a26]' : 'hover:bg-[#252220]'
-        }`}
-      >
-        <Icon
-          className={`w-[15px] h-[15px] ${active ? 'stroke-[#e8e2d9]' : 'stroke-[#4a4540]'}`}
-          strokeWidth={active ? 2 : 1.5}
-        />
-      </button>
-    )
-  }
 
   return (
     <div className="w-[52px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col items-center py-3 gap-[6px]">
       {/* Logo mark */}
       <div className="w-[30px] h-[30px] bg-[#e8e2d9] rounded-lg mb-[10px]" />
-
-      {navItem('home', HomeIcon, 'Home')}
-      {navItem('import', ArrowDownTrayIcon, 'Importeer')}
 
       <div className="flex-1" />
 
