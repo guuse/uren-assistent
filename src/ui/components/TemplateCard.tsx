@@ -30,7 +30,7 @@ function actionLabel(template: Template): string {
 export function TemplateCard({ template, onBook, onEdit }: Props) {
   return (
     <div
-      className="bg-white border border-[#e8e2d9] rounded-[10px] p-[14px] flex flex-col gap-2 cursor-pointer group hover:border-[#d0c9c0] transition-colors"
+      className="bg-[#252220] border border-[#2e2a26] rounded-[10px] p-[14px] flex flex-col gap-2 cursor-pointer group hover:border-[#3e3a36] transition-colors"
     >
       <div className="flex items-start justify-between">
         <div
@@ -39,20 +39,20 @@ export function TemplateCard({ template, onBook, onEdit }: Props) {
         />
         <button
           onClick={(e) => { e.stopPropagation(); onEdit() }}
-          className="text-[#c8c0b8] hover:text-[#a09890] opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
+          className="text-[#4a4540] hover:text-[#7a7268] opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
           title="Bewerken"
         >
           ✏
         </button>
       </div>
-      <div className="text-[#3a3530] text-[12px] font-semibold leading-tight">{template.name}</div>
-      <div className="text-[#a09890] text-[11px]">{templateSubtitle(template)}</div>
+      <div className="text-[#e8e2d9] text-[12px] font-semibold leading-tight">{template.name}</div>
+      <div className="text-[#7a7268] text-[11px]">{templateSubtitle(template)}</div>
       {!(template.projectId ?? template.serviceId) && (
-        <div className="text-[#c4956a] text-[10px]">Velden ontbreken</div>
+        <div className="text-[#a07848] text-[10px]">Velden ontbreken</div>
       )}
       <button
         onClick={() => onBook(template)}
-        className="mt-1 text-[#faf8f4] text-[10px] font-semibold py-[5px] px-[10px] rounded-md self-start transition-opacity hover:opacity-80 cursor-pointer"
+        className="mt-1 text-[#1c1917] text-[10px] font-semibold py-[5px] px-[10px] rounded-md self-start transition-opacity hover:opacity-80 cursor-pointer"
         style={{ backgroundColor: template.color }}
       >
         {actionLabel(template)}
