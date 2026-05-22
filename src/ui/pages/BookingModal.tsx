@@ -1,16 +1,19 @@
 import { useBooking } from '../hooks/useBooking'
 import { FieldSelector } from '../components/FieldSelector'
 import { TimeSelect } from '../components/TimeSelect'
+import EvidencePanel from '../components/EvidencePanel'
 import type { HourEntry } from '../../domain/entities/HourEntry'
+import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
 interface Props {
   initialEntry?: Partial<HourEntry>
   title?: string
+  evidenceBlock?: ClassifiedBlock
   onClose: () => void
   onBooked?: () => void
 }
 
-export function BookingModal({ initialEntry = {}, title = 'Uren boeken', onClose, onBooked }: Props) {
+export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenceBlock, onClose, onBooked }: Props) {
   const booking = useBooking(initialEntry)
 
   if (booking.status === 'success') {
@@ -38,6 +41,13 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', onClose
           <div className="text-[#e8e2d9] font-bold">{title}</div>
           <button onClick={onClose} className="text-[#4a4540] hover:text-[#e8e2d9] text-lg">✕</button>
         </div>
+
+        {evidenceBlock && (
+          <EvidencePanel
+            rawUrls={evidenceBlock.rawUrls}
+            rawTitles={evidenceBlock.rawTitles}
+          />
+        )}
 
         {/* Datum */}
         <div className="flex flex-col gap-1">
@@ -71,6 +81,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', onClose
           value={booking.projectId}
           options={booking.projects.map((p) => ({ id: p.id, label: `${p.organizationName} — ${p.name}` }))}
           onChange={booking.setProjectId}
+          highlight={!booking.projectId}
         />
         {booking.projectId && (
           <FieldSelector
@@ -78,6 +89,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', onClose
             value={booking.serviceId}
             options={booking.services.map((s) => ({ id: s.id, label: s.name }))}
             onChange={booking.setServiceId}
+            highlight={!booking.serviceId}
           />
         )}
         {booking.serviceId && (

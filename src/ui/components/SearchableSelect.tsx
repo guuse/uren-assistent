@@ -13,9 +13,10 @@ interface Props {
   required?: boolean
   disabled?: boolean
   placeholder?: string
+  highlight?: boolean
 }
 
-export function SearchableSelect({ label, options, value, onChange, required, disabled, placeholder = 'Kies...' }: Props) {
+export function SearchableSelect({ label, options, value, onChange, required, disabled, placeholder = 'Kies...', highlight }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -75,7 +76,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
           type="button"
           onClick={handleOpen}
           disabled={disabled}
-          className="w-full bg-[#1e1b18] text-left text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2"
+          className={`w-full bg-[#1e1b18] text-left text-sm rounded-lg px-3 py-2 border focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2 ${highlight ? 'border-[#a07848] focus:border-[#a07848]' : 'border-[#2e2a26] focus:border-[#5a5248]'}`}
         >
           <span className={selected ? 'text-[#e8e2d9]' : 'text-[#4a4540]'}>
             {selected ? selected.label : placeholder}

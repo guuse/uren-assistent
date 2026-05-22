@@ -12,9 +12,10 @@ interface Props {
   onChange: (id: string) => void
   required?: boolean
   disabled?: boolean
+  highlight?: boolean
 }
 
-export function FieldSelector({ label, options, value, onChange, required, disabled }: Props) {
+export function FieldSelector({ label, options, value, onChange, required, disabled, highlight }: Props) {
   return (
     <SearchableSelect
       label={label}
@@ -23,6 +24,7 @@ export function FieldSelector({ label, options, value, onChange, required, disab
       onChange={onChange}
       {...(required !== undefined && { required })}
       {...(disabled !== undefined && { disabled })}
+      {...(highlight !== undefined && { highlight })}
     />
   )
 }
