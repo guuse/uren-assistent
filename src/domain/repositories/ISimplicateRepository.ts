@@ -30,4 +30,5 @@ export interface ISimplicateRepository {
   getHourTypes(): Promise<SimplicateHourType[]>
   getEmployee(email: string): Promise<SimplicateEmployee>
   bookHours(entries: HourEntry[]): Promise<void>
+  getHourEntries(employeeId: string, from: string, to: string): Promise<HourEntry[]>
 }

@@ -10,6 +10,7 @@ import type { HourEntry } from '../../domain/entities/HourEntry'
 import type {
   SimplicateApiListResponse,
   SimplicateEmployeeResponse,
+  SimplicateHourEntryResponse,
   SimplicateHourTypeResponse,
   SimplicateProjectResponse,
   SimplicateServiceResponse,
@@ -117,5 +118,23 @@ export class SimplicateRepository implements ISimplicateRepository {
         }),
       ),
     )
+  }
+
+  async getHourEntries(employeeId: string, from: string, to: string): Promise<HourEntry[]> {
+    const data = await this.getPaginated<SimplicateHourEntryResponse>(
+      `/hours/hours?q%5Bemployee.id%5D=${encodeURIComponent(employeeId)}&q%5Bstart_date%5D%5Bge%5D=${from}&q%5Bstart_date%5D%5Ble%5D=${to}`,
+    )
+    return data.map((h) => ({
+      id: h.id,
+      employeeId: h.employee.id,
+      projectId: h.project.id,
+      projectServiceId: h.projectservice.id,
+      hourTypeId: h.type.id,
+      hours: h.hours,
+      startDate: h.start_date.slice(0, 10),
+      startTime: h.start_date.slice(11, 16),
+      endTime: h.end_date.slice(11, 16),
+      note: h.note,
+    }))
   }
 }

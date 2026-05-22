@@ -31,6 +31,18 @@ export interface SimplicateEmployeeResponse {
   work_email: string
 }
 
+export interface SimplicateHourEntryResponse {
+  id: string
+  employee: { id: string }
+  project: { id: string }
+  projectservice: { id: string }
+  type: { id: string }
+  hours: number
+  start_date: string   // "YYYY-MM-DD HH:mm:ss"
+  end_date: string     // "YYYY-MM-DD HH:mm:ss"
+  note: string
+}
+
 export interface SimplicateApiListResponse<T> {
   data: T[]
 }
