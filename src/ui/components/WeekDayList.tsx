@@ -10,6 +10,7 @@ interface Props {
   onPrevWeek: () => void
   onNextWeek: () => void
   weekLabel: string            // bijv. "week 21" of "vorige week"
+  conceptCountForDate?: (date: string) => number
 }
 
 const TARGET_HOURS = 8
@@ -32,6 +33,7 @@ export function WeekDayList({
   onPrevWeek,
   onNextWeek,
   weekLabel,
+  conceptCountForDate,
 }: Props) {
   return (
     <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
@@ -45,6 +47,7 @@ export function WeekDayList({
           const hours = hoursForDate(date)
           const isSelected = date === selectedDate
           const isFull = hours >= TARGET_HOURS
+          const conceptCount = conceptCountForDate?.(date) ?? 0
 
           return (
             <button
@@ -71,6 +74,13 @@ export function WeekDayList({
               <div className="text-[8px] text-[#475569] mt-1">
                 {hours > 0 ? `${hours} / ${TARGET_HOURS}u` : `0 / ${TARGET_HOURS}u`}
               </div>
+              {conceptCount > 0 && !isFull && (
+                <div className="mt-1">
+                  <span className="bg-[#2a2010] text-[#a07848] text-[8px] px-[5px] py-[1px] rounded">
+                    {conceptCount} concept{conceptCount !== 1 ? 'en' : ''}
+                  </span>
+                </div>
+              )}
             </button>
           )
         })}
