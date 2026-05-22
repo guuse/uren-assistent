@@ -9,7 +9,7 @@ import type { Template, TemplateType, Day } from '../../../domain/entities/Templ
 import type { SimplicateService } from '../../../domain/repositories/ISimplicateRepository'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
-const COLORS = ['#6c63ff', '#63c5ff', '#63ffb4', '#f59e0b', '#f87171', '#a78bfa']
+const COLORS = ['#c4956a', '#7ab87a', '#6a9fc0', '#c47a7a', '#a07848', '#8a7ab8']
 const TYPE_LABELS: Record<TemplateType, string> = {
   recurring: 'Herhalend (ma–vr)',
   single: 'Los (vandaag)',
@@ -45,7 +45,6 @@ export function TemplateForm({ initial, onDone }: Props) {
   const [loadingServices, setLoadingServices] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load services when projectId changes
   useEffect(() => {
     if (!projectId) {
       setServices([])
@@ -103,18 +102,18 @@ export function TemplateForm({ initial, onDone }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label className="text-xs uppercase tracking-widest text-gray-400">Naam</label>
+        <label className="text-xs uppercase tracking-widest text-[#7a7268]">Naam</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Bijv. Dagelijkse standup"
-          className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs uppercase tracking-widest text-gray-400">Type</label>
+        <label className="text-xs uppercase tracking-widest text-[#7a7268]">Type</label>
         <div className="flex gap-2 flex-wrap">
           {(Object.keys(TYPE_LABELS) as TemplateType[]).map((t) => (
             <button
@@ -122,7 +121,7 @@ export function TemplateForm({ initial, onDone }: Props) {
               type="button"
               onClick={() => setType(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                type === t ? 'bg-[#6c63ff] text-white' : 'bg-[#1a1a2e] text-gray-400 hover:text-white'
+                type === t ? 'bg-[#e8e2d9] text-[#1c1917]' : 'bg-[#1e1b18] text-[#7a7268] hover:text-[#e8e2d9]'
               }`}
             >
               {TYPE_LABELS[t]}
@@ -133,14 +132,14 @@ export function TemplateForm({ initial, onDone }: Props) {
 
       {type === 'recurring' && (
         <div className="flex flex-col gap-1">
-          <label className="text-xs uppercase tracking-widest text-gray-400">Dagen</label>
+          <label className="text-xs uppercase tracking-widest text-[#7a7268]">Dagen</label>
           <DayPicker selected={days} onChange={setDays} />
         </div>
       )}
 
       {type === 'weekly-block' && (
         <div className="flex flex-col gap-1">
-          <label className="text-xs uppercase tracking-widest text-gray-400">Dag</label>
+          <label className="text-xs uppercase tracking-widest text-[#7a7268]">Dag</label>
           <DayPicker selected={[day]} onChange={(d) => { if (d[0]) setDay(d[0]) }} />
         </div>
       )}
@@ -148,14 +147,14 @@ export function TemplateForm({ initial, onDone }: Props) {
       <div className="flex gap-3">
         <div className="flex-1 flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-xs uppercase tracking-widest text-gray-400">Starttijd</label>
+            <label className="text-xs uppercase tracking-widest text-[#7a7268]">Starttijd</label>
             <button
               type="button"
               onClick={() => setStartTime(startTime !== undefined ? undefined : '09:00')}
               className={`text-xs px-2 py-0.5 rounded transition-colors ${
                 startTime === undefined
-                  ? 'bg-[#6c63ff] text-white'
-                  : 'bg-[#1a1a2e] text-gray-500 hover:text-gray-300'
+                  ? 'bg-[#e8e2d9] text-[#1c1917]'
+                  : 'bg-[#1e1b18] text-[#4a4540] hover:text-[#e8e2d9]'
               }`}
             >
               Dynamisch
@@ -166,10 +165,10 @@ export function TemplateForm({ initial, onDone }: Props) {
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+              className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
             />
           ) : (
-            <div className="bg-[#1a1a2e] text-gray-500 text-sm rounded-lg px-3 py-2 border border-gray-700 border-dashed">
+            <div className="bg-[#1e1b18] text-[#4a4540] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] border-dashed">
               Kiest gebruiker bij boeking
             </div>
           )}
@@ -177,14 +176,14 @@ export function TemplateForm({ initial, onDone }: Props) {
 
         <div className="flex-1 flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-xs uppercase tracking-widest text-gray-400">Eindtijd</label>
+            <label className="text-xs uppercase tracking-widest text-[#7a7268]">Eindtijd</label>
             <button
               type="button"
               onClick={() => setEndTime(endTime !== undefined ? undefined : '09:30')}
               className={`text-xs px-2 py-0.5 rounded transition-colors ${
                 endTime === undefined
-                  ? 'bg-[#6c63ff] text-white'
-                  : 'bg-[#1a1a2e] text-gray-500 hover:text-gray-300'
+                  ? 'bg-[#e8e2d9] text-[#1c1917]'
+                  : 'bg-[#1e1b18] text-[#4a4540] hover:text-[#e8e2d9]'
               }`}
             >
               Dynamisch
@@ -195,10 +194,10 @@ export function TemplateForm({ initial, onDone }: Props) {
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+              className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
             />
           ) : (
-            <div className="bg-[#1a1a2e] text-gray-500 text-sm rounded-lg px-3 py-2 border border-gray-700 border-dashed">
+            <div className="bg-[#1e1b18] text-[#4a4540] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] border-dashed">
               Kiest gebruiker bij boeking
             </div>
           )}
@@ -227,28 +226,28 @@ export function TemplateForm({ initial, onDone }: Props) {
       />
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs uppercase tracking-widest text-gray-400">Standaard toelichting</label>
+        <label className="text-xs uppercase tracking-widest text-[#7a7268]">Standaard toelichting</label>
         <input type="text" value={defaultNote} onChange={(e) => setDefaultNote(e.target.value)}
           placeholder="Optioneel"
-          className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none" />
+          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none" />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs uppercase tracking-widest text-gray-400">Kleur</label>
+        <label className="text-xs uppercase tracking-widest text-[#7a7268]">Kleur</label>
         <div className="flex gap-2">
           {COLORS.map((c) => (
             <button key={c} type="button" onClick={() => setColor(c)}
               style={{ backgroundColor: c }}
-              className={`w-6 h-6 rounded-full transition-transform ${color === c ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-[#2d2d44]' : ''}`}
+              className={`w-6 h-6 rounded-full transition-transform ${color === c ? 'scale-125 ring-2 ring-[#e8e2d9] ring-offset-1 ring-offset-[#252220]' : ''}`}
             />
           ))}
         </div>
       </div>
 
-      {error && <div className="bg-red-900/40 text-red-300 text-xs rounded-lg px-3 py-2">{error}</div>}
+      {error && <div className="bg-[#221e1b] text-[#b85a3a] text-xs rounded-lg px-3 py-2">{error}</div>}
 
       <button onClick={handleSave}
-        className="bg-[#6c63ff] hover:bg-[#5a52e0] text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+        className="bg-[#e8e2d9] hover:bg-[#d5cfc6] text-[#1c1917] font-semibold py-2.5 rounded-lg text-sm transition-colors">
         {initial ? 'Opslaan' : 'Template aanmaken'}
       </button>
     </div>
