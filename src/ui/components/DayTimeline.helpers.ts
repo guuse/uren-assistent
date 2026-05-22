@@ -1,9 +1,11 @@
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
+import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
 export type TimelineBlock =
-  | { type: 'entry'; startTime: string; endTime: string; entry: HourEntry; suggestion?: never }
-  | { type: 'gap'; startTime: string; endTime: string; entry?: never; suggestion?: HourEntrySuggestion }
+  | { type: 'entry'; startTime: string; endTime: string; entry: HourEntry; suggestion?: never; block?: never }
+  | { type: 'gap'; startTime: string; endTime: string; entry?: never; suggestion?: HourEntrySuggestion; block?: never }
+  | { type: 'concept'; startTime: string; endTime: string; entry?: never; suggestion?: never; block: ClassifiedBlock }
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -72,6 +74,46 @@ export function computeTimelineBlocks(
         usedSuggestions.add(firstIdx)
       }
     }
+  }
+
+  return blocks
+}
+
+export function mergeConceptsIntoTimeline(
+  entries: HourEntry[],
+  concepts: ClassifiedBlock[],
+  dayStart: string,
+  dayEnd: string,
+): TimelineBlock[] {
+  type Item =
+    | { kind: 'entry'; startTime: string; endTime: string; entry: HourEntry }
+    | { kind: 'concept'; startTime: string; endTime: string; block: ClassifiedBlock }
+
+  const items: Item[] = [
+    ...entries.map(e => ({ kind: 'entry' as const, startTime: e.startTime, endTime: e.endTime, entry: e })),
+    ...concepts.map(c => ({ kind: 'concept' as const, startTime: c.startTime, endTime: c.endTime, block: c })),
+  ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+
+  const blocks: TimelineBlock[] = []
+  let cursor = timeToMinutes(dayStart)
+  const end = timeToMinutes(dayEnd)
+
+  for (const item of items) {
+    const itemStart = timeToMinutes(item.startTime)
+    const itemEnd = timeToMinutes(item.endTime)
+    if (itemStart > cursor) {
+      blocks.push({ type: 'gap', startTime: minutesToTime(cursor), endTime: minutesToTime(itemStart) })
+    }
+    if (item.kind === 'entry') {
+      blocks.push({ type: 'entry', startTime: item.startTime, endTime: item.endTime, entry: item.entry })
+    } else {
+      blocks.push({ type: 'concept', startTime: item.startTime, endTime: item.endTime, block: item.block })
+    }
+    cursor = Math.max(cursor, itemEnd)
+  }
+
+  if (cursor < end) {
+    blocks.push({ type: 'gap', startTime: minutesToTime(cursor), endTime: minutesToTime(end) })
   }
 
   return blocks
