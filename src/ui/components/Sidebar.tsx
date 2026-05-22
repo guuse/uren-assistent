@@ -20,11 +20,11 @@ export function Sidebar({ current, onNavigate, onSettings }: Props) {
         title={label}
         onClick={() => onNavigate(page)}
         className={`w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-          active ? 'bg-[#3a353012]' : 'hover:bg-[#3a35300a]'
+          active ? 'bg-[#2e2a26]' : 'hover:bg-[#252220]'
         }`}
       >
         <Icon
-          className={`w-[15px] h-[15px] ${active ? 'stroke-[#3a3530]' : 'stroke-[#c8c0b8]'}`}
+          className={`w-[15px] h-[15px] ${active ? 'stroke-[#e8e2d9]' : 'stroke-[#4a4540]'}`}
           strokeWidth={active ? 2 : 1.5}
         />
       </button>
@@ -32,9 +32,9 @@ export function Sidebar({ current, onNavigate, onSettings }: Props) {
   }
 
   return (
-    <div className="w-[52px] flex-shrink-0 bg-[#f2ede6] border-r border-[#e8e2d9] flex flex-col items-center py-3 gap-[6px]">
+    <div className="w-[52px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col items-center py-3 gap-[6px]">
       {/* Logo mark */}
-      <div className="w-[30px] h-[30px] bg-[#3a3530] rounded-lg mb-[10px]" />
+      <div className="w-[30px] h-[30px] bg-[#e8e2d9] rounded-lg mb-[10px]" />
 
       {navItem('home', HomeIcon, 'Home')}
       {navItem('import', ArrowDownTrayIcon, 'Importeer')}
@@ -44,14 +44,14 @@ export function Sidebar({ current, onNavigate, onSettings }: Props) {
       <button
         title="Instellingen"
         onClick={onSettings}
-        className="w-[34px] h-[34px] rounded-lg flex items-center justify-center hover:bg-[#3a35300a] transition-colors cursor-pointer"
+        className="w-[34px] h-[34px] rounded-lg flex items-center justify-center hover:bg-[#252220] transition-colors cursor-pointer"
       >
-        <Cog6ToothIcon className="w-[15px] h-[15px] stroke-[#c8c0b8]" strokeWidth={1.5} />
+        <Cog6ToothIcon className="w-[15px] h-[15px] stroke-[#4a4540]" strokeWidth={1.5} />
       </button>
 
       {/* Avatar */}
-      <div className="w-[26px] h-[26px] bg-[#e8e2d9] rounded-full flex items-center justify-center mt-1">
-        <span className="text-[#3a3530] text-[10px] font-semibold">{initials}</span>
+      <div className="w-[26px] h-[26px] bg-[#2e2a26] rounded-full flex items-center justify-center mt-1">
+        <span className="text-[#e8e2d9] text-[10px] font-semibold">{initials}</span>
       </div>
     </div>
   )
