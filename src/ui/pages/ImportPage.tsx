@@ -5,10 +5,10 @@ import ImportBlockCard from '../components/ImportBlockCard'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
 function blockStatusColor(block: ClassifiedBlock): string {
-  if (!block.projectId || !block.serviceId) return '#c4956a'
-  if (block.origin === 'cache') return '#6a9e80'
-  if (block.confidence < 0.6) return '#c4956a'
-  return '#6a9e80'
+  if (!block.projectId || !block.serviceId) return '#a07848'
+  if (block.origin === 'cache') return '#5a8a6a'
+  if (block.confidence < 0.6) return '#a07848'
+  return '#5a8a6a'
 }
 
 const MAX_DOTS = 9
@@ -70,21 +70,21 @@ export default function ImportPage() {
   }).length
 
   return (
-    <div className="h-full bg-[#faf8f4] flex flex-col overflow-hidden">
+    <div className="h-full bg-[#1c1917] flex flex-col overflow-hidden">
 
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[#e8e2d9] flex-shrink-0">
-        <div className="text-[#3a3530] text-[13px] font-bold">Browsergeschiedenis importeren</div>
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-[#2e2a26] flex-shrink-0">
+        <div className="text-[#e8e2d9] text-[13px] font-bold">Browsergeschiedenis importeren</div>
 
         {blocks.length > 0 && (
           <>
-            <div className="flex-1 h-[3px] bg-[#e8e2d9] rounded overflow-hidden">
+            <div className="flex-1 h-[3px] bg-[#2e2a26] rounded overflow-hidden">
               <div
-                className="h-full bg-[#3a3530] rounded transition-all duration-300"
+                className="h-full bg-[#e8e2d9] rounded transition-all duration-300"
                 style={{ width: `${((confirmed.size + skipped.size) / blocks.length) * 100}%` }}
               />
             </div>
-            <div className="text-[#a09890] text-[10px] whitespace-nowrap">
+            <div className="text-[#7a7268] text-[10px] whitespace-nowrap">
               {confirmed.size + skipped.size} / {blocks.length}
             </div>
           </>
@@ -92,7 +92,7 @@ export default function ImportPage() {
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="bg-white border border-[#e8e2d9] text-[#a09890] rounded px-[10px] py-[4px] text-[10px] hover:border-[#d0c9c0] transition-colors cursor-pointer flex-shrink-0"
+          className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[10px] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
         >
           + CSV
           <input
@@ -105,20 +105,20 @@ export default function ImportPage() {
         </button>
 
         <div className="flex items-center gap-1.5">
-          <label className="text-[#c0b8b0] text-[10px]">Min. bezoeken:</label>
+          <label className="text-[#4a4540] text-[10px]">Min. bezoeken:</label>
           <input
             type="number"
             min={1}
             value={minVisits}
             onChange={e => setMinVisits(Number(e.target.value))}
-            className="w-12 rounded px-2 py-1 text-[11px] text-[#3a3530] border border-[#e8e2d9] bg-white focus:outline-none focus:border-[#a09890]"
+            className="w-12 rounded px-2 py-1 text-[11px] text-[#e8e2d9] border border-[#2e2a26] bg-[#1e1b18] focus:outline-none focus:border-[#5a5248]"
           />
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mx-6 mt-3 p-3 rounded-lg text-[11px] text-[#d97757] bg-[#fff8f5] border border-[#f0ddd5] flex-shrink-0">
+        <div className="mx-6 mt-3 p-3 rounded-lg text-[11px] text-[#b85a3a] bg-[#221e1b] border border-[#3a2e2a] flex-shrink-0">
           {error}
         </div>
       )}
@@ -130,7 +130,7 @@ export default function ImportPage() {
         {blocks.length === 0 && !isLoading && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div
-              className="w-full max-w-sm border-2 border-dashed border-[#e0d9d0] rounded-xl px-8 py-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#d0c9c0] transition-colors"
+              className="w-full max-w-sm border-2 border-dashed border-[#2e2a26] rounded-xl px-8 py-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#3e3a36] transition-colors"
               onDragOver={e => e.preventDefault()}
               onDrop={e => {
                 e.preventDefault()
@@ -139,7 +139,7 @@ export default function ImportPage() {
               }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="text-[#c0b8b0] text-[12px] text-center leading-relaxed">
+              <div className="text-[#4a4540] text-[12px] text-center leading-relaxed">
                 Sleep Chrome history CSV hiernaartoe<br />of klik om te kiezen
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function ImportPage() {
         {/* Loading state */}
         {isLoading && (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-[#a09890] text-[12px]">
+            <div className="text-[#7a7268] text-[12px]">
               {status === 'parsing' && 'Bezig met analyseren...'}
               {status === 'classifying' && 'Bezig met classificeren...'}
               {status === 'booking' && 'Bezig met boeken...'}
@@ -160,14 +160,14 @@ export default function ImportPage() {
         {/* Done state */}
         {isDone && !isLoading && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <div className="text-[#3a3530] text-[14px] font-semibold">Klaar</div>
-            <div className="text-[#a09890] text-[12px]">
+            <div className="text-[#e8e2d9] text-[14px] font-semibold">Klaar</div>
+            <div className="text-[#7a7268] text-[12px]">
               {confirmed.size} bevestigd, {skipped.size} overgeslagen
             </div>
             {totalReady > 0 && (
               <button
                 onClick={() => void bookAll()}
-                className="bg-[#3a3530] text-[#faf8f4] rounded-lg px-6 py-2.5 text-[12px] font-semibold hover:bg-[#2e2b26] transition-colors cursor-pointer"
+                className="bg-[#e8e2d9] text-[#1c1917] rounded-lg px-6 py-2.5 text-[12px] font-semibold hover:bg-[#d5cfc6] transition-colors cursor-pointer"
               >
                 Boek {totalReady} blokken
               </button>
@@ -203,7 +203,7 @@ export default function ImportPage() {
               style={{
                 width: i === currentIndex ? 7 : 5,
                 height: i === currentIndex ? 7 : 5,
-                backgroundColor: confirmed.has(i) ? '#6a9e80' : skipped.has(i) ? '#c0b8b0' : blockStatusColor(blocks[i]!),
+                backgroundColor: confirmed.has(i) ? '#5a8a6a' : skipped.has(i) ? '#3e3a36' : blockStatusColor(blocks[i]!),
                 opacity: i === currentIndex ? 1 : 0.5,
               }}
               title={`Blok ${i + 1}`}
