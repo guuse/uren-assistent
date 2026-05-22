@@ -33,8 +33,8 @@ export function DayPicker({ selected, onChange }: Props) {
           onClick={() => toggle(key)}
           className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
             selected.includes(key)
-              ? 'bg-[#6c63ff] text-white'
-              : 'bg-[#1a1a2e] text-gray-400 hover:text-white'
+              ? 'bg-[#e8e2d9] text-[#1c1917]'
+              : 'bg-[#1e1b18] text-[#7a7268] hover:text-[#e8e2d9]'
           }`}
         >
           {label}
