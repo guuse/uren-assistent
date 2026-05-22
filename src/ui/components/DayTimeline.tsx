@@ -93,6 +93,19 @@ export function DayTimeline({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Hidden file input — één instantie voor de hele component */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) void handleFileDrop(f)
+          e.target.value = ''
+        }}
+      />
+
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#2e2a26] flex items-center gap-4 flex-shrink-0">
         <div>
@@ -116,17 +129,6 @@ export function DayTimeline({
             className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[10px] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
           >
             ↑ Nieuwe CSV
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0]
-                if (f) void handleFileDrop(f)
-                e.target.value = ''
-              }}
-            />
           </button>
         )}
       </div>
@@ -160,17 +162,6 @@ export function DayTimeline({
               className="bg-[#e8e2d9] text-[#1c1917] border-none rounded-lg px-5 py-2 text-[11px] font-bold cursor-pointer hover:bg-[#d5cfc6] transition-colors"
             >
               + Chrome history uploaden
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={e => {
-                  const f = e.target.files?.[0]
-                  if (f) void handleFileDrop(f)
-                  e.target.value = ''
-                }}
-              />
             </button>
             <div className="text-[#4a4540] text-[9px]">of sleep een .csv bestand hiernaartoe</div>
           </div>
