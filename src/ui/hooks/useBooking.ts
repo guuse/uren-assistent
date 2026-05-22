@@ -1,47 +1,28 @@
 import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { keychainRepo, createSimplicateRepository, createUseCases } from '../../application/container'
-import type { Template } from '../../domain/entities/Template'
+import type { HourEntry } from '../../domain/entities/HourEntry'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
 export type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
 
-export interface UseBookingOptions {
-  initialDate?: string       // YYYY-MM-DD, overrides Monday calculation
-  initialStartTime?: string  // HH:mm, overrides template.startTime
-  initialEndTime?: string    // HH:mm, overrides template.endTime
-}
-
-export function useBooking(template: Template, options: UseBookingOptions = {}) {
+export function useBooking(initial: Partial<HourEntry> = {}) {
   const simplicateEmployeeId = useAppStore((s) => s.simplicateEmployeeId)
   const projects = useAppStore((s) => s.projects)
   const allHourTypes = useAppStore((s) => s.hourTypes)
 
-  const [projectId, setProjectId] = useState(template.projectId ?? '')
-  const [serviceId, setServiceId] = useState(template.serviceId ?? '')
-  const [hourTypeId, setHourTypeId] = useState(template.hourTypeId ?? '')
-  const [note, setNote] = useState(template.defaultNote ?? '')
-  const [startTime, setStartTime] = useState<string>(
-    options.initialStartTime ?? template.startTime ?? '09:00'
-  )
-  const [endTime, setEndTime] = useState<string>(
-    options.initialEndTime ?? template.endTime ?? '09:30'
-  )
-  const [weekStartDate, setWeekStartDate] = useState(() => {
-    if (options.initialDate) return options.initialDate
-    // Default to this Monday
-    const today = new Date()
-    const day = today.getDay()
-    const diff = day === 0 ? -6 : 1 - day
-    today.setDate(today.getDate() + diff)
-    return today.toISOString().split('T')[0]!
-  })
+  const [projectId, setProjectId] = useState(initial.projectId ?? '')
+  const [serviceId, setServiceId] = useState(initial.projectServiceId ?? '')
+  const [hourTypeId, setHourTypeId] = useState(initial.hourTypeId ?? '')
+  const [note, setNote] = useState(initial.note ?? '')
+  const [startTime, setStartTime] = useState(initial.startTime ?? '09:00')
+  const [endTime, setEndTime] = useState(initial.endTime ?? '09:30')
+  const [date, setDate] = useState(initial.startDate ?? new Date().toISOString().split('T')[0]!)
   const [services, setServices] = useState<{ id: string; name: string; hourTypeIds: string[] }[]>([])
   const [status, setStatus] = useState<BookingStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Filter hour types to those available on the selected service
   const selectedService = services.find((s) => s.id === serviceId)
   const hourTypes = selectedService
     ? allHourTypes.filter((ht) => selectedService.hourTypeIds.includes(ht.id))
@@ -87,17 +68,25 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
       if (!apiKey || !apiSecret) throw new Error('Simplicate API key niet ingesteld')
 
       const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
-      const { bookTemplate } = createUseCases(simplicateRepo)
+      const { bookHours } = createUseCases(simplicateRepo)
 
-      const effectiveTemplate = { ...template, startTime, endTime }
+      const [hStart, mStart] = startTime.split(':').map(Number)
+      const [hEnd, mEnd] = endTime.split(':').map(Number)
+      const hours = Math.round(((hEnd! * 60 + mEnd!) - (hStart! * 60 + mStart!)) / 60 * 2) / 2
 
-      await bookTemplate.execute({
-        template: effectiveTemplate,
+      const entry: HourEntry = {
         employeeId: simplicateEmployeeId,
+        projectId,
+        projectServiceId: serviceId,
+        hourTypeId,
+        hours,
+        startDate: date,
+        startTime,
+        endTime,
         note,
-        weekStartDate,
-        overrides: { projectId, serviceId, hourTypeId },
-      })
+      }
+
+      await bookHours.execute(entry)
       setStatus('success')
     } catch (err) {
       setStatus('error')
@@ -112,7 +101,7 @@ export function useBooking(template: Template, options: UseBookingOptions = {}) 
     note, setNote,
     startTime, setStartTime,
     endTime, setEndTime,
-    weekStartDate, setWeekStartDate,
+    date, setDate,
     services,
     status,
     errorMessage,
