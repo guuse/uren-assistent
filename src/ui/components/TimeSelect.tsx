@@ -28,11 +28,11 @@ export function TimeSelect({ label, value, onChange, minTime }: Props) {
 
   return (
     <div className="flex flex-col gap-1 flex-1">
-      <label className="text-xs uppercase tracking-widest text-gray-400">{label}</label>
+      <label className="text-xs uppercase tracking-widest text-[#7a7268]">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-[#1a1a2e] text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none"
+        className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
       >
         {options.map((t) => (
           <option key={t} value={t}>{t}</option>
