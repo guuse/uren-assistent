@@ -80,19 +80,19 @@ export default function ImportBlockCard({
   const blockTitle = block.summary || block.blockName || 'Onbekend blok'
 
   return (
-    <div className="bg-white border border-[#e8e2d9] rounded-[12px] p-[18px] flex flex-col gap-3 flex-1 min-h-0">
+    <div className="bg-[#252220] border border-[#2e2a26] rounded-[12px] p-[18px] flex flex-col gap-3 flex-1 min-h-0">
       {/* Block header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[#3a3530] text-[14px] font-bold tracking-tight leading-snug truncate">
+          <div className="text-[#e8e2d9] text-[14px] font-bold tracking-tight leading-snug truncate">
             {blockTitle}
           </div>
-          <div className="text-[#a09890] text-[11px] mt-1">
+          <div className="text-[#7a7268] text-[11px] mt-1">
             {formatBlockTime(block)}{formatDuration(block.startTime, block.endTime)}
           </div>
         </div>
         {confidencePct > 0 && (
-          <div className="bg-[#f2ede6] text-[#a09890] rounded text-[10px] px-[9px] py-[3px] whitespace-nowrap flex-shrink-0">
+          <div className="bg-[#2e2a26] text-[#7a7268] rounded text-[10px] px-[9px] py-[3px] whitespace-nowrap flex-shrink-0">
             {confidencePct}% zeker
           </div>
         )}
@@ -125,10 +125,10 @@ export default function ImportBlockCard({
       </div>
 
       {bookingResult === 'success' && (
-        <div className="text-[#6a9e80] text-[11px]">Geboekt</div>
+        <div className="text-[#5a8a6a] text-[11px]">Geboekt</div>
       )}
       {bookingResult === 'error' && (
-        <div className="text-[#d97757] text-[11px]">Boeken mislukt — probeer opnieuw</div>
+        <div className="text-[#b85a3a] text-[11px]">Boeken mislukt — probeer opnieuw</div>
       )}
 
       {/* Spacer to push actions to bottom */}
@@ -139,20 +139,20 @@ export default function ImportBlockCard({
         <button
           onClick={onPrevious}
           disabled={blockIndex === 0}
-          className="bg-[#faf8f4] border border-[#e8e2d9] text-[#a09890] rounded-[7px] px-[14px] py-[8px] text-[11px] disabled:opacity-40 hover:border-[#d0c9c0] transition-colors cursor-pointer"
+          className="bg-[#1c1917] border border-[#2e2a26] text-[#7a7268] rounded-[7px] px-[14px] py-[8px] text-[11px] disabled:opacity-40 hover:border-[#3e3a36] transition-colors cursor-pointer"
         >
           ← Vorige
         </button>
         <button
           onClick={onSkip}
-          className="bg-[#faf8f4] border border-[#e8e2d9] text-[#a09890] rounded-[7px] px-[14px] py-[8px] text-[11px] hover:border-[#d0c9c0] transition-colors cursor-pointer"
+          className="bg-[#1c1917] border border-[#2e2a26] text-[#7a7268] rounded-[7px] px-[14px] py-[8px] text-[11px] hover:border-[#3e3a36] transition-colors cursor-pointer"
         >
           Overslaan
         </button>
         <button
           onClick={onConfirm}
           disabled={!canConfirm}
-          className="flex-1 bg-[#3a3530] text-[#faf8f4] rounded-[7px] py-[8px] text-[11px] font-semibold disabled:opacity-40 hover:bg-[#2e2b26] transition-colors cursor-pointer"
+          className="flex-1 bg-[#e8e2d9] text-[#1c1917] rounded-[7px] py-[8px] text-[11px] font-semibold disabled:opacity-40 hover:bg-[#d5cfc6] transition-colors cursor-pointer"
         >
           Bevestig →
         </button>
