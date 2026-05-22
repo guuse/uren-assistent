@@ -1,4 +1,5 @@
 export interface HourEntry {
+  id?: string
   employeeId: string
   projectId: string
   projectServiceId: string
