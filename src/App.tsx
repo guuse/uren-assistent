@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from './store/appStore'
 import { useAppInit } from './ui/hooks/useAppInit'
+import { useSimplicateData } from './ui/hooks/useSimplicateData'
 import { LoginPage } from './ui/pages/LoginPage'
 import { WeekPage } from './ui/pages/WeekPage'
 import ImportPage from './ui/pages/ImportPage'
@@ -11,6 +12,7 @@ type Page = 'home' | 'import'
 
 function App() {
   useAppInit()
+  useSimplicateData()
   const user = useAppStore((s) => s.user)
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [showSettings, setShowSettings] = useState(false)
