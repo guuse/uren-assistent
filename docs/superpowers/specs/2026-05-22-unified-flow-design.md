@@ -197,6 +197,7 @@ const { blocksForDate, hasData, removeBlock } = useHistoryStore(selectedDate)
 | `src/ui/hooks/useImport.ts` | Behouden, maar `selectedBlockIndex` / `openBlock` / `closeBlock` worden vervangen door `WeekPage`-lokale state |
 | Sidebar import-nav-item | Verwijderen |
 | `ImportBlockCard.tsx` | Verwijderen (functionaliteit zit in `BookingModal` + evidence-strip) |
+| `EvidencePanel.tsx` | Behouden — wordt hergebruikt in `BookingModal` als `evidenceBlock` aanwezig is |
 
 ---
 
