@@ -65,9 +65,9 @@ export function SearchableSelect({ label, options, value, onChange, required, di
 
   return (
     <div className="flex flex-col gap-1" ref={containerRef}>
-      <label className="text-xs uppercase tracking-widest text-gray-400">
+      <label className="text-xs uppercase tracking-widest text-[#7a7268]">
         {label}
-        {required && !value && <span className="text-amber-400 ml-1">⚠</span>}
+        {required && !value && <span className="text-[#a07848] ml-1">⚠</span>}
       </label>
 
       <div className="relative">
@@ -75,48 +75,48 @@ export function SearchableSelect({ label, options, value, onChange, required, di
           type="button"
           onClick={handleOpen}
           disabled={disabled}
-          className="w-full bg-[#1a1a2e] text-left text-sm rounded-lg px-3 py-2 border border-gray-700 focus:border-[#6c63ff] focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2"
+          className="w-full bg-[#1e1b18] text-left text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2"
         >
-          <span className={selected ? 'text-white' : 'text-gray-500'}>
+          <span className={selected ? 'text-[#e8e2d9]' : 'text-[#4a4540]'}>
             {selected ? selected.label : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {selected && (
               <span
                 onClick={handleClear}
-                className="text-gray-500 hover:text-white text-xs px-1 cursor-pointer"
+                className="text-[#4a4540] hover:text-[#e8e2d9] text-xs px-1 cursor-pointer"
                 role="button"
               >
                 ✕
               </span>
             )}
-            <span className="text-gray-600 text-xs">{open ? '▲' : '▼'}</span>
+            <span className="text-[#4a4540] text-xs">{open ? '▲' : '▼'}</span>
           </div>
         </button>
 
         {open && (
-          <div className="absolute z-50 top-full mt-1 w-full bg-[#1a1a2e] border border-gray-700 rounded-lg shadow-xl overflow-hidden">
-            <div className="p-2 border-b border-gray-700">
+          <div className="absolute z-50 top-full mt-1 w-full bg-[#1e1b18] border border-[#2e2a26] rounded-lg shadow-xl overflow-hidden">
+            <div className="p-2 border-b border-[#2e2a26]">
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Zoeken..."
-                className="w-full bg-[#2d2d44] text-white text-sm rounded px-2 py-1.5 border border-gray-600 focus:border-[#6c63ff] focus:outline-none placeholder-gray-500"
+                className="w-full bg-[#252220] text-[#e8e2d9] text-sm rounded px-2 py-1.5 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none placeholder-[#4a4540]"
               />
             </div>
             <div className="max-h-52 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-500">Geen resultaten</div>
+                <div className="px-3 py-2 text-sm text-[#4a4540]">Geen resultaten</div>
               ) : (
                 filtered.map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
                     onClick={() => handleSelect(opt.id)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2d2d44] transition-colors ${
-                      opt.id === value ? 'text-[#6c63ff] font-medium' : 'text-white'
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-[#252220] transition-colors ${
+                      opt.id === value ? 'text-[#e8e2d9] font-medium' : 'text-[#7a7268]'
                     }`}
                   >
                     {opt.label}
