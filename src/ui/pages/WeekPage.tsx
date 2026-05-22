@@ -38,20 +38,10 @@ export function WeekPage() {
   const [bookingEntry, setBookingEntry] = useState<Partial<HourEntry> | null>(null)
   const [bookingConcept, setBookingConcept] = useState<ClassifiedBlock | null>(null)
 
-  // Concept-count per datum voor de WeekDayList badge (synchronous approximation via in-memory)
-  const [conceptCountCache, setConceptCountCache] = useState<Record<string, number>>({})
-
+  // Concept-count voor de WeekDayList badge: alleen de geselecteerde datum is in-memory geladen
   function conceptCountForDate(date: string): number {
-    return conceptCountCache[date] ?? 0
+    return date === week.selectedDate ? historyStore.blocksForDate.length : 0
   }
-
-  // Sync concept-count badge-cache wanneer blokken voor geselecteerde datum wijzigen
-  useEffect(() => {
-    setConceptCountCache(prev => ({
-      ...prev,
-      [week.selectedDate]: historyStore.blocksForDate.length,
-    }))
-  }, [week.selectedDate, historyStore.blocksForDate.length])
 
   function handleBookSuggestion(suggestion: HourEntrySuggestion) {
     const entry: Partial<HourEntry> = {

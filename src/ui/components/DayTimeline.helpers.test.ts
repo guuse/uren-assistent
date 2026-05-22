@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeTimelineBlocks, type TimelineBlock } from './DayTimeline.helpers'
+import { computeTimelineBlocks } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 
@@ -22,7 +22,7 @@ function makeSuggestion(startTime?: string): HourEntrySuggestion {
     projectId: 'p2',
     projectServiceId: 's2',
     hourTypeId: 'ht2',
-    startTime,
+    ...(startTime !== undefined && { startTime }),
     reason: 'last-week',
     occurrences: 1,
   }

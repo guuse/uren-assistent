@@ -64,13 +64,13 @@ export function computeTimelineBlocks(
     })
 
     if (matchIdx !== -1) {
-      block.suggestion = suggestions[matchIdx]
+      block.suggestion = suggestions[matchIdx]!
       usedSuggestions.add(matchIdx)
     } else {
       // Eerste ongebruikte suggestie zonder startTime (geen voorkeur voor gat)
       const firstIdx = suggestions.findIndex((s, i) => !usedSuggestions.has(i) && !s.startTime)
       if (firstIdx !== -1) {
-        block.suggestion = suggestions[firstIdx]
+        block.suggestion = suggestions[firstIdx]!
         usedSuggestions.add(firstIdx)
       }
     }
