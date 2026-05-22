@@ -1,6 +1,7 @@
 import { KeychainRepository } from '../infrastructure/keychain/KeychainRepository'
 import { SimplicateRepository } from '../infrastructure/simplicate/SimplicateRepository'
 import { MappingCacheRepository } from '../infrastructure/storage/MappingCacheRepository'
+import { HistoryStore } from '../infrastructure/storage/HistoryStore'
 import { CopilotRepository } from '../infrastructure/copilot/CopilotRepository'
 import { GoogleCalendarRepository } from '../infrastructure/googlecalendar/GoogleCalendarRepository'
 import { FetchSimplicateDataUseCase } from '../domain/usecases/FetchSimplicateDataUseCase'
@@ -22,6 +23,7 @@ const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string
 // Repositories
 export const keychainRepo = new KeychainRepository()
 export const mappingCacheRepo = new MappingCacheRepository()
+export const historyStore = new HistoryStore()
 
 export function createSimplicateRepository(baseUrl: string, apiKey: string, apiSecret: string) {
   return new SimplicateRepository(baseUrl, apiKey, apiSecret)
