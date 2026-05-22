@@ -11,7 +11,6 @@ import {
   createGroupAndClassifyDayUseCase,
 } from '../../application/container'
 import { ParseBrowserHistoryUseCase, ParseError } from '../../domain/usecases/ParseBrowserHistoryUseCase'
-import { BookTemplateUseCase } from '../../domain/usecases/BookTemplateUseCase'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 import type { CachedMapping } from '../../domain/repositories/IMappingCacheRepository'
@@ -192,7 +191,6 @@ export function useImport(): ImportState {
       return
     }
     const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
-    const bookTemplate = new BookTemplateUseCase(simplicateRepo)
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]!
@@ -201,21 +199,20 @@ export function useImport(): ImportState {
         continue
       }
       try {
-        await bookTemplate.execute({
-          template: {
-            id: `import-${i}`,
-            name: block.blockName,
-            type: 'single',
-            color: '#6c63ff',
-            projectId: block.projectId,
-            serviceId: block.serviceId,
-            startTime: block.startTime,
-            endTime: block.endTime,
-          },
+        const [sh, sm] = block.startTime.split(':').map(Number)
+        const [eh, em] = block.endTime.split(':').map(Number)
+        const hours = ((eh! * 60 + em!) - (sh! * 60 + sm!)) / 60
+        await simplicateRepo.bookHours([{
           employeeId,
+          projectId: block.projectId,
+          projectServiceId: block.serviceId,
+          hourTypeId: '',
+          hours,
+          startDate: block.date,
+          startTime: block.startTime,
+          endTime: block.endTime,
           note: block.note ?? '',
-          weekStartDate: block.date,
-        })
+        }])
         results[i] = 'success'
         // Only cache mappings for non-calendar blocks (calendar blocks have synthetic urlPattern)
         if (block.origin !== 'calendar') {
