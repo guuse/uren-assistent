@@ -317,16 +317,16 @@ export function DayTimeline({
                       key={i}
                       onClick={() => onEditEntry(block.entry)}
                       style={{ height }}
-                      className="w-full text-left bg-indigo-950 border-l-[3px] border-indigo-500 rounded-r px-3 py-1 hover:bg-indigo-900 transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
+                      className="w-full text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
                     >
                       <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
                         {projectName(block.entry.projectId)}
                       </div>
-                      <div className="text-indigo-300 text-[0.5625rem] truncate">
+                      <div className="text-[#7ab8e8] text-[0.5625rem] truncate">
                         {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
                       </div>
                       {block.entry.note && height > 52 && (
-                        <div className="text-[#64748b] text-[0.5625rem] truncate">{block.entry.note}</div>
+                        <div className="text-[#5a8aaa] text-[0.5625rem] truncate">{block.entry.note}</div>
                       )}
                     </button>
                   )
@@ -368,14 +368,14 @@ export function DayTimeline({
                     <div
                       key={i}
                       style={{ height }}
-                      className="w-full bg-[#1a2332] border border-dashed border-indigo-800 rounded px-3 py-1 flex items-center justify-between"
+                      className="w-full border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
                     >
-                      <div className="text-indigo-400 text-[0.625rem] truncate flex-1 mr-2">
+                      <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
                         → {suggestionLabel(block.suggestion)}
                       </div>
                       <button
                         onClick={() => onBookSuggestion(block.suggestion!)}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+                        className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
                       >
                         + Boek
                       </button>
@@ -387,7 +387,7 @@ export function DayTimeline({
                   <div
                     key={i}
                     style={{ height }}
-                    className="w-full bg-[#16213e] rounded border border-[#1e293b]"
+                    className="w-full border-b border-[#2e2a26]"
                   />
                 )
                 })}
