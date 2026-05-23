@@ -101,6 +101,42 @@ npm run tauri build   # production build
 
 ---
 
+## Bouwen & Omgevingen
+
+De app heeft twee configuraties die naast elkaar kunnen draaien:
+
+| Omgeving | Config | App-naam | Bundle ID |
+|---|---|---|---|
+| Dev | `src-tauri/tauri.conf.json` | uren-schrijven | com.guus.uren-schrijven |
+| Prod | `src-tauri/tauri.prod.conf.json` | Uren assistent | com.guus.uren-assistent |
+
+### Makefile-targets
+
+- `make run` — start de dev-server (hot reload, devtools aan)
+- `make build-prod` — bouwt prod-release en installeert in `/Applications/` (overschrijft vorige)
+- `make build-dev` — bouwt installeerbare dev-app
+
+### App-titel
+
+De zichtbare app-naam komt uit `VITE_APP_TITLE`:
+- `.env.production` → `Uren assistent` (gebruikt door `tauri build --config tauri.prod.conf.json`)
+- `.env.development` → `Uren schrijven (dev)` (gebruikt door `tauri dev`)
+
+### Iconen
+
+- Dev-icoon: `src-tauri/app-icon-dev.png` (512x512, met gele moersleutel-badge)
+- Prod-icoon: `src-tauri/app-icon-prod.png` (512x512, schoon)
+- Gegenereerde sets: `src-tauri/icons/` (dev) en `src-tauri/icons-prod/` (prod)
+
+Na een icoon-wijziging regenereer je de sets:
+
+```bash
+npx tauri icon src-tauri/app-icon-dev.png --output src-tauri/icons
+npx tauri icon src-tauri/app-icon-prod.png --output src-tauri/icons-prod
+```
+
+---
+
 ## Common Pitfalls
 
 - `serviceId` options depend on `projectId` — always filter services by the selected project
