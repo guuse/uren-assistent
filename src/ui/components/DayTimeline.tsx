@@ -7,7 +7,7 @@ import { useAppStore } from '../../store/appStore'
 
 const DAY_START = '08:00'
 const DAY_END = '18:00'
-const HOUR_HEIGHT_PX = 48
+const HOUR_HEIGHT_PX = 80
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -16,7 +16,7 @@ function timeToMinutes(time: string): number {
 
 function blockHeight(startTime: string, endTime: string): number {
   const mins = timeToMinutes(endTime) - timeToMinutes(startTime)
-  return Math.max(24, (mins / 60) * HOUR_HEIGHT_PX)
+  return Math.max(36, (mins / 60) * HOUR_HEIGHT_PX)
 }
 
 function conceptStatus(block: ClassifiedBlock): 'ok' | 'warn' | 'low' {
@@ -111,11 +111,11 @@ export function DayTimeline({
         <div>
           <div className="text-[#e8e2d9] font-bold capitalize">{dateLabel}</div>
           {hasConcepts ? (
-            <div className="text-[#a07848] text-[11px] mt-0.5">
+            <div className="text-[#a07848] text-[0.6875rem] mt-0.5">
               {totalHours}u geboekt · {pendingCount > 0 ? `${pendingCount} concept${pendingCount !== 1 ? 'en' : ''} te bevestigen` : 'alle concepten compleet'}
             </div>
           ) : (
-            <div className={`text-[11px] mt-0.5 ${totalHours >= 8 ? 'text-green-400' : 'text-amber-400'}`}>
+            <div className={`text-[0.6875rem] mt-0.5 ${totalHours >= 8 ? 'text-green-400' : 'text-amber-400'}`}>
               {totalHours}u geboekt · {Math.max(0, 8 - totalHours)}u te gaan
             </div>
           )}
@@ -126,7 +126,7 @@ export function DayTimeline({
         {(hasConcepts || hasEntries) && (
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[10px] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
+            className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[0.625rem] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
           >
             ↑ Nieuwe CSV
           </button>
@@ -136,7 +136,7 @@ export function DayTimeline({
       {/* Classifying spinner */}
       {isClassifying && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-[#7a7268] text-[12px]">Bezig met classificeren...</div>
+          <div className="text-[#7a7268] text-[0.75rem]">Bezig met classificeren...</div>
         </div>
       )}
 
@@ -153,17 +153,17 @@ export function DayTimeline({
         >
           <div className="border-2 border-dashed border-[#3a5a2a] rounded-xl px-8 py-10 flex flex-col items-center gap-3 w-full max-w-sm bg-[#1e2418]">
             <div className="w-12 h-12 bg-[#2a3a20] rounded-full flex items-center justify-center text-[#6aaa4a] text-2xl">↑</div>
-            <div className="text-[#e8e2d9] text-[13px] font-bold text-center">Geen browsergeschiedenis voor deze dag</div>
-            <div className="text-[#7a7268] text-[10px] text-center leading-relaxed">
+            <div className="text-[#e8e2d9] text-[0.8125rem] font-bold text-center">Geen browsergeschiedenis voor deze dag</div>
+            <div className="text-[#7a7268] text-[0.625rem] text-center leading-relaxed">
               Upload een Chrome history CSV om deze dag automatisch<br/>te laten invullen via de LLM.
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-[#e8e2d9] text-[#1c1917] border-none rounded-lg px-5 py-2 text-[11px] font-bold cursor-pointer hover:bg-[#d5cfc6] transition-colors"
+              className="bg-[#e8e2d9] text-[#1c1917] border-none rounded-lg px-5 py-2 text-[0.6875rem] font-bold cursor-pointer hover:bg-[#d5cfc6] transition-colors"
             >
               + Chrome history uploaden
             </button>
-            <div className="text-[#4a4540] text-[9px]">of sleep een .csv bestand hiernaartoe</div>
+            <div className="text-[#4a4540] text-[0.5625rem]">of sleep een .csv bestand hiernaartoe</div>
           </div>
         </div>
       )}
@@ -177,7 +177,7 @@ export function DayTimeline({
               {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
                 <div
                   key={hour}
-                  className="text-[#475569] text-[9px] flex items-start"
+                  className="text-[#475569] text-[0.5625rem] flex items-start"
                   style={{ height: HOUR_HEIGHT_PX }}
                 >
                   {hour.toString().padStart(2, '0')}
@@ -198,14 +198,14 @@ export function DayTimeline({
                       style={{ height }}
                       className="w-full text-left bg-indigo-950 border-l-[3px] border-indigo-500 rounded-r px-3 py-1 hover:bg-indigo-900 transition-colors cursor-pointer flex flex-col justify-center"
                     >
-                      <div className="text-[#e8e2d9] text-[11px] font-semibold truncate">
+                      <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
                         {projectName(block.entry.projectId)}
                       </div>
-                      <div className="text-indigo-300 text-[9px]">
+                      <div className="text-indigo-300 text-[0.5625rem]">
                         {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
                       </div>
                       {block.entry.note && (
-                        <div className="text-[#64748b] text-[9px] truncate">{block.entry.note}</div>
+                        <div className="text-[#64748b] text-[0.5625rem] truncate">{block.entry.note}</div>
                       )}
                     </button>
                   )
@@ -224,18 +224,18 @@ export function DayTimeline({
                       style={{ height }}
                       className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center`}
                     >
-                      <span className={`absolute right-2 top-1.5 text-[9px] px-[6px] py-[2px] rounded ${s.badge}`}>
+                      <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
                         {badgeLabel}
                       </span>
-                      <div className="text-[#e8e2d9] text-[11px] font-semibold truncate pr-16">
+                      <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate pr-16">
                         {block.block.blockName}
                       </div>
-                      <div className={`text-[9px] ${s.sub}`}>
+                      <div className={`text-[0.5625rem] ${s.sub}`}>
                         {block.block.startTime}–{block.block.endTime}
                         {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
                       </div>
                       {(!block.block.projectId || !block.block.serviceId) && (
-                        <div className="text-[#7a7268] text-[9px]">⚠ Project ontbreekt — klik om in te vullen</div>
+                        <div className="text-[#7a7268] text-[0.5625rem]">⚠ Project ontbreekt — klik om in te vullen</div>
                       )}
                     </button>
                   )
@@ -249,12 +249,12 @@ export function DayTimeline({
                       style={{ height }}
                       className="w-full bg-[#1a2332] border border-dashed border-indigo-800 rounded px-3 py-1 flex items-center justify-between"
                     >
-                      <div className="text-indigo-400 text-[10px] truncate flex-1 mr-2">
+                      <div className="text-indigo-400 text-[0.625rem] truncate flex-1 mr-2">
                         → {suggestionLabel(block.suggestion)}
                       </div>
                       <button
                         onClick={() => onBookSuggestion(block.suggestion!)}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
                       >
                         + Boek
                       </button>
