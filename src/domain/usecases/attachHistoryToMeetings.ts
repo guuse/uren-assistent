@@ -37,6 +37,12 @@ export function attachHistoryToMeetings(
   const unclaimed: HistoryBlock[] = []
 
   for (const block of blocks) {
+    // Commit-blocks (github.com/...) worden nooit aan meetings gekoppeld — altijd standalone
+    if (block.urlPattern.startsWith('github.com/')) {
+      unclaimed.push(block)
+      continue
+    }
+
     const blockStart = toMinutes(block.firstVisitTime)
     const blockEnd = toMinutes(block.lastVisitTime || block.firstVisitTime)
     const blockMid = (blockStart + blockEnd) / 2
