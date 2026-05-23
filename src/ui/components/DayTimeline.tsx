@@ -204,15 +204,15 @@ export function DayTimeline({
                       key={i}
                       onClick={() => onEditEntry(block.entry)}
                       style={{ height }}
-                      className="w-full text-left bg-indigo-950 border-l-[3px] border-indigo-500 rounded-r px-3 py-1 hover:bg-indigo-900 transition-colors cursor-pointer flex flex-col justify-center"
+                      className="w-full text-left bg-indigo-950 border-l-[3px] border-indigo-500 rounded-r px-3 py-1 hover:bg-indigo-900 transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
                     >
                       <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
                         {projectName(block.entry.projectId)}
                       </div>
-                      <div className="text-indigo-300 text-[0.5625rem]">
+                      <div className="text-indigo-300 text-[0.5625rem] truncate">
                         {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
                       </div>
-                      {block.entry.note && (
+                      {block.entry.note && height > 52 && (
                         <div className="text-[#64748b] text-[0.5625rem] truncate">{block.entry.note}</div>
                       )}
                     </button>
@@ -230,7 +230,7 @@ export function DayTimeline({
                       key={i}
                       onClick={() => onConceptClick?.(block.block)}
                       style={{ height }}
-                      className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center`}
+                      className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
                     >
                       <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
                         {badgeLabel}
@@ -238,12 +238,12 @@ export function DayTimeline({
                       <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate pr-16">
                         {block.block.blockName}
                       </div>
-                      <div className={`text-[0.5625rem] ${s.sub}`}>
+                      <div className={`text-[0.5625rem] truncate ${s.sub}`}>
                         {block.block.startTime}–{block.block.endTime}
                         {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
                       </div>
-                      {(!block.block.projectId || !block.block.serviceId) && (
-                        <div className="text-[#7a7268] text-[0.5625rem]">⚠ Project ontbreekt — klik om in te vullen</div>
+                      {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
+                        <div className="text-[#7a7268] text-[0.5625rem] truncate">⚠ Project ontbreekt — klik om in te vullen</div>
                       )}
                     </button>
                   )
