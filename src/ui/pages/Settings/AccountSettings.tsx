@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { keychainRepo, createSimplicateRepository } from '../../../application/container'
 import { useAuth } from '../../hooks/useAuth'
 import { useAppStore } from '../../../store/appStore'
+import { useStarredProjects } from '../../hooks/useStarredProjects'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
@@ -12,7 +13,9 @@ export function AccountSettings() {
   const setSimplicateData = useAppStore((s) => s.setSimplicateData)
   const setSimplicateEmployeeId = useAppStore((s) => s.setSimplicateEmployeeId)
   const setCopilotToken = useAppStore((s) => s.setCopilotToken)
+  const projects = useAppStore((s) => s.projects)
   const { logout } = useAuth()
+  const { starredIds, toggle: toggleStar } = useStarredProjects()
 
   const [apiKey, setApiKey] = useState('')
   const [apiSecret, setApiSecret] = useState('')
@@ -173,6 +176,36 @@ export function AccountSettings() {
         >
           {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
         </button>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Favoriete projecten</div>
+        <div className="text-xs text-[#4a4540]">
+          Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.
+        </div>
+        {projects.length === 0 ? (
+          <div className="text-xs text-[#4a4540]">Geen projecten geladen.</div>
+        ) : (
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+            {[...projects]
+              .sort((a, b) => `${a.organizationName} — ${a.name}`.localeCompare(`${b.organizationName} — ${b.name}`))
+              .map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => void toggleStar(p.id)}
+                  className={`flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                    starredIds.has(p.id)
+                      ? 'bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9]'
+                      : 'bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36]'
+                  }`}
+                >
+                  <span className="text-[#a07848]">{starredIds.has(p.id) ? '★' : '☆'}</span>
+                  <span>{p.organizationName} — {p.name}</span>
+                </button>
+              ))}
+          </div>
+        )}
       </div>
 
       <button
