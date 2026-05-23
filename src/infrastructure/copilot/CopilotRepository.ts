@@ -3,6 +3,7 @@ import type { ICopilotRepository, Project, Service, DayItem, DayClassificationRe
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
+import type { DayContext } from '../../domain/entities/DayContext'
 
 interface CopilotChoice {
   message: { content: string }
@@ -53,6 +54,26 @@ function formatOverlappingMeetings(block: HistoryBlock & { overlappingMeetings?:
     .map(e => `- ${toTime(e.start)}–${toTime(e.end)} ${e.title}`)
     .join('\n')
   return `\n  Overlapping meetings:\n${list}`
+}
+
+function formatDayContext(context: DayContext | undefined, date: string): string {
+  if (!context) return ''
+  const parts: string[] = []
+
+  const commitsForDay = context.commits.filter(c => c.timestamp.slice(0, 10) === date)
+  if (commitsForDay.length > 0) {
+    const lines = commitsForDay.map(c => `- ${c.time} ${c.message} [${c.repo}]`).join('\n')
+    parts.push(`## GitHub commits (${date})\n${lines}`)
+  }
+
+  if (context.linearIssues.length > 0) {
+    const lines = context.linearIssues
+      .map(i => `- ${i.identifier} · ${i.title} ✓ (afgerond ${i.completedAt.slice(0, 10)})`)
+      .join('\n')
+    parts.push(`## Linear issues (afgerond deze week)\n${lines}`)
+  }
+
+  return parts.length > 0 ? '\n' + parts.join('\n\n') + '\n' : ''
 }
 
 export class CopilotRepository implements ICopilotRepository {
@@ -166,6 +187,7 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
     availableProjects: Project[],
     availableServices: Service[],
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
+    context?: DayContext,
   ): Promise<DayClassificationResult[]> {
     const pad = (n: number) => String(n).padStart(2, '0')
     const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -220,6 +242,8 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
       ? `## Cache-hints (eerder geboekte patronen)\n${hintLines}\n\n`
       : ''
 
+    const contextSection = formatDayContext(context, date)
+
     const prompt = `Je bent een tijdregistratie-assistent die een developer helpt zijn werkuren te registreren.
 
 Datum: ${date}
@@ -228,7 +252,7 @@ Voor elk genummerd item hieronder geef je één boekingsblok terug.
 - Vergadering-items: gebruik de vergader-duur voor startTime/endTime/hours
 - Losse items: gebruik de browse-duur
 
-${meetingsSection}${standaloneSection}${hintsSection}Beschikbare projecten:
+${meetingsSection}${standaloneSection}${hintsSection}${contextSection}Beschikbare projecten:
 ${projectList}
 
 Beschikbare diensten (gekoppeld aan projecten via projectId):
