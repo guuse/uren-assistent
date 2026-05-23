@@ -15,8 +15,8 @@ describe('pixelToMinutes', () => {
 })
 
 describe('snapToInterval', () => {
-  it('snapt 495 min naar 480 (08:00 bij 30-min interval)', () => {
-    expect(snapToInterval(495, 30)).toBe(480)
+  it('snapt 492 min naar 480 (08:00 bij 30-min interval)', () => {
+    expect(snapToInterval(492, 30)).toBe(480)
   })
   it('snapt 510 min naar 510 (08:30)', () => {
     expect(snapToInterval(510, 30)).toBe(510)
