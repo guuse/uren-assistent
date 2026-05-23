@@ -34,8 +34,9 @@ function firstName(email: string): string {
   return part.charAt(0).toUpperCase() + part.slice(1)
 }
 
-function formatTime(date: Date): string {
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+function formatTime(date: Date | string): string {
+  const d = date instanceof Date ? date : new Date(date)
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
 function attendeeLabel(attendees: string[]): string {

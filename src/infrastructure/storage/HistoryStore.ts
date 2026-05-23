@@ -18,7 +18,20 @@ export class HistoryStore implements IHistoryStore {
     try {
       const path = await this.filePath()
       const raw = await readTextFile(path)
-      this.data = JSON.parse(raw) as Record<string, ClassifiedBlock[]>
+      const parsed = JSON.parse(raw) as Record<string, ClassifiedBlock[]>
+      // Rehydrate Date objects in overlappingMeetings (JSON.parse returns strings for Dates)
+      for (const blocks of Object.values(parsed)) {
+        for (const block of blocks) {
+          if (block.overlappingMeetings) {
+            block.overlappingMeetings = block.overlappingMeetings.map(m => ({
+              ...m,
+              start: new Date(m.start),
+              end: new Date(m.end),
+            }))
+          }
+        }
+      }
+      this.data = parsed
     } catch {
       this.data = {}
     }
