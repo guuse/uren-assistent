@@ -1,3 +1,5 @@
+import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
+
 interface Props {
   rawUrls?: string[] | undefined
   rawTitles?: string[] | undefined
@@ -6,6 +8,7 @@ interface Props {
   summary?: string | undefined
   startTime?: string | undefined
   endTime?: string | undefined
+  meetings?: CalendarEvent[] | undefined
 }
 
 function displayUrl(url: string): { host: string; path: string } {
@@ -24,6 +27,23 @@ function domainStyle(hostname: string): { bg: string; color: string } {
   return { bg: '#252220', color: '#7a7268' }
 }
 
+/** Extract first name from email: "jan.de.vries@company.com" → "Jan" */
+function firstName(email: string): string {
+  const local = email.split('@')[0] ?? email
+  const part = local.split(/[._]/)[0] ?? local
+  return part.charAt(0).toUpperCase() + part.slice(1)
+}
+
+function formatTime(date: Date): string {
+  return date.toTimeString().slice(0, 5)
+}
+
+function attendeeLabel(attendees: string[]): string {
+  const names = attendees.slice(0, 3).map(firstName)
+  const extra = attendees.length - 3
+  return extra > 0 ? `${names.join(', ')} +${extra}` : names.join(', ')
+}
+
 export default function EvidencePanel({
   rawUrls,
   rawTitles,
@@ -32,25 +52,39 @@ export default function EvidencePanel({
   summary,
   startTime,
   endTime,
+  meetings,
 }: Props) {
   const urlList = rawUrls?.length ? rawUrls : urls ?? []
   const titleList = rawTitles?.length ? rawTitles : titles ?? []
+  const meetingList = meetings?.length ? meetings : []
+  const hasMeetings = meetingList.length > 0
 
-  if (urlList.length === 0 && titleList.length === 0 && !summary) return null
+  if (urlList.length === 0 && titleList.length === 0 && !summary && !hasMeetings) return null
 
-  const timeLabel = startTime && endTime ? ` · ${startTime}–${endTime}` : ''
+  const timeLabel = startTime && endTime ? `${startTime}–${endTime}` : ''
 
   return (
     <div className="bg-[#1c1917] border border-[#2e2a26] rounded-lg overflow-hidden">
       {/* Kopregel */}
       <div className="px-3 py-[7px] border-b border-[#2e2a26] flex justify-between items-center">
         <span className="text-[#4a4540] text-[0.5625rem] uppercase tracking-[.08em] font-semibold">
-          Bezochte pagina's
+          {hasMeetings ? 'Context' : "Bezochte pagina's"}
         </span>
         <span className="text-[#4a4540] text-[0.5625rem]">
-          {urlList.length}{timeLabel}
+          {hasMeetings
+            ? timeLabel
+            : `${urlList.length}${timeLabel ? ` · ${timeLabel}` : ''}`}
         </span>
       </div>
+
+      {/* Browsing sub-label (alleen als meetings aanwezig) */}
+      {hasMeetings && urlList.length > 0 && (
+        <div className="px-3 pt-2 pb-1">
+          <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+            Browsing ({urlList.length})
+          </span>
+        </div>
+      )}
 
       {/* URL-lijst */}
       {urlList.length > 0 && (
@@ -82,6 +116,49 @@ export default function EvidencePanel({
             )
           })}
         </div>
+      )}
+
+      {/* Scheidingslijn + Agenda-sectie */}
+      {hasMeetings && (
+        <>
+          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+              Agenda ({meetingList.length})
+            </span>
+          </div>
+          <div className="px-3 pb-2 flex flex-col gap-[7px]">
+            {meetingList.map((meeting) => {
+              const statusColor = meeting.status === 'accepted' ? '#5a8a6a' : '#a07848'
+              const statusLabel = meeting.status === 'accepted' ? '✓ accepted' : '? tentative'
+              const timeRange = `${formatTime(meeting.start)}–${formatTime(meeting.end)}`
+              const attendees = attendeeLabel(meeting.attendees)
+              return (
+                <div key={meeting.id} className="flex gap-[10px] items-start">
+                  <div
+                    className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] mt-[1px] border border-[#2e2a26]"
+                    style={{ background: '#1a2a3a' }}
+                  >
+                    📅
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-[5px]">
+                      <span className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                        {meeting.title}
+                      </span>
+                      <span className="text-[0.5625rem] flex-shrink-0" style={{ color: statusColor }}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <div className="text-[#7a7268] text-[0.625rem] mt-[1px]">
+                      {timeRange}{attendees ? ` · ${attendees}` : ''}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* LLM-samenvatting */}

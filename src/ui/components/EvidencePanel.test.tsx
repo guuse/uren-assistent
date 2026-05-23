@@ -70,7 +70,6 @@ describe('EvidencePanel', () => {
 
   it('shows "Context" header instead of "Bezochte pagina\'s" when meetings are provided', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -82,7 +81,6 @@ describe('EvidencePanel', () => {
 
   it('renders meeting title in agenda section', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -93,7 +91,6 @@ describe('EvidencePanel', () => {
 
   it('renders "Agenda (1)" sub-label', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -104,7 +101,6 @@ describe('EvidencePanel', () => {
 
   it('renders "Browsing (1)" sub-label when meetings are present', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -115,7 +111,6 @@ describe('EvidencePanel', () => {
 
   it('shows accepted status indicator', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent({ status: 'accepted' })]}
@@ -126,7 +121,6 @@ describe('EvidencePanel', () => {
 
   it('shows tentative status indicator', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent({ status: 'tentative' })]}
@@ -137,7 +131,6 @@ describe('EvidencePanel', () => {
 
   it('shows first names of up to 3 attendees', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -148,7 +141,6 @@ describe('EvidencePanel', () => {
 
   it('truncates attendees beyond 3 with +N', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent({ attendees: ['a@x.com', 'b@x.com', 'c@x.com', 'd@x.com', 'e@x.com'] })]}
@@ -160,7 +152,6 @@ describe('EvidencePanel', () => {
 
   it('shows meeting time range', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel
         rawUrls={['https://github.com/org/repo']}
         meetings={[makeEvent()]}
@@ -176,7 +167,6 @@ describe('EvidencePanel', () => {
 
   it('keeps "Bezochte pagina\'s" header when meetings is empty array', () => {
     render(
-      // @ts-expect-error meetings prop does not exist yet
       <EvidencePanel rawUrls={['https://github.com/org/repo']} meetings={[]} />
     )
     expect(screen.getByText("Bezochte pagina's")).toBeInTheDocument()
