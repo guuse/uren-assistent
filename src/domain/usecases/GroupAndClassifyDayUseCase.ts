@@ -164,7 +164,21 @@ export class GroupAndClassifyDayUseCase {
               timeToMinutes(c.time) >= startMin &&
               timeToMinutes(c.time) <= endMin
             )
+            console.log('[GroupAndClassify] commit-block filter:', {
+              urlPattern: block.urlPattern,
+              repo,
+              startMin,
+              endMin,
+              totalCommits: context.commits.length,
+              filteredCommits: blockCommits.length,
+              sample: blockCommits.slice(0, 3).map(c => ({ repo: c.repo, time: c.time })),
+            })
           }
+
+          // Voor commit-blocks: geen Linear issues per block — Linear issues zijn week-breed
+          // en niet aan een specifieke repo te koppelen zonder expliciete mapping.
+          // Linear issues zijn wel zichtbaar in de dag-context onderaan de tijdlijn.
+          const blockLinearIssues: import('../entities/LinearIssue').LinearIssue[] = []
 
           const classified: ClassifiedBlock = {
             ...block,
@@ -178,7 +192,7 @@ export class GroupAndClassifyDayUseCase {
             rawTitles: block.titles.slice(0, 5),
             rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
             ...(blockCommits !== undefined ? { commits: blockCommits } : {}),
-            ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
+            ...(blockLinearIssues !== undefined ? { linearIssues: blockLinearIssues } : {}),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
