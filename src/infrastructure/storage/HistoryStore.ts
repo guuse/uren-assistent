@@ -52,17 +52,17 @@ export class HistoryStore implements IHistoryStore {
     const existing = this.data[date] ?? []
     const merged = [...existing]
     for (const block of blocks) {
-      // Strip runtime-only and large fields before persisting.
-      // commits/linearIssues are re-fetched each run.
-      // urls/titles are capped — only the top entries are needed for display and cache hints.
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { commits: _c, linearIssues: _l, ...persistable } = block
+      // Cap all potentially large arrays before persisting to prevent file bloat.
+      // commits and linearIssues are capped (not stripped) so block-level context
+      // survives a page reload without re-running "Verwerk week".
       const capped: ClassifiedBlock = {
-        ...persistable,
-        urls: persistable.urls.slice(0, 20),
-        titles: persistable.titles.slice(0, 20),
-        ...(persistable.rawUrls ? { rawUrls: persistable.rawUrls.slice(0, 5) } : {}),
-        ...(persistable.rawTitles ? { rawTitles: persistable.rawTitles.slice(0, 5) } : {}),
+        ...block,
+        urls: block.urls.slice(0, 20),
+        titles: block.titles.slice(0, 20),
+        ...(block.rawUrls ? { rawUrls: block.rawUrls.slice(0, 5) } : {}),
+        ...(block.rawTitles ? { rawTitles: block.rawTitles.slice(0, 5) } : {}),
+        ...(block.commits ? { commits: block.commits.slice(0, 50) } : {}),
+        ...(block.linearIssues ? { linearIssues: block.linearIssues.slice(0, 20) } : {}),
       }
       const idx = merged.findIndex(b => b.urlPattern === capped.urlPattern)
       if (idx !== -1) {

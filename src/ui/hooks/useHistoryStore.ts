@@ -17,7 +17,6 @@ export function useHistoryStore(selectedDate: string) {
   }, [])
 
   useEffect(() => {
-    // Reset direct bij datum-wissel zodat de vorige dag niet zichtbaar blijft
     setBlocksForDate([])
     setHasData(false)
     setIsLoaded(false)
