@@ -177,10 +177,18 @@ export function DayTimeline({
               {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
                 <div
                   key={hour}
-                  className="text-[#475569] text-[0.5625rem] flex items-start"
+                  className="relative flex-shrink-0"
                   style={{ height: HOUR_HEIGHT_PX }}
                 >
-                  {hour.toString().padStart(2, '0')}
+                  <span className="absolute top-0 text-[#475569] text-[0.5625rem]">
+                    {hour.toString().padStart(2, '0')}
+                  </span>
+                  <span
+                    className="absolute text-[#2e3a4a] text-[0.5rem]"
+                    style={{ top: HOUR_HEIGHT_PX / 2 }}
+                  >
+                    :30
+                  </span>
                 </div>
               ))}
             </div>
