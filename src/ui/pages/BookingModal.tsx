@@ -118,6 +118,17 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
             options={booking.projects.map((p) => ({ id: p.id, label: `${p.organizationName} — ${p.name}` }))}
             onChange={booking.setProjectId}
             highlight={!booking.projectId}
+            renderSuffix={(opt) => (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); void booking.toggleStar(opt.id) }}
+                className="p-1 text-[#a07848] hover:text-[#c09858] transition-colors"
+                aria-label={booking.starredIds.has(opt.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
+              >
+                {booking.starredIds.has(opt.id) ? '★' : '☆'}
+              </button>
+            )}
+            {...(booking.lastStarredId !== undefined && { groupSeparatorAfter: booking.lastStarredId })}
           />
           {booking.projectId && (
             <FieldSelector
