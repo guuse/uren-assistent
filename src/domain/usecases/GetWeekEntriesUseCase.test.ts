@@ -44,12 +44,14 @@ describe('GetWeekEntriesUseCase', () => {
     expect(result['2026-05-20']).toHaveLength(1)
   })
 
-  it('roept repo aan met maandag tot vrijdag van de gegeven week', async () => {
+  it('roept repo aan met maandag tot zaterdag als exclusieve bovengrens', async () => {
     const repo = makeRepo([])
     const useCase = new GetWeekEntriesUseCase(repo)
     await useCase.execute('emp1', '2026-05-18')
 
-    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-05-18', '2026-05-22')
+    // Saturday (2026-05-23) is used as exclusive upper bound so that friday entries
+    // ('2026-05-22 HH:MM:SS') pass the [le] string comparison in the Simplicate API
+    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-05-18', '2026-05-23')
   })
 
   it('geeft lege records terug als er geen entries zijn', async () => {
