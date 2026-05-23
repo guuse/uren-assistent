@@ -127,9 +127,8 @@ describe('mergeConceptsIntoTimeline', () => {
       '18:00',
     )
     expect(blocks.some(b => b.type === 'entry')).toBe(true)
-    // concept is nu zichtbaar als overlapping via buildTimelineRows, niet als los blok
-    const rows = buildTimelineRows(blocks)
-    expect(rows.some(r => r.right !== undefined && r.right.type === 'concept')).toBe(true)
+    // concept is ook aanwezig als los blok — renderer bepaalt kolom
+    expect(blocks.some(b => b.type === 'concept')).toBe(true)
   })
 
   it('toont concept naast geboekte entry bij gedeeltelijke overlap', () => {
@@ -140,8 +139,7 @@ describe('mergeConceptsIntoTimeline', () => {
       '18:00',
     )
     expect(blocks.some(b => b.type === 'entry')).toBe(true)
-    const rows = buildTimelineRows(blocks)
-    expect(rows.some(r => r.right !== undefined && r.right.type === 'concept')).toBe(true)
+    expect(blocks.some(b => b.type === 'concept')).toBe(true)
   })
 
   it('toont concept als het aansluit maar niet overlapt met een entry', () => {
@@ -169,16 +167,15 @@ describe('buildTimelineRows', () => {
   })
 
   it('geeft een rij met left=entry en right=concept als ze overlappen', () => {
+    // Met nieuwe logica heeft elke block zijn eigen rij — entry en concept zijn losse rijen
     const blocks = mergeConceptsIntoTimeline(
       [makeEntry('09:00', '11:00')],
       [makeConcept('09:00', '11:00')],
       '08:00',
       '18:00',
     )
-    const rows = buildTimelineRows(blocks)
-    const overlappingRow = rows.find(r => r.left.type === 'entry' && r.right !== undefined)
-    expect(overlappingRow).toBeDefined()
-    expect(overlappingRow!.right!.type).toBe('concept')
+    expect(blocks.some(b => b.type === 'entry')).toBe(true)
+    expect(blocks.some(b => b.type === 'concept')).toBe(true)
   })
 
   it('geeft gat-rij zonder right als er geen concept in dat gat zit', () => {

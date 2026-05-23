@@ -180,7 +180,7 @@ export default function EvidencePanel({
               GitHub commits ({commits.length})
             </span>
           </div>
-          <div className="px-3 pb-2 flex flex-col gap-[7px]">
+          <div className="px-3 pb-2 flex flex-col gap-[7px] overflow-y-auto" style={{ maxHeight: '160px' }}>
             {commits.map((commit) => (
               <div key={commit.sha} className="flex gap-[10px] items-start">
                 <div

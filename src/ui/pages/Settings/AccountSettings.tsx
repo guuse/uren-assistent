@@ -3,6 +3,7 @@ import { keychainRepo, createSimplicateRepository } from '../../../application/c
 import { useAuth } from '../../hooks/useAuth'
 import { useAppStore } from '../../../store/appStore'
 import { useStarredProjects } from '../../hooks/useStarredProjects'
+import { testCopilotToken, testGitHubToken, testLinearToken } from '../../../infrastructure/tokenTest'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
@@ -14,7 +15,9 @@ export function AccountSettings() {
   const setSimplicateEmployeeId = useAppStore((s) => s.setSimplicateEmployeeId)
   const setCopilotToken = useAppStore((s) => s.setCopilotToken)
   const setGithubToken = useAppStore((s) => s.setGithubToken)
+  const setGithubUsername = useAppStore((s) => s.setGithubUsername)
   const setLinearToken = useAppStore((s) => s.setLinearToken)
+  const setTokenStatus = useAppStore((s) => s.setTokenStatus)
   const projects = useAppStore((s) => s.projects)
   const { logout } = useAuth()
   const { starredIds, toggle: toggleStar } = useStarredProjects()
@@ -29,14 +32,21 @@ export function AccountSettings() {
   const [copilotTokenInput, setCopilotTokenInput] = useState('')
   const [hasCopilotToken, setHasCopilotToken] = useState(false)
   const [copilotSaved, setCopilotSaved] = useState(false)
+  const [copilotTestState, setCopilotTestState] = useState<TestState>('idle')
+  const [copilotTestLabel, setCopilotTestLabel] = useState<string | null>(null)
 
   const [githubTokenInput, setGithubTokenInput] = useState('')
+  const [githubUsernameInput, setGithubUsernameInput] = useState('')
   const [hasGithubToken, setHasGithubToken] = useState(false)
   const [githubSaved, setGithubSaved] = useState(false)
+  const [githubTestState, setGithubTestState] = useState<TestState>('idle')
+  const [githubTestLabel, setGithubTestLabel] = useState<string | null>(null)
 
   const [linearTokenInput, setLinearTokenInput] = useState('')
   const [hasLinearToken, setHasLinearToken] = useState(false)
   const [linearSaved, setLinearSaved] = useState(false)
+  const [linearTestState, setLinearTestState] = useState<TestState>('idle')
+  const [linearTestLabel, setLinearTestLabel] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadExisting() {
@@ -47,11 +57,13 @@ export function AccountSettings() {
       if (ct) { setHasCopilotToken(true); setCopilotToken(ct) }
       const gt = await keychainRepo.get('github-token')
       if (gt) { setHasGithubToken(true); setGithubToken(gt) }
+      const gu = await keychainRepo.get('github-username')
+      if (gu) { setGithubUsernameInput(gu); setGithubUsername(gu) }
       const lt = await keychainRepo.get('linear-token')
       if (lt) { setHasLinearToken(true); setLinearToken(lt) }
     }
     void loadExisting()
-  }, [setCopilotToken, setGithubToken, setLinearToken])
+  }, [setCopilotToken, setGithubToken, setGithubUsername, setLinearToken])
 
   async function save() {
     await keychainRepo.set('simplicate-api-key', apiKey)
@@ -106,6 +118,10 @@ export function AccountSettings() {
   async function saveGithubToken() {
     await keychainRepo.set('github-token', githubTokenInput)
     setGithubToken(githubTokenInput)
+    if (githubUsernameInput.trim()) {
+      await keychainRepo.set('github-username', githubUsernameInput.trim())
+      setGithubUsername(githubUsernameInput.trim())
+    }
     setHasGithubToken(true)
     setGithubSaved(true)
     setTimeout(() => setGithubSaved(false), 2000)
@@ -117,6 +133,36 @@ export function AccountSettings() {
     setHasLinearToken(true)
     setLinearSaved(true)
     setTimeout(() => setLinearSaved(false), 2000)
+  }
+
+  async function testCopilot() {
+    const token = copilotTokenInput || await keychainRepo.get('copilot-token')
+    if (!token) return
+    setCopilotTestState('testing')
+    const result = await testCopilotToken(token)
+    setCopilotTestState(result.ok ? 'ok' : 'fail')
+    setCopilotTestLabel(result.label)
+    setTokenStatus('copilot', result.ok ? 'ok' : 'fail')
+  }
+
+  async function testGithub() {
+    const token = githubTokenInput || await keychainRepo.get('github-token')
+    if (!token) return
+    setGithubTestState('testing')
+    const result = await testGitHubToken(token)
+    setGithubTestState(result.ok ? 'ok' : 'fail')
+    setGithubTestLabel(result.label)
+    setTokenStatus('github', result.ok ? 'ok' : 'fail')
+  }
+
+  async function testLinear() {
+    const token = linearTokenInput || await keychainRepo.get('linear-token')
+    if (!token) return
+    setLinearTestState('testing')
+    const result = await testLinearToken(token)
+    setLinearTestState(result.ok ? 'ok' : 'fail')
+    setLinearTestLabel(result.label)
+    setTokenStatus('linear', result.ok ? 'ok' : 'fail')
   }
 
   return (
@@ -199,13 +245,28 @@ export function AccountSettings() {
           className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
         />
 
-        <button
-          onClick={saveCopilotToken}
-          disabled={copilotTokenInput.length === 0}
-          className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-        >
-          {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void testCopilot()}
+            disabled={!hasCopilotToken && copilotTokenInput.length === 0}
+            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
+          >
+            {copilotTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
+          </button>
+          <button
+            onClick={saveCopilotToken}
+            disabled={copilotTokenInput.length === 0}
+            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
+          >
+            {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
+          </button>
+        </div>
+        {copilotTestState === 'ok' && (
+          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {copilotTestLabel}</div>
+        )}
+        {copilotTestState === 'fail' && (
+          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{copilotTestLabel}</div>
+        )}
       </div>
 
       {/* GitHub token sectie */}
@@ -228,14 +289,36 @@ export function AccountSettings() {
           placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
           className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
         />
+        <input
+          type="text"
+          value={githubUsernameInput}
+          onChange={e => setGithubUsernameInput(e.target.value)}
+          placeholder="GitHub gebruikersnaam (bijv. guuse)"
+          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
+        />
 
-        <button
-          onClick={saveGithubToken}
-          disabled={githubTokenInput.length === 0}
-          className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-        >
-          {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void testGithub()}
+            disabled={!hasGithubToken && githubTokenInput.length === 0}
+            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
+          >
+            {githubTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
+          </button>
+          <button
+            onClick={saveGithubToken}
+            disabled={githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0}
+            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
+          >
+            {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
+          </button>
+        </div>
+        {githubTestState === 'ok' && (
+          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {githubTestLabel}</div>
+        )}
+        {githubTestState === 'fail' && (
+          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{githubTestLabel}</div>
+        )}
       </div>
 
       {/* Linear API key sectie */}
@@ -259,13 +342,28 @@ export function AccountSettings() {
           className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
         />
 
-        <button
-          onClick={saveLinearToken}
-          disabled={linearTokenInput.length === 0}
-          className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-        >
-          {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void testLinear()}
+            disabled={!hasLinearToken && linearTokenInput.length === 0}
+            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
+          >
+            {linearTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
+          </button>
+          <button
+            onClick={saveLinearToken}
+            disabled={linearTokenInput.length === 0}
+            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
+          >
+            {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
+          </button>
+        </div>
+        {linearTestState === 'ok' && (
+          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {linearTestLabel}</div>
+        )}
+        {linearTestState === 'fail' && (
+          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{linearTestLabel}</div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">

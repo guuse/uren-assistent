@@ -49,9 +49,12 @@ export function WeekDayList({
 
       <div className="flex flex-col gap-1 flex-1">
         {weekDays.map((date) => {
-          const dayNum = new Date(date).getDay().toString()
+          // Parse YYYY-MM-DD as local date to avoid UTC timezone shift
+          const [year, month, day] = date.split('-').map(Number)
+          const localDate = new Date(year!, month! - 1, day!)
+          const dayNum = localDate.getDay().toString()
           const label = DAY_LABELS[dayNum] ?? ''
-          const dayOfMonth = new Date(date).getDate()
+          const dayOfMonth = localDate.getDate()
           const hours = hoursForDate(date)
           const isSelected = date === selectedDate
           const isFull = hours >= TARGET_HOURS

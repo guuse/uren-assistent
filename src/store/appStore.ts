@@ -5,6 +5,21 @@ import type {
   SimplicateProject,
   SimplicateService,
 } from '../domain/repositories/ISimplicateRepository'
+import type { GitHubCommit } from '../domain/entities/GitHubCommit'
+import type { LinearIssue } from '../domain/entities/LinearIssue'
+
+export type TokenStatus = 'unknown' | 'ok' | 'fail'
+
+export interface TokenStatuses {
+  copilot: TokenStatus
+  github: TokenStatus
+  linear: TokenStatus
+}
+
+export interface DayContext {
+  commits: GitHubCommit[]
+  linearIssues: LinearIssue[]
+}
 
 interface AppState {
   // Auth
@@ -34,6 +49,14 @@ interface AppState {
   linearToken: string | null
   setLinearToken: (token: string) => void
 
+  // Token connection status
+  tokenStatuses: TokenStatuses
+  setTokenStatus: (service: keyof TokenStatuses, status: TokenStatus) => void
+
+  // Day context (commits + linear issues per date, set after ProcessWeek)
+  dayContexts: Record<string, DayContext>
+  setDayContext: (date: string, ctx: DayContext) => void
+
   // UI
   isLoading: boolean
   setLoading: (loading: boolean) => void
@@ -51,6 +74,8 @@ const initialState = {
   githubToken: null,
   githubUsername: null,
   linearToken: null,
+  tokenStatuses: { copilot: 'unknown' as const, github: 'unknown' as const, linear: 'unknown' as const },
+  dayContexts: {},
   isLoading: false,
   error: null,
 }
@@ -70,6 +95,12 @@ export const useAppStore = create<AppState>()((set) => ({
   setGithubToken: (githubToken) => set({ githubToken }),
   setGithubUsername: (githubUsername) => set({ githubUsername }),
   setLinearToken: (linearToken) => set({ linearToken }),
+
+  setTokenStatus: (service, status) =>
+    set((state) => ({ tokenStatuses: { ...state.tokenStatuses, [service]: status } })),
+
+  setDayContext: (date, ctx) =>
+    set((state) => ({ dayContexts: { ...state.dayContexts, [date]: ctx } })),
 
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),

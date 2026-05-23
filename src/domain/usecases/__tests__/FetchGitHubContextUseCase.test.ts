@@ -4,8 +4,8 @@ import type { IGitHubRepository } from '../../repositories/IGitHubRepository'
 import type { GitHubCommit } from '../../entities/GitHubCommit'
 
 const mockCommits: GitHubCommit[] = [
-  { sha: 'abc', message: 'feat: add ESC close', repo: 'guuse/uren-schrijven', branch: 'main', timestamp: '2026-05-20T10:23:00Z', time: '10:23' },
-  { sha: 'def', message: 'fix: drag logic', repo: 'guuse/uren-schrijven', branch: 'main', timestamp: '2026-05-21T11:47:00Z', time: '11:47' },
+  { sha: 'abc', message: 'feat: add ESC close', repo: 'guuse/uren-schrijven', branch: 'main', timestamp: '2026-05-20T10:23:00Z', time: '10:23', date: '2026-05-20' },
+  { sha: 'def', message: 'fix: drag logic', repo: 'guuse/uren-schrijven', branch: 'main', timestamp: '2026-05-21T11:47:00Z', time: '11:47', date: '2026-05-21' },
 ]
 
 const mockRepo: IGitHubRepository = {

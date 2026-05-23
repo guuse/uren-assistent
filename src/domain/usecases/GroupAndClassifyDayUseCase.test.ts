@@ -159,7 +159,7 @@ describe('GroupAndClassifyDayUseCase', () => {
 
   it('accepts optional DayContext without crashing on empty day', async () => {
     const context: DayContext = {
-      commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'guuse/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00' }],
+      commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'guuse/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00', date: '2026-05-20' }],
       linearIssues: [{ identifier: 'ENG-42', title: 'Booking modal', completedAt: '2026-05-20T14:00:00Z', url: 'https://linear.app/eng/issue/ENG-42' }],
     }
     const { copilotRepo, cacheRepo } = makeDeps({}, [])

@@ -92,65 +92,36 @@ export function mergeConceptsIntoTimeline(
   dayStart: string,
   dayEnd: string,
 ): TimelineBlock[] {
-  type EntryItem = { kind: 'entry'; startTime: string; endTime: string; entry: HourEntry }
-  type ConceptItem = { kind: 'concept'; startTime: string; endTime: string; block: ClassifiedBlock; overlapping: boolean }
-  type Item = EntryItem | ConceptItem
+  // Deduplicate concepts by blockName+startTime+endTime (keep last, which has resolved projectId)
+  const seenKeys = new Map<string, ClassifiedBlock>()
+  for (const c of concepts) {
+    seenKeys.set(`${c.blockName}|${c.startTime}|${c.endTime}`, c)
+  }
+  const uniqueConcepts = Array.from(seenKeys.values())
 
-  // Concepts that overlap with a booked entry are marked as overlapping (not filtered out).
-  const annotatedConcepts: ConceptItem[] = concepts.map(concept => {
-    const cStart = timeToMinutes(concept.startTime)
-    const cEnd = timeToMinutes(concept.endTime)
-    const overlapping = entries.some(entry => {
-      const eStart = timeToMinutes(entry.startTime)
-      const eEnd = timeToMinutes(entry.endTime)
-      return cStart < eEnd && cEnd > eStart
-    })
-    return { kind: 'concept' as const, startTime: concept.startTime, endTime: concept.endTime, block: concept, overlapping }
-  })
-
-  // Non-overlapping concepts join the main timeline stream
-  const nonOverlappingConcepts = annotatedConcepts.filter(c => !c.overlapping)
-
-  const items: Item[] = [
-    ...entries.map(e => ({ kind: 'entry' as const, startTime: e.startTime, endTime: e.endTime, entry: e })),
-    ...nonOverlappingConcepts,
+  // All entries and concepts as flat blocks, sorted by startTime
+  const allItems = [
+    ...entries.map(e => ({ type: 'entry' as const, startTime: e.startTime, endTime: e.endTime, entry: e })),
+    ...uniqueConcepts.map(c => ({ type: 'concept' as const, startTime: c.startTime, endTime: c.endTime, block: c })),
   ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
 
+  // Build output with gap blocks filling the spaces between items
   const blocks: TimelineBlock[] = []
   let cursor = timeToMinutes(dayStart)
   const end = timeToMinutes(dayEnd)
 
-  for (const item of items) {
+  for (const item of allItems) {
     const itemStart = timeToMinutes(item.startTime)
     const itemEnd = timeToMinutes(item.endTime)
     if (itemStart > cursor) {
       blocks.push({ type: 'gap', startTime: minutesToTime(cursor), endTime: minutesToTime(itemStart) })
     }
-    if (item.kind === 'entry') {
-      blocks.push({ type: 'entry', startTime: item.startTime, endTime: item.endTime, entry: item.entry })
-    } else {
-      blocks.push({ type: 'concept', startTime: item.startTime, endTime: item.endTime, block: item.block })
-    }
+    blocks.push(item as TimelineBlock)
     cursor = Math.max(cursor, itemEnd)
   }
 
   if (cursor < end) {
     blocks.push({ type: 'gap', startTime: minutesToTime(cursor), endTime: minutesToTime(end) })
-  }
-
-  // Attach overlapping concepts as metadata on their entry blocks
-  for (const c of annotatedConcepts.filter(c => c.overlapping)) {
-    const cStart = timeToMinutes(c.startTime)
-    const cEnd = timeToMinutes(c.endTime)
-    const entryBlock = blocks.find(b => {
-      if (b.type !== 'entry') return false
-      const bStart = timeToMinutes(b.startTime)
-      const bEnd = timeToMinutes(b.endTime)
-      return cStart < bEnd && cEnd > bStart
-    })
-    if (entryBlock && entryBlock.type === 'entry') {
-      ;(entryBlock as TimelineBlock & { overlappingConcept?: ClassifiedBlock }).overlappingConcept = c.block
-    }
   }
 
   return blocks

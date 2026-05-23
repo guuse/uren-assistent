@@ -22,11 +22,15 @@ export class LinearRepository implements ILinearRepository {
   constructor(private readonly token: string) {}
 
   async getCompletedIssuesForWeek(weekStart: string, weekEnd: string): Promise<LinearIssue[]> {
+    const startISO = `${weekStart}T00:00:00.000Z`
+    const endISO = `${weekEnd}T23:59:59.999Z`
+
+    // Use inline literals to avoid GraphQL type mismatches with Linear's schema
     const query = `
-      query CompletedIssues($weekStart: DateTime!, $weekEnd: DateTime!) {
+      {
         issues(
           filter: {
-            completedAt: { gte: $weekStart, lte: $weekEnd }
+            completedAt: { gte: "${startISO}", lte: "${endISO}" }
             assignee: { isMe: { eq: true } }
           }
           first: 50
@@ -47,17 +51,12 @@ export class LinearRepository implements ILinearRepository {
         Authorization: this.token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        query,
-        variables: {
-          weekStart: `${weekStart}T00:00:00Z`,
-          weekEnd: `${weekEnd}T23:59:59Z`,
-        },
-      }),
+      body: JSON.stringify({ query }),
     })
 
     if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status}`)
+      const body = await response.text()
+      throw new Error(`Linear API error: ${response.status} — ${body}`)
     }
 
     const data = await response.json() as LinearResponse

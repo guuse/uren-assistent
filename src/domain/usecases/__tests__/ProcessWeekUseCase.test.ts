@@ -11,7 +11,7 @@ import type { LinearIssue } from '../../entities/LinearIssue'
 
 const mockCommit: GitHubCommit = {
   sha: 'abc', message: 'feat: test', repo: 'guuse/r', branch: 'main',
-  timestamp: '2026-05-19T10:00:00Z', time: '10:00',
+  timestamp: '2026-05-19T10:00:00Z', time: '10:00', date: '2026-05-19',
 }
 const mockIssue: LinearIssue = {
   identifier: 'ENG-1', title: 'Test issue', completedAt: '2026-05-19T14:00:00Z',

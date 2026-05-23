@@ -19,6 +19,11 @@ function toTime(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h! * 60 + m!
+}
+
 function roundToHalf(hours: number): number {
   return Math.max(0.5, Math.round(hours * 2) / 2)
 }
@@ -145,6 +150,22 @@ export class GroupAndClassifyDayUseCase {
           llmResults.push(classified)
         } else {
           const block = matchedItem.block
+
+          // Voor commit-blocks: filter commits op deze repo + tijdsperiode
+          // urlPattern = "github.com/owner/repo@HH:mm"
+          let blockCommits = context?.commits
+          if (block.urlPattern.startsWith('github.com/') && context?.commits) {
+            const repoUrl = block.urlPattern.split('@')[0]!  // "github.com/owner/repo"
+            const repo = repoUrl.replace('github.com/', '')  // "owner/repo"
+            const startMin = timeToMinutes(block.firstVisitTime)
+            const endMin = timeToMinutes(block.lastVisitTime)
+            blockCommits = context.commits.filter(c =>
+              c.repo === repo &&
+              timeToMinutes(c.time) >= startMin &&
+              timeToMinutes(c.time) <= endMin
+            )
+          }
+
           const classified: ClassifiedBlock = {
             ...block,
             blockName: result.blockName,
@@ -156,7 +177,7 @@ export class GroupAndClassifyDayUseCase {
             origin: 'llm',
             rawTitles: block.titles.slice(0, 5),
             rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
-            ...(context?.commits !== undefined ? { commits: context.commits } : {}),
+            ...(blockCommits !== undefined ? { commits: blockCommits } : {}),
             ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
           }
           if (result.projectId !== null) classified.projectId = result.projectId

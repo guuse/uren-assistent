@@ -6,6 +6,7 @@ import { LoginPage } from './ui/pages/LoginPage'
 import { WeekPage } from './ui/pages/WeekPage'
 import { Sidebar } from './ui/components/Sidebar'
 import { SettingsPage } from './ui/pages/Settings/SettingsPage'
+import ConnectionBanner from './ui/components/ConnectionBanner'
 
 function App() {
   useAppInit()
@@ -17,20 +18,26 @@ function App() {
 
   if (showSettings) {
     return (
-      <div className="h-screen flex overflow-hidden bg-[#1c1917]">
-        <Sidebar onSettings={() => setShowSettings(true)} />
-        <div className="flex-1 overflow-hidden">
-          <SettingsPage onBack={() => setShowSettings(false)} />
+      <div className="h-screen flex flex-col overflow-hidden bg-[#1c1917]">
+        <ConnectionBanner />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar onSettings={() => setShowSettings(true)} />
+          <div className="flex-1 overflow-hidden">
+            <SettingsPage onBack={() => setShowSettings(false)} />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-[#1c1917]">
-      <Sidebar onSettings={() => setShowSettings(true)} />
-      <div className="flex-1 overflow-hidden">
-        <WeekPage />
+    <div className="h-screen flex flex-col overflow-hidden bg-[#1c1917]">
+      <ConnectionBanner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar onSettings={() => setShowSettings(true)} />
+        <div className="flex-1 overflow-hidden">
+          <WeekPage />
+        </div>
       </div>
     </div>
   )

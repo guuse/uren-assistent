@@ -6,4 +6,5 @@ export interface GitHubCommit {
   branch: string
   timestamp: string // ISO 8601
   time: string      // "HH:MM" lokale tijd
+  date: string      // "YYYY-MM-DD" lokale datum
 }

@@ -1,11 +1,14 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { mergeConceptsIntoTimeline, computeTimelineBlocks, buildTimelineRows } from './DayTimeline.helpers'
+import { mergeConceptsIntoTimeline, computeTimelineBlocks } from './DayTimeline.helpers'
 import type { TimelineBlock } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
+import type { GitHubCommit } from '../../domain/entities/GitHubCommit'
+import type { LinearIssue } from '../../domain/entities/LinearIssue'
 import { useAppStore } from '../../store/appStore'
 import { pixelToMinutes, snapToInterval, minutesToTime, swapIfNeeded } from './DragOverlay'
+import EvidencePanel from './EvidencePanel'
 
 const DAY_START = '08:00'
 const DAY_END = '18:00'
@@ -16,10 +19,6 @@ function timeToMinutes(time: string): number {
   return h! * 60 + m!
 }
 
-function blockHeight(startTime: string, endTime: string): number {
-  const mins = timeToMinutes(endTime) - timeToMinutes(startTime)
-  return Math.max(36, (mins / 60) * HOUR_HEIGHT_PX)
-}
 
 function conceptStatus(block: ClassifiedBlock): 'ok' | 'warn' | 'low' {
   if (!block.projectId || !block.serviceId) return 'warn'
@@ -38,6 +37,8 @@ interface Props {
   entries: HourEntry[]
   suggestions: HourEntrySuggestion[]
   conceptBlocks?: ClassifiedBlock[]
+  commits?: GitHubCommit[]
+  linearIssues?: LinearIssue[]
   onBookSuggestion: (suggestion: HourEntrySuggestion) => void
   onEditEntry: (entry: HourEntry) => void
   onConceptClick?: (block: ClassifiedBlock) => void
@@ -51,6 +52,8 @@ export function DayTimeline({
   entries,
   suggestions,
   conceptBlocks = [],
+  commits = [],
+  linearIssues = [],
   onBookSuggestion,
   onEditEntry,
   onConceptClick,
@@ -131,16 +134,30 @@ export function DayTimeline({
     ? mergeConceptsIntoTimeline(entries, conceptBlocks, DAY_START, DAY_END)
     : computeTimelineBlocks(entries, suggestions, DAY_START, DAY_END)
 
-  const rows = buildTimelineRows(flatBlocks)
+  const DAY_START_MIN = timeToMinutes(DAY_START)
+  const TOTAL_MINS = timeToMinutes(DAY_END) - DAY_START_MIN
+  const TOTAL_PX = HOUR_HEIGHT_PX * 10
 
-  function renderBlock(block: TimelineBlock, height: number, key: string | number) {
+  function blockTop(startTime: string): number {
+    return ((timeToMinutes(startTime) - DAY_START_MIN) / TOTAL_MINS) * TOTAL_PX
+  }
+  function blockPx(startTime: string, endTime: string): number {
+    const mins = timeToMinutes(endTime) - timeToMinutes(startTime)
+    return Math.max(24, (mins / TOTAL_MINS) * TOTAL_PX)
+  }
+
+  // If there are both entries and concepts: entries left 59%, concepts right 40%
+  // If only concepts: full width
+  function renderBlock(block: TimelineBlock, height: number, key: string | number, positionStyle?: React.CSSProperties) {
+    const baseStyle: React.CSSProperties = { height, ...positionStyle }
+
     if (block.type === 'entry') {
       return (
         <button
           key={key}
           onClick={() => onEditEntry(block.entry)}
-          style={{ height }}
-          className="w-full text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
+          style={baseStyle}
+          className="text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
         >
           <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
             {projectName(block.entry.projectId)}
@@ -165,8 +182,8 @@ export function DayTimeline({
         <button
           key={key}
           onClick={() => onConceptClick?.(block.block)}
-          style={{ height }}
-          className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
+          style={baseStyle}
+          className={`relative text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
         >
           <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
             {badgeLabel}
@@ -190,8 +207,8 @@ export function DayTimeline({
       return (
         <div
           key={key}
-          style={{ height }}
-          className="w-full border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
+          style={baseStyle}
+          className="border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
         >
           <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
             → {suggestionLabel(block.suggestion)}
@@ -209,8 +226,8 @@ export function DayTimeline({
     return (
       <div
         key={key}
-        style={{ height }}
-        className="w-full border-b border-[#2e2a26]"
+        style={baseStyle}
+        className="border-b border-[#2e2a26]"
       />
     )
   }
@@ -392,31 +409,89 @@ export function DayTimeline({
                   </div>
                 )
               })()}
-              <div className="flex flex-col gap-[1px]">
-                {rows.map((row, i) => {
-                  const leftHeight = blockHeight(row.left.startTime, row.left.endTime)
+               <div className="absolute inset-0">
+                {(() => {
+                  // Column-packing: assign each entry/concept to the first column where it fits.
+                  // Sort by duration ascending first so shorter blocks go left, longer blocks right.
+                  const contentBlocks = flatBlocks.filter(b => b.type === 'entry' || b.type === 'concept')
+                  const sortedByDuration = [...contentBlocks].sort((a, b) => {
+                    const durA = timeToMinutes(a.endTime) - timeToMinutes(a.startTime)
+                    const durB = timeToMinutes(b.endTime) - timeToMinutes(b.startTime)
+                    if (durA !== durB) return durA - durB  // kortste eerst → links
+                    return a.startTime.localeCompare(b.startTime)  // gelijke duur: vroegste eerst
+                  })
+                  // columnEndMin[i] = the end time (in minutes) of the last block placed in column i
+                  const columnEndMin: number[] = []
 
-                  if (row.right) {
-                    const rightHeight = blockHeight(row.right.startTime, row.right.endTime)
-                    const rowHeight = Math.max(leftHeight, rightHeight)
-                    // Two-column layout: entry left (60%), concept right (40%)
-                    return (
-                      <div key={i} style={{ height: rowHeight }} className="flex gap-[2px] items-start">
-                        <div className="flex-[3] min-w-0">
-                          {renderBlock(row.left, leftHeight, `${i}-left`)}
-                        </div>
-                        <div className="flex-[2] min-w-0">
-                          {renderBlock(row.right, rightHeight, `${i}-right`)}
-                        </div>
-                      </div>
-                    )
-                  }
+                  const blockColumns = sortedByDuration.map(block => {
+                    const startMin = timeToMinutes(block.startTime)
+                    // Find first column where this block fits
+                    let col = columnEndMin.findIndex(endMin => startMin >= endMin)
+                    if (col === -1) {
+                      col = columnEndMin.length
+                      columnEndMin.push(0)
+                    }
+                    columnEndMin[col] = timeToMinutes(block.endTime)
+                    return { block, col }
+                  })
 
-                  return renderBlock(row.left, leftHeight, i)
-                })}
+                  const numCols = Math.max(1, columnEndMin.length)
+                  const colWidthPct = 100 / numCols
+
+                  // Render gap blocks first (always column 0, full width only if no content blocks)
+                  const gapElements = flatBlocks
+                    .filter(b => b.type === 'gap' && b.suggestion)
+                    .map((block, i) => {
+                      if (block.type !== 'gap') return null
+                      const top = blockTop(block.startTime)
+                      const height = blockPx(block.startTime, block.endTime)
+                      // Gaps fill column 0 width (or full width if single column)
+                      const width = `${colWidthPct}%`
+                      return (
+                        <div
+                          key={`gap-${i}`}
+                          style={{ position: 'absolute', top, left: 0, width, height }}
+                          className="border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
+                        >
+                          <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
+                            → {suggestionLabel(block.suggestion!)}
+                          </div>
+                          <button
+                            onClick={() => onBookSuggestion(block.suggestion!)}
+                            className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+                          >
+                            + Boek
+                          </button>
+                        </div>
+                      )
+                    })
+
+                  // Render content blocks in their assigned columns
+                  const contentElements = blockColumns.map(({ block, col }, i) => {
+                    const top = blockTop(block.startTime)
+                    const height = blockPx(block.startTime, block.endTime)
+                    const left = `${col * colWidthPct}%`
+                    const width = `${colWidthPct}%`
+                    return renderBlock(block, height, `content-${i}`, {
+                      position: 'absolute', top, left, width,
+                    })
+                  })
+
+                  return [...gapElements, ...contentElements]
+                })()}
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Evidence panel — GitHub commits + Linear issues voor deze dag */}
+      {(commits.length > 0 || linearIssues.length > 0) && (
+        <div className="flex-shrink-0 border-t border-[#2e2a26] px-4 py-3">
+          <div className="text-[#7a7268] text-[0.5625rem] font-semibold uppercase tracking-wide mb-2">
+            Context voor deze dag
+          </div>
+          <EvidencePanel commits={commits} linearIssues={linearIssues} />
         </div>
       )}
     </div>

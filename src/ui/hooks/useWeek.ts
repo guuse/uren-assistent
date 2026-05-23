@@ -5,22 +5,30 @@ import type { HourEntry } from '../../domain/entities/HourEntry'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function getMondayOf(date: Date): string {
-  const d = new Date(date)
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const day = d.getDay()
   const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
-  return d.toISOString().split('T')[0]!
+  return toLocalDateString(d)
 }
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr)
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year!, month! - 1, day!)
   d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]!
+  return toLocalDateString(d)
 }
 
 function todayString(): string {
-  return new Date().toISOString().split('T')[0]!
+  return toLocalDateString(new Date())
 }
 
 export function useWeek() {
