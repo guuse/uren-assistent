@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use std::net::TcpListener;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener as AsyncTcpListener;
@@ -71,8 +71,17 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
         })
         .ok_or("No code in callback")?;
 
-    let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h2>Inloggen geslaagd! Je kunt dit venster sluiten.</h2></body></html>";
+    let html = "<!DOCTYPE html><html><body><p>Je bent ingelogd. Dit venster sluit automatisch.</p><script>window.close()</script></body></html>";
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n{}",
+        html.len(),
+        html
+    );
     writer.write_all(response.as_bytes()).await.map_err(|e| e.to_string())?;
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_focus();
+    }
 
     // Return code + verifier + redirect_uri for token exchange in JS
     Ok(serde_json::json!({ "code": code, "verifier": verifier, "redirect_uri": redirect_uri }).to_string())
