@@ -1,12 +1,19 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useWeek } from '../hooks/useWeek'
 import { useSuggestions } from '../hooks/useSuggestions'
 import { useImport } from '../hooks/useImport'
 import { useHistoryStore } from '../hooks/useHistoryStore'
 import { WeekDayList } from '../components/WeekDayList'
+import type { DayProcessingState } from '../components/WeekDayList'
 import { DayTimeline } from '../components/DayTimeline'
 import { BookingModal } from './BookingModal'
-import { mappingCacheRepo } from '../../application/container'
+import {
+  mappingCacheRepo,
+  createProcessWeekUseCase,
+  createCalendarRepository,
+  createCopilotRepository,
+} from '../../application/container'
+import { useAppStore } from '../../store/appStore'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
@@ -35,12 +42,27 @@ export function WeekPage() {
   const importState = useImport()
   const historyStore = useHistoryStore(week.selectedDate)
 
+  const githubToken = useAppStore((s) => s.githubToken)
+  const githubUsername = useAppStore((s) => s.githubUsername)
+  const linearToken = useAppStore((s) => s.linearToken)
+  const copilotToken = useAppStore((s) => s.copilotToken)
+  const projects = useAppStore((s) => s.projects)
+  const services = useAppStore((s) => s.services)
+
   const [bookingEntry, setBookingEntry] = useState<Partial<HourEntry> | null>(null)
   const [bookingConcept, setBookingConcept] = useState<ClassifiedBlock | null>(null)
 
-  // Concept-count voor de WeekDayList badge: alleen de geselecteerde datum is in-memory geladen
+  // Week processing state
+  const [isProcessingWeek, setIsProcessingWeek] = useState(false)
+  const [dayProcessingStates, setDayProcessingStates] = useState<Map<string, DayProcessingState>>(new Map())
+  const abortRef = useRef(false)
+
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
+  }
+
+  function processingStateForDate(date: string): DayProcessingState {
+    return dayProcessingStates.get(date) ?? 'idle'
   }
 
   function handleBookSuggestion(suggestion: HourEntrySuggestion) {
@@ -89,7 +111,6 @@ export function WeekPage() {
 
   const { saveBlocksForDate } = historyStore
 
-  // Na classificatie: sla blokken op in historyStore
   useEffect(() => {
     if (importState.status !== 'ready' || importState.blocks.length === 0) return
     const byDate: Record<string, ClassifiedBlock[]> = {}
@@ -106,7 +127,6 @@ export function WeekPage() {
     setBookingEntry(null)
     if (bookingConcept) {
       await historyStore.removeBlock(week.selectedDate, bookingConcept.urlPattern)
-      // Persist mapping cache
       if (bookingConcept.projectId && bookingConcept.serviceId) {
         await mappingCacheRepo.set(bookingConcept.urlPattern, {
           projectId: bookingConcept.projectId,
@@ -121,8 +141,57 @@ export function WeekPage() {
     void week.refresh()
   }
 
+  async function handleProcessWeek() {
+    if (!copilotToken || !githubToken || !linearToken) return
+    const username = githubUsername ?? 'guuse'
+
+    setIsProcessingWeek(true)
+    setDayProcessingStates(new Map())
+    abortRef.current = false
+
+    try {
+      const calendarRepo = createCalendarRepository()
+      const copilotRepo = createCopilotRepository(copilotToken)
+      const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
+      const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
+
+      const useCase = createProcessWeekUseCase(
+        githubToken,
+        linearToken,
+        calendarRepo,
+        copilotRepo,
+        domainProjects,
+        domainServices,
+        username,
+      )
+
+      for await (const progress of useCase.execute(week.selectedWeekStart, week.selectedWeekEnd)) {
+        if (abortRef.current) break
+        if (progress.phase === 'classifying-day' && progress.day) {
+          setDayProcessingStates(prev => new Map(prev).set(progress.day!, 'classifying'))
+        } else if (progress.phase === 'done') {
+          setDayProcessingStates(prev => {
+            const next = new Map(prev)
+            for (const day of week.weekDays) {
+              if (!next.has(day) || next.get(day) === 'classifying') {
+                next.set(day, 'done')
+              }
+            }
+            return next
+          })
+        } else if (progress.phase === 'error' && progress.day) {
+          setDayProcessingStates(prev => new Map(prev).set(progress.day!, 'error'))
+        }
+      }
+    } finally {
+      setIsProcessingWeek(false)
+      void week.refresh()
+    }
+  }
+
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
   const isClassifying = importState.status === 'classifying' || importState.status === 'parsing'
+  const canProcessWeek = !!(githubToken && linearToken && copilotToken)
 
   return (
     <div className="h-full flex bg-[#1c1917] text-[#e8e2d9]">
@@ -135,6 +204,9 @@ export function WeekPage() {
         onPrevWeek={week.prevWeek}
         onNextWeek={week.nextWeek}
         weekLabel={weekLabel(week.selectedWeekStart)}
+        {...(canProcessWeek ? { onProcessWeek: handleProcessWeek } : {})}
+        processingStateForDate={processingStateForDate}
+        isProcessingWeek={isProcessingWeek}
       />
 
       {week.isLoading ? (
