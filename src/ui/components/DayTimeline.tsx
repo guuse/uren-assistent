@@ -1,10 +1,10 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { mergeConceptsIntoTimeline, computeTimelineBlocks } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { useAppStore } from '../../store/appStore'
-import { DragOverlay } from './DragOverlay'
+import { pixelToMinutes, snapToInterval, minutesToTime, swapIfNeeded } from './DragOverlay'
 
 const DAY_START = '08:00'
 const DAY_END = '18:00'
@@ -59,6 +59,68 @@ export function DayTimeline({
 }: Props) {
   const projects = useAppStore((s) => s.projects)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const blocksContainerRef = useRef<HTMLDivElement>(null)
+
+  // Drag-to-book state
+  const [dragState, setDragState] = useState<{ startMin: number; endMin: number } | null>(null)
+  const isDragging = useRef(false)
+
+  const getMinutesFromEvent = useCallback((e: MouseEvent) => {
+    const rect = blocksContainerRef.current!.getBoundingClientRect()
+    const y = Math.max(0, Math.min(e.clientY - rect.top, HOUR_HEIGHT_PX * 10))
+    return snapToInterval(pixelToMinutes(y, HOUR_HEIGHT_PX * 10, 8 * 60), 30)
+  }, [])
+
+  function handleBlocksMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if (!onDragNew) return
+    if (e.button !== 0) return
+    // Only start drag on the container itself or gap/empty blocks — not on interactive blocks
+    const target = e.target as HTMLElement
+    if (target.closest('button')) return
+    e.preventDefault()
+    const startMin = getMinutesFromEvent(e.nativeEvent)
+    isDragging.current = true
+    setDragState({ startMin, endMin: startMin })
+  }
+
+  useEffect(() => {
+    if (!onDragNew) return
+
+    function handleMouseMove(e: MouseEvent) {
+      if (!isDragging.current) return
+      const endMin = getMinutesFromEvent(e)
+      setDragState((prev) => prev ? { ...prev, endMin } : prev)
+    }
+
+    function handleMouseUp() {
+      if (!isDragging.current) return
+      isDragging.current = false
+      setDragState((prev) => {
+        if (!prev) return null
+        const { start, end } = swapIfNeeded(prev.startMin, prev.endMin)
+        if (end - start >= 30) {
+          onDragNew!(minutesToTime(start), minutesToTime(end))
+        }
+        return null
+      })
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && isDragging.current) {
+        isDragging.current = false
+        setDragState(null)
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onDragNew, getMinutesFromEvent])
 
   const hasConcepts = conceptBlocks.length > 0
   const hasEntries = entries.length > 0
@@ -196,18 +258,56 @@ export function DayTimeline({
               ))}
             </div>
 
-            {/* Blokken — omhullende div voor drag overlay */}
-            <div className="flex-1 relative" style={{ minHeight: HOUR_HEIGHT_PX * 10 }}>
-              {onDragNew && (
-                <DragOverlay
-                  totalHeightPx={HOUR_HEIGHT_PX * 10}
-                  dayStartMinutes={8 * 60}
-                  snapMinutes={30}
-                  minDurationMinutes={30}
-                  onDragComplete={onDragNew}
-                />
-              )}
-              <div className="flex flex-col gap-[1px]" style={{ position: 'relative', zIndex: 1 }}>
+            {/* Blokken — omhullende div voor drag */}
+            <div
+              ref={blocksContainerRef}
+              className="flex-1 relative"
+              style={{
+                minHeight: HOUR_HEIGHT_PX * 10,
+                cursor: onDragNew ? (dragState ? 'ns-resize' : 'crosshair') : undefined,
+                userSelect: onDragNew ? 'none' : undefined,
+              }}
+              onMouseDown={handleBlocksMouseDown}
+            >
+              {/* Drag preview-blok */}
+              {dragState && (() => {
+                const { start, end } = swapIfNeeded(dragState.startMin, dragState.endMin)
+                const top = ((start - 8 * 60) / 600) * (HOUR_HEIGHT_PX * 10)
+                const height = Math.max(1, ((end - start) / 600) * (HOUR_HEIGHT_PX * 10))
+                const durationMins = end - start
+                const durationLabel = durationMins >= 60 ? `${durationMins / 60}u` : `${durationMins}m`
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top,
+                      left: 0,
+                      right: 0,
+                      height,
+                      background: 'rgba(90,138,106,0.2)',
+                      border: '2px dashed #5a8a6a',
+                      borderRadius: 4,
+                      pointerEvents: 'none',
+                      zIndex: 20,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      padding: '0 8px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div style={{ color: '#5a8a6a', fontSize: '0.6875rem', fontWeight: 600 }}>
+                      {minutesToTime(start)} – {minutesToTime(end)}
+                    </div>
+                    {height > 36 && (
+                      <div style={{ color: '#5a8a6a', fontSize: '0.5625rem', opacity: 0.8 }}>
+                        {durationLabel} · loslaten om te boeken
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+              <div className="flex flex-col gap-[1px]">
                 {blocks.map((block, i) => {
                 const height = blockHeight(block.startTime, block.endTime)
 
