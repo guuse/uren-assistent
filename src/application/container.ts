@@ -17,6 +17,11 @@ import { BookHoursUseCase } from '../domain/usecases/BookHoursUseCase'
 import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 import type { ICopilotRepository } from '../domain/repositories/ICopilotRepository'
 import type { Project, Service } from '../domain/repositories/ICopilotRepository'
+import { GitHubRepository } from '../infrastructure/github/GitHubRepository'
+import { LinearRepository } from '../infrastructure/linear/LinearRepository'
+import { ProcessWeekUseCase } from '../domain/usecases/ProcessWeekUseCase'
+import type { IGitHubRepository } from '../domain/repositories/IGitHubRepository'
+import type { ILinearRepository } from '../domain/repositories/ILinearRepository'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string
@@ -65,4 +70,34 @@ export function createUseCases(simplicateRepo: ISimplicateRepository) {
     generateSuggestions: new GenerateSuggestionsUseCase(),
     bookHours: new BookHoursUseCase(simplicateRepo),
   }
+}
+
+export function createGitHubRepository(token: string): IGitHubRepository {
+  return new GitHubRepository(token)
+}
+
+export function createLinearRepository(token: string): ILinearRepository {
+  return new LinearRepository(token)
+}
+
+export function createProcessWeekUseCase(
+  githubToken: string,
+  linearToken: string,
+  calendarRepo: ReturnType<typeof createCalendarRepository>,
+  copilotRepo: ICopilotRepository,
+  projects: Project[],
+  services: Service[],
+  githubUsername: string,
+): ProcessWeekUseCase {
+  return new ProcessWeekUseCase(
+    new GitHubRepository(githubToken),
+    new LinearRepository(linearToken),
+    calendarRepo,
+    historyStore,
+    copilotRepo,
+    mappingCacheRepo,
+    projects,
+    services,
+    githubUsername,
+  )
 }
