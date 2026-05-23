@@ -2,14 +2,29 @@ import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { keychainRepo, createSimplicateRepository, createUseCases } from '../../application/container'
 import type { HourEntry } from '../../domain/entities/HourEntry'
+import { useStarredProjects } from './useStarredProjects'
+import type { SimplicateProject } from '../../domain/repositories/ISimplicateRepository'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
 export type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
 
+function sortProjects(projects: SimplicateProject[], starredIds: ReadonlySet<string>): { sorted: SimplicateProject[]; lastStarredId: string | undefined } {
+  const starred = projects
+    .filter(p => starredIds.has(p.id))
+    .sort((a, b) => `${a.organizationName} — ${a.name}`.localeCompare(`${b.organizationName} — ${b.name}`))
+  const rest = projects
+    .filter(p => !starredIds.has(p.id))
+    .sort((a, b) => `${a.organizationName} — ${a.name}`.localeCompare(`${b.organizationName} — ${b.name}`))
+  const lastStarredId = starred.length > 0 ? starred[starred.length - 1]!.id : undefined
+  return { sorted: [...starred, ...rest], lastStarredId }
+}
+
 export function useBooking(initial: Partial<HourEntry> = {}) {
   const simplicateEmployeeId = useAppStore((s) => s.simplicateEmployeeId)
   const projects = useAppStore((s) => s.projects)
+  const { starredIds, toggle: toggleStar } = useStarredProjects()
+  const { sorted: sortedProjects, lastStarredId } = sortProjects(projects, starredIds)
   const allHourTypes = useAppStore((s) => s.hourTypes)
 
   const [projectId, setProjectId] = useState(initial.projectId ?? '')
@@ -107,7 +122,10 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
     errorMessage,
     missingFields,
     canBook: missingFields.length === 0,
-    projects,
+    projects: sortedProjects,
+    starredIds,
+    toggleStar,
+    lastStarredId,
     hourTypes,
     book,
   }
