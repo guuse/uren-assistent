@@ -197,7 +197,7 @@ export function DayTimeline({
             </div>
 
             {/* Blokken — omhullende div voor drag overlay */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative" style={{ minHeight: HOUR_HEIGHT_PX * 10 }}>
               {onDragNew && (
                 <DragOverlay
                   totalHeightPx={HOUR_HEIGHT_PX * 10}
