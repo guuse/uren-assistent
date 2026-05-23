@@ -5,6 +5,18 @@ import EvidencePanel from './EvidencePanel'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 
 describe('EvidencePanel', () => {
+  function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+    return {
+      id: '1',
+      title: 'Daily Stand-up',
+      start: new Date('2026-05-13T09:00:00'),
+      end: new Date('2026-05-13T09:30:00'),
+      attendees: ['jan@company.com', 'lisa@company.com', 'marco@company.com'],
+      status: 'accepted',
+      ...overrides,
+    }
+  }
+
   it('renders nothing when both arrays are empty', () => {
     const { container } = render(<EvidencePanel rawTitles={[]} rawUrls={[]} />)
     expect(container.firstChild).toBeNull()
@@ -55,18 +67,6 @@ describe('EvidencePanel', () => {
     )
     expect(screen.getByText('1 · 09:00–10:00')).toBeInTheDocument()
   })
-
-  function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
-    return {
-      id: '1',
-      title: 'Daily Stand-up',
-      start: new Date('2026-05-13T09:00:00'),
-      end: new Date('2026-05-13T09:30:00'),
-      attendees: ['jan@company.com', 'lisa@company.com', 'marco@company.com'],
-      status: 'accepted',
-      ...overrides,
-    }
-  }
 
   it('shows "Context" header instead of "Bezochte pagina\'s" when meetings are provided', () => {
     render(
@@ -154,6 +154,7 @@ describe('EvidencePanel', () => {
         meetings={[makeEvent({ attendees: ['a@x.com', 'b@x.com', 'c@x.com', 'd@x.com', 'e@x.com'] })]}
       />
     )
+    expect(screen.getByText(/A, B, C/)).toBeInTheDocument()
     expect(screen.getByText(/\+2/)).toBeInTheDocument()
   })
 
