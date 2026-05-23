@@ -1,4 +1,6 @@
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
+import type { GitHubCommit } from '../../domain/entities/GitHubCommit'
+import type { LinearIssue } from '../../domain/entities/LinearIssue'
 
 interface Props {
   rawUrls?: string[] | undefined
@@ -9,6 +11,8 @@ interface Props {
   startTime?: string | undefined
   endTime?: string | undefined
   meetings?: CalendarEvent[] | undefined
+  commits?: GitHubCommit[]
+  linearIssues?: LinearIssue[]
 }
 
 function displayUrl(url: string): { host: string; path: string } {
@@ -54,6 +58,8 @@ export default function EvidencePanel({
   startTime,
   endTime,
   meetings,
+  commits,
+  linearIssues,
 }: Props) {
   const urlList = rawUrls?.length ? rawUrls : urls ?? []
   const titleList = rawTitles?.length ? rawTitles : titles ?? []
@@ -161,6 +167,70 @@ export default function EvidencePanel({
                 </div>
               )
             })}
+          </div>
+        </>
+      )}
+
+      {/* GitHub commits sectie */}
+      {commits && commits.length > 0 && (
+        <>
+          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+              GitHub commits ({commits.length})
+            </span>
+          </div>
+          <div className="px-3 pb-2 flex flex-col gap-[7px]">
+            {commits.map((commit) => (
+              <div key={commit.sha} className="flex gap-[10px] items-start">
+                <div
+                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
+                  style={{ background: '#2a1e12', color: '#f48024' }}
+                >
+                  GH
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                    {commit.message}
+                  </div>
+                  <div className="text-[#7a7268] text-[0.625rem] mt-[1px] truncate">
+                    {commit.repo} · {commit.time}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Linear issues sectie */}
+      {linearIssues && linearIssues.length > 0 && (
+        <>
+          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+              Linear (deze week, afgerond)
+            </span>
+          </div>
+          <div className="px-3 pb-2 flex flex-col gap-[7px]">
+            {linearIssues.map((issue) => (
+              <div key={issue.identifier} className="flex gap-[10px] items-start">
+                <div
+                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
+                  style={{ background: '#1a1a2e', color: '#8b5cf6' }}
+                >
+                  LN
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                    {issue.identifier} · {issue.title}
+                  </div>
+                </div>
+                <div className="text-[0.5625rem] flex-shrink-0" style={{ color: '#5a8a6a' }}>
+                  ✓ done
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
