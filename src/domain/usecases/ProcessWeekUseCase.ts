@@ -7,13 +7,18 @@ import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepos
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
 import { GroupAndClassifyDayUseCase } from './GroupAndClassifyDayUseCase'
+import { groupCommitsIntoBlocks } from './GroupCommitsIntoBlocks'
 import type { GitHubCommit } from '../entities/GitHubCommit'
+import type { LinearIssue } from '../entities/LinearIssue'
 
 export interface ProcessWeekProgress {
-  phase: 'fetching-github' | 'fetching-linear' | 'classifying-day' | 'done' | 'error'
+  phase: 'fetching-github' | 'fetching-linear' | 'context-ready' | 'classifying-day' | 'done' | 'error'
   day?: string
   dayIndex?: number
   error?: string
+  // only on context-ready:
+  commitsByDay?: Record<string, GitHubCommit[]>
+  linearIssues?: LinearIssue[]
 }
 
 function weekDays(weekStart: string): string[] {
@@ -53,7 +58,14 @@ export class ProcessWeekUseCase {
     yield { phase: 'fetching-linear' }
     const linearIssues = await this.fetchLinear.execute(weekStart, weekEnd)
 
+    // Build per-day commit map and emit context-ready so UI can store it
     const days = weekDays(weekStart)
+    const commitsByDay: Record<string, GitHubCommit[]> = {}
+    for (const day of days) {
+      commitsByDay[day] = allCommits.filter(c => c.date === day)
+    }
+    yield { phase: 'context-ready', commitsByDay, linearIssues }
+
     const groupAndClassify = new GroupAndClassifyDayUseCase(
       this.copilotRepo,
       this.cacheRepo,
@@ -66,7 +78,7 @@ export class ProcessWeekUseCase {
       yield { phase: 'classifying-day', day, dayIndex: i }
 
       try {
-        const dayCommits: GitHubCommit[] = allCommits.filter(c => c.timestamp.slice(0, 10) === day)
+        const dayCommits: GitHubCommit[] = commitsByDay[day] ?? []
 
         const dayStart = new Date(day + 'T00:00:00')
         const dayEnd = new Date(day + 'T23:59:59')
@@ -75,7 +87,10 @@ export class ProcessWeekUseCase {
           this.calendarRepo.fetchEvents(dayStart, dayEnd),
         ])
 
-        const classified = await groupAndClassify.execute(day, historyBlocks, calendarEvents, {
+        const commitBlocks = groupCommitsIntoBlocks(dayCommits, day)
+        const allBlocks = [...historyBlocks, ...commitBlocks]
+
+        const classified = await groupAndClassify.execute(day, allBlocks, calendarEvents, {
           commits: dayCommits,
           linearIssues,
         })
