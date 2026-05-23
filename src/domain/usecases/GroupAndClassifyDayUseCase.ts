@@ -171,15 +171,6 @@ export class GroupAndClassifyDayUseCase {
               timeToMinutes(c.time) >= startMin &&
               timeToMinutes(c.time) <= endMin
             )
-            console.log('[GroupAndClassify] commit-block filter:', {
-              urlPattern: block.urlPattern,
-              repo,
-              startMin,
-              endMin,
-              totalCommits: context.commits.length,
-              filteredCommits: blockCommits.length,
-              sample: blockCommits.slice(0, 3).map(c => ({ repo: c.repo, time: c.time })),
-            })
           }
 
           // Linear issues koppelen via LLM-output (relatedIssueIds), met heuristiek als fallback.

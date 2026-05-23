@@ -52,11 +52,16 @@ export class HistoryStore implements IHistoryStore {
     const existing = this.data[date] ?? []
     const merged = [...existing]
     for (const block of blocks) {
-      const idx = merged.findIndex(b => b.urlPattern === block.urlPattern)
+      // Strip runtime-only fields before persisting — commits and linearIssues
+      // are re-fetched from GitHub/Linear on each "Verwerk week" run and must
+      // not bloat the JSON file.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { commits: _c, linearIssues: _l, ...persistable } = block
+      const idx = merged.findIndex(b => b.urlPattern === persistable.urlPattern)
       if (idx !== -1) {
-        merged[idx] = block
+        merged[idx] = persistable
       } else {
-        merged.push(block)
+        merged.push(persistable)
       }
     }
     this.data[date] = merged

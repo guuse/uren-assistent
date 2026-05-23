@@ -222,7 +222,6 @@ export function WeekPage() {
 
   const dayCommits = dayContexts[week.selectedDate]?.commits ?? historyStore.blocksForDate[0]?.commits ?? []
   const dayLinearIssues = dayContexts[week.selectedDate]?.linearIssues ?? historyStore.blocksForDate[0]?.linearIssues ?? []
-  console.log('[WeekPage] date:', week.selectedDate, 'commits:', dayCommits.length, 'linear:', dayLinearIssues.length)
   const canProcessWeek = !!(githubToken && linearToken && copilotToken)
 
   return (
