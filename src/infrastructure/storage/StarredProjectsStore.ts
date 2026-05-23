@@ -10,18 +10,31 @@ interface PersistedData {
 
 export class StarredProjectsStore implements IStarredProjectsRepository {
   private ids: Set<string> = new Set()
+  private cachedPath: string | undefined
 
   private async filePath(): Promise<string> {
-    const dir = await appDataDir()
-    return `${dir}/${FILENAME}`
+    if (!this.cachedPath) {
+      const dir = await appDataDir()
+      this.cachedPath = `${dir}/${FILENAME}`
+    }
+    return this.cachedPath
   }
 
   async load(): Promise<void> {
     try {
       const path = await this.filePath()
       const raw = await readTextFile(path)
-      const parsed = JSON.parse(raw) as PersistedData
-      this.ids = new Set(parsed.starredIds)
+      const parsed: unknown = JSON.parse(raw)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'starredIds' in parsed &&
+        Array.isArray((parsed as Record<string, unknown>).starredIds)
+      ) {
+        this.ids = new Set((parsed as PersistedData).starredIds)
+      } else {
+        this.ids = new Set()
+      }
     } catch {
       this.ids = new Set()
     }

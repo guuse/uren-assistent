@@ -59,7 +59,14 @@ describe('StarredProjectsStore', () => {
     const store = new StarredProjectsStore()
     await store.load()
     await store.toggle('p42')
-    const written = JSON.parse((mockWrite as ReturnType<typeof vi.fn>).mock.calls[0]![1] as string) as unknown
+    const written = JSON.parse(mockWrite.mock.calls[0]![1] as string) as unknown
     expect(written).toEqual({ starredIds: ['p42'] })
+  })
+
+  it('behandelt malformed JSON als lege set', async () => {
+    mockRead.mockResolvedValue(JSON.stringify({ starredIds: null }))
+    const store = new StarredProjectsStore()
+    await store.load()
+    expect(store.getStarredIds().size).toBe(0)
   })
 })
