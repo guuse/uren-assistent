@@ -19,19 +19,39 @@ describe('EvidencePanel', () => {
     expect(screen.getByText('github.com/org/repo/pull/42')).toBeInTheDocument()
   })
 
-  it('renders titles when provided', () => {
-    render(<EvidencePanel rawTitles={['Pull Request #42 · org/repo']} />)
+  it('shows section header "Bezochte pagina\'s"', () => {
+    render(<EvidencePanel rawUrls={['https://github.com/org/repo']} />)
+    expect(screen.getByText("Bezochte pagina's")).toBeInTheDocument()
+  })
+
+  it('renders title as sub-text below URL when both are provided', () => {
+    render(
+      <EvidencePanel
+        rawUrls={['https://github.com/org/repo/pull/42']}
+        rawTitles={['Pull Request #42 · org/repo']}
+      />
+    )
     expect(screen.getByText('Pull Request #42 · org/repo')).toBeInTheDocument()
   })
 
-  it('truncates titles longer than 80 characters', () => {
-    const longTitle = 'A'.repeat(90)
-    render(<EvidencePanel rawTitles={[longTitle]} />)
-    expect(screen.getByText('A'.repeat(80) + '…')).toBeInTheDocument()
+  it('renders summary in LLM summary section', () => {
+    render(
+      <EvidencePanel
+        rawUrls={['https://github.com/org/repo']}
+        summary="This is a test summary"
+      />
+    )
+    expect(screen.getByText('"This is a test summary"')).toBeInTheDocument()
   })
 
-  it('shows section header "Wat je deed"', () => {
-    render(<EvidencePanel rawUrls={['https://github.com/org/repo']} />)
-    expect(screen.getByText('Wat je deed')).toBeInTheDocument()
+  it('shows startTime and endTime in header when provided', () => {
+    render(
+      <EvidencePanel
+        rawUrls={['https://github.com/org/repo']}
+        startTime="09:00"
+        endTime="10:00"
+      />
+    )
+    expect(screen.getByText('1 · 09:00–10:00')).toBeInTheDocument()
   })
 })
