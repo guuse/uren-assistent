@@ -73,6 +73,7 @@ export function useWeek() {
 
   return {
     selectedWeekStart,
+    selectedWeekEnd: addDays(selectedWeekStart, 4),
     selectedDate,
     selectDate: setSelectedDate,
     entriesByDate,

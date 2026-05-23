@@ -79,19 +79,41 @@ export function computeTimelineBlocks(
   return blocks
 }
 
+export type TimelineRow = {
+  startTime: string
+  endTime: string
+  left: TimelineBlock
+  right?: TimelineBlock
+}
+
 export function mergeConceptsIntoTimeline(
   entries: HourEntry[],
   concepts: ClassifiedBlock[],
   dayStart: string,
   dayEnd: string,
 ): TimelineBlock[] {
-  type Item =
-    | { kind: 'entry'; startTime: string; endTime: string; entry: HourEntry }
-    | { kind: 'concept'; startTime: string; endTime: string; block: ClassifiedBlock }
+  type EntryItem = { kind: 'entry'; startTime: string; endTime: string; entry: HourEntry }
+  type ConceptItem = { kind: 'concept'; startTime: string; endTime: string; block: ClassifiedBlock; overlapping: boolean }
+  type Item = EntryItem | ConceptItem
+
+  // Concepts that overlap with a booked entry are marked as overlapping (not filtered out).
+  const annotatedConcepts: ConceptItem[] = concepts.map(concept => {
+    const cStart = timeToMinutes(concept.startTime)
+    const cEnd = timeToMinutes(concept.endTime)
+    const overlapping = entries.some(entry => {
+      const eStart = timeToMinutes(entry.startTime)
+      const eEnd = timeToMinutes(entry.endTime)
+      return cStart < eEnd && cEnd > eStart
+    })
+    return { kind: 'concept' as const, startTime: concept.startTime, endTime: concept.endTime, block: concept, overlapping }
+  })
+
+  // Non-overlapping concepts join the main timeline stream
+  const nonOverlappingConcepts = annotatedConcepts.filter(c => !c.overlapping)
 
   const items: Item[] = [
     ...entries.map(e => ({ kind: 'entry' as const, startTime: e.startTime, endTime: e.endTime, entry: e })),
-    ...concepts.map(c => ({ kind: 'concept' as const, startTime: c.startTime, endTime: c.endTime, block: c })),
+    ...nonOverlappingConcepts,
   ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
 
   const blocks: TimelineBlock[] = []
@@ -116,5 +138,49 @@ export function mergeConceptsIntoTimeline(
     blocks.push({ type: 'gap', startTime: minutesToTime(cursor), endTime: minutesToTime(end) })
   }
 
+  // Attach overlapping concepts as metadata on their entry blocks
+  for (const c of annotatedConcepts.filter(c => c.overlapping)) {
+    const cStart = timeToMinutes(c.startTime)
+    const cEnd = timeToMinutes(c.endTime)
+    const entryBlock = blocks.find(b => {
+      if (b.type !== 'entry') return false
+      const bStart = timeToMinutes(b.startTime)
+      const bEnd = timeToMinutes(b.endTime)
+      return cStart < bEnd && cEnd > bStart
+    })
+    if (entryBlock && entryBlock.type === 'entry') {
+      ;(entryBlock as TimelineBlock & { overlappingConcept?: ClassifiedBlock }).overlappingConcept = c.block
+    }
+  }
+
   return blocks
+}
+
+/**
+ * Converts a flat list of TimelineBlocks into TimelineRows suitable for two-column rendering.
+ * Entry blocks that have an overlappingConcept attached get a `right` column with that concept.
+ */
+export function buildTimelineRows(blocks: TimelineBlock[]): TimelineRow[] {
+  return blocks.map(block => {
+    const extended = block as TimelineBlock & { overlappingConcept?: ClassifiedBlock }
+    if (block.type === 'entry' && extended.overlappingConcept) {
+      const concept = extended.overlappingConcept
+      return {
+        startTime: block.startTime,
+        endTime: block.endTime,
+        left: block,
+        right: {
+          type: 'concept' as const,
+          startTime: concept.startTime,
+          endTime: concept.endTime,
+          block: concept,
+        },
+      }
+    }
+    return {
+      startTime: block.startTime,
+      endTime: block.endTime,
+      left: block,
+    }
+  })
 }

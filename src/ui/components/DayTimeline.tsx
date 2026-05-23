@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { mergeConceptsIntoTimeline, computeTimelineBlocks } from './DayTimeline.helpers'
+import { mergeConceptsIntoTimeline, computeTimelineBlocks, buildTimelineRows } from './DayTimeline.helpers'
+import type { TimelineBlock } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
@@ -126,9 +127,93 @@ export function DayTimeline({
   const hasEntries = entries.length > 0
   const showCta = !hasConcepts && !hasEntries && !isClassifying
 
-  const blocks = hasConcepts || hasEntries
+  const flatBlocks = hasConcepts || hasEntries
     ? mergeConceptsIntoTimeline(entries, conceptBlocks, DAY_START, DAY_END)
     : computeTimelineBlocks(entries, suggestions, DAY_START, DAY_END)
+
+  const rows = buildTimelineRows(flatBlocks)
+
+  function renderBlock(block: TimelineBlock, height: number, key: string | number) {
+    if (block.type === 'entry') {
+      return (
+        <button
+          key={key}
+          onClick={() => onEditEntry(block.entry)}
+          style={{ height }}
+          className="w-full text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
+        >
+          <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
+            {projectName(block.entry.projectId)}
+          </div>
+          <div className="text-[#7ab8e8] text-[0.5625rem] truncate">
+            {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
+          </div>
+          {block.entry.note && height > 52 && (
+            <div className="text-[#5a8aaa] text-[0.5625rem] truncate">{block.entry.note}</div>
+          )}
+        </button>
+      )
+    }
+
+    if (block.type === 'concept') {
+      const status = conceptStatus(block.block)
+      const s = CONCEPT_STYLES[status]
+      const badgeLabel = block.block.origin === 'cache'
+        ? 'Cache'
+        : `${Math.round(block.block.confidence * 100)}% zeker`
+      return (
+        <button
+          key={key}
+          onClick={() => onConceptClick?.(block.block)}
+          style={{ height }}
+          className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
+        >
+          <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
+            {badgeLabel}
+          </span>
+          <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate pr-16">
+            {block.block.blockName}
+          </div>
+          <div className={`text-[0.5625rem] truncate ${s.sub}`}>
+            {block.block.startTime}–{block.block.endTime}
+            {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
+          </div>
+          {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
+            <div className="text-[#7a7268] text-[0.5625rem] truncate">⚠ Project ontbreekt — klik om in te vullen</div>
+          )}
+        </button>
+      )
+    }
+
+    // gap
+    if (block.suggestion) {
+      return (
+        <div
+          key={key}
+          style={{ height }}
+          className="w-full border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
+        >
+          <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
+            → {suggestionLabel(block.suggestion)}
+          </div>
+          <button
+            onClick={() => onBookSuggestion(block.suggestion!)}
+            className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+          >
+            + Boek
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={key}
+        style={{ height }}
+        className="w-full border-b border-[#2e2a26]"
+      />
+    )
+  }
 
   const totalHours = entries.reduce((sum, e) => sum + e.hours, 0)
   const pct = Math.min(100, (totalHours / 8) * 100)
@@ -308,88 +393,26 @@ export function DayTimeline({
                 )
               })()}
               <div className="flex flex-col gap-[1px]">
-                {blocks.map((block, i) => {
-                const height = blockHeight(block.startTime, block.endTime)
+                {rows.map((row, i) => {
+                  const leftHeight = blockHeight(row.left.startTime, row.left.endTime)
 
-                if (block.type === 'entry') {
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => onEditEntry(block.entry)}
-                      style={{ height }}
-                      className="w-full text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
-                    >
-                      <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
-                        {projectName(block.entry.projectId)}
+                  if (row.right) {
+                    const rightHeight = blockHeight(row.right.startTime, row.right.endTime)
+                    const rowHeight = Math.max(leftHeight, rightHeight)
+                    // Two-column layout: entry left (60%), concept right (40%)
+                    return (
+                      <div key={i} style={{ height: rowHeight }} className="flex gap-[2px] items-start">
+                        <div className="flex-[3] min-w-0">
+                          {renderBlock(row.left, leftHeight, `${i}-left`)}
+                        </div>
+                        <div className="flex-[2] min-w-0">
+                          {renderBlock(row.right, rightHeight, `${i}-right`)}
+                        </div>
                       </div>
-                      <div className="text-[#7ab8e8] text-[0.5625rem] truncate">
-                        {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
-                      </div>
-                      {block.entry.note && height > 52 && (
-                        <div className="text-[#5a8aaa] text-[0.5625rem] truncate">{block.entry.note}</div>
-                      )}
-                    </button>
-                  )
-                }
+                    )
+                  }
 
-                if (block.type === 'concept') {
-                  const status = conceptStatus(block.block)
-                  const s = CONCEPT_STYLES[status]
-                  const badgeLabel = block.block.origin === 'cache'
-                    ? 'Cache'
-                    : `${Math.round(block.block.confidence * 100)}% zeker`
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => onConceptClick?.(block.block)}
-                      style={{ height }}
-                      className={`relative w-full text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
-                    >
-                      <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
-                        {badgeLabel}
-                      </span>
-                      <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate pr-16">
-                        {block.block.blockName}
-                      </div>
-                      <div className={`text-[0.5625rem] truncate ${s.sub}`}>
-                        {block.block.startTime}–{block.block.endTime}
-                        {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
-                      </div>
-                      {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
-                        <div className="text-[#7a7268] text-[0.5625rem] truncate">⚠ Project ontbreekt — klik om in te vullen</div>
-                      )}
-                    </button>
-                  )
-                }
-
-                // gap
-                if (block.suggestion) {
-                  return (
-                    <div
-                      key={i}
-                      style={{ height }}
-                      className="w-full border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
-                    >
-                      <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
-                        → {suggestionLabel(block.suggestion)}
-                      </div>
-                      <button
-                        onClick={() => onBookSuggestion(block.suggestion!)}
-                        className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
-                      >
-                        + Boek
-                      </button>
-                    </div>
-                  )
-                }
-
-                return (
-                  <div
-                    key={i}
-                    style={{ height }}
-                    className="w-full border-b border-[#2e2a26]"
-                  />
-                )
+                  return renderBlock(row.left, leftHeight, i)
                 })}
               </div>
             </div>

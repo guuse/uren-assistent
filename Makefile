@@ -18,7 +18,7 @@ clean:
 	rm -rf node_modules dist src-tauri/target
 
 
-build-prod: prepare
+prod: prepare
 	npm run build
 	npx tauri build --config src-tauri/tauri.prod.conf.json
 	cp -rf "src-tauri/target/release/bundle/macos/Uren assistent.app" /Applications/

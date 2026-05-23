@@ -41,7 +41,13 @@ De `devtools` instelling wordt in de prod-config op `false` gezet.
 
 Technische identifiers (`package.json` `name`, `Cargo.toml` `name`) blijven ongewijzigd.
 
-De app-titel in de UI wordt gelezen uit `import.meta.env.VITE_APP_TITLE` met fallback `"Uren assistent"`. De dev-build gebruikt de bestaande naam.
+De app-titel in de UI wordt gelezen uit `import.meta.env.VITE_APP_TITLE` met fallback `"Uren assistent"`. Dit wordt gezet via een `.env.production` bestand:
+
+```
+VITE_APP_TITLE=Uren assistent
+```
+
+De dev-build heeft geen `.env.production`, dus de fallback of een aparte `.env.development` waarde geldt daar.
 
 ---
 
