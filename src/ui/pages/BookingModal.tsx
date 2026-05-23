@@ -92,6 +92,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
               summary={evidenceBlock.summary}
               startTime={evidenceBlock.startTime}
               endTime={evidenceBlock.endTime}
+              meetings={evidenceBlock.overlappingMeetings}
             />
           )}
 
