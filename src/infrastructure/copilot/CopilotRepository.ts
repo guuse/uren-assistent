@@ -266,6 +266,7 @@ Geef een JSON-array terug. Elk item heeft:
 - serviceId (string | null, moet een dienst-ID zijn waarvan projectId overeenkomt)
 - note (string, korte boekingsnotitie max 80 tekens)
 - confidence (number 0-1, hoe zeker je bent van de projectkeuze)
+- relatedIssueIds (string[], identifiers van Linear issues die bij dit blok horen, bv. ["GMS-4", "SCHP-41"]. Gebruik referenties in commit-berichten, namen en gelijkenis tussen issue-titels en activiteit. Lege array als niets van toepassing.)
 
 Gebruik de cache-hints als leidraad maar overschrijf ze als de context duidelijk op een ander project wijst.
 Geef ALLEEN een geldige JSON-array terug, geen markdown, geen uitleg.`

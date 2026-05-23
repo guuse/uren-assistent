@@ -37,6 +37,7 @@ export interface DayClassificationResult {
   serviceId: string | null
   note: string
   confidence: number
+  relatedIssueIds?: string[]  // e.g. ["GMS-4", "SCHP-41"] — LLM-determined relevant Linear issues
 }
 
 export interface ICopilotRepository {

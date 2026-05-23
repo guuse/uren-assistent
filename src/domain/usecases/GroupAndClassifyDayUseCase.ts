@@ -143,7 +143,14 @@ export class GroupAndClassifyDayUseCase {
             rawTitles: meetingTitles.slice(0, 5),
             rawUrls: meetingUrls.slice(0, 5).map(sanitizeUrl),
             ...(context?.commits !== undefined ? { commits: context.commits } : {}),
-            ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
+            ...((() => {
+              if (!context?.linearIssues?.length) return {}
+              if (result.relatedIssueIds && result.relatedIssueIds.length > 0) {
+                const relatedSet = new Set(result.relatedIssueIds)
+                return { linearIssues: context.linearIssues.filter(i => relatedSet.has(i.identifier)) }
+              }
+              return { linearIssues: context.linearIssues }
+            })()),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
@@ -175,10 +182,25 @@ export class GroupAndClassifyDayUseCase {
             })
           }
 
-          // Voor commit-blocks: geen Linear issues per block — Linear issues zijn week-breed
-          // en niet aan een specifieke repo te koppelen zonder expliciete mapping.
-          // Linear issues zijn wel zichtbaar in de dag-context onderaan de tijdlijn.
-          const blockLinearIssues: import('../entities/LinearIssue').LinearIssue[] = []
+          // Linear issues koppelen via LLM-output (relatedIssueIds), met heuristiek als fallback.
+          let blockLinearIssues = context?.linearIssues ?? []
+          if (context?.linearIssues?.length) {
+            // Stap 1: gebruik LLM-bepaalde issue-koppeling
+            if (result.relatedIssueIds && result.relatedIssueIds.length > 0) {
+              const relatedSet = new Set(result.relatedIssueIds)
+              blockLinearIssues = context.linearIssues.filter(i => relatedSet.has(i.identifier))
+            } else if (block.urlPattern.startsWith('github.com/')) {
+              // Stap 2 (fallback): expliciete refs in commit-berichten
+              const allMessages = block.titles.join(' ')
+              const explicitRefs = new Set((allMessages.match(/[A-Z]+-\d+/g) ?? []))
+              if (explicitRefs.size > 0) {
+                blockLinearIssues = context.linearIssues.filter(i => explicitRefs.has(i.identifier))
+              } else {
+                // Geen koppeling gevonden — lege lijst voor commit-blocks
+                blockLinearIssues = []
+              }
+            }
+          }
 
           const classified: ClassifiedBlock = {
             ...block,
