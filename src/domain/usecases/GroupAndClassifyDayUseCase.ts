@@ -3,6 +3,7 @@ import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepos
 import type { CalendarEvent } from '../entities/CalendarEvent'
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
+import type { DayContext } from '../entities/DayContext'
 import { attachHistoryToMeetings } from './attachHistoryToMeetings'
 
 function sanitizeUrl(url: string): string {
@@ -34,10 +35,10 @@ export class GroupAndClassifyDayUseCase {
     date: string,
     historyBlocks: HistoryBlock[],
     calendarEvents: CalendarEvent[],
+    context?: DayContext,
   ): Promise<ClassifiedBlock[]> {
     const { groups, unclaimed } = attachHistoryToMeetings(historyBlocks, calendarEvents)
 
-    // Build DayItem[] with sequential indices
     const items: DayItem[] = []
     let index = 0
 
@@ -58,7 +59,6 @@ export class GroupAndClassifyDayUseCase {
       index++
     }
 
-    // Build cache hints
     const allCache = this.cacheRepo.getAll()
     const cacheHints: Record<string, { projectName: string; serviceName: string }> = {}
     for (const item of items) {
@@ -73,7 +73,6 @@ export class GroupAndClassifyDayUseCase {
       }
     }
 
-    // Separate cache hits (standalone only) from LLM items
     const cacheResults: ClassifiedBlock[] = []
     const llmItems: DayItem[] = []
 
@@ -91,20 +90,23 @@ export class GroupAndClassifyDayUseCase {
           note: cached.note,
           confidence: 1,
           origin: 'cache',
+          ...(context?.commits !== undefined ? { commits: context.commits } : {}),
+          ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
         })
       } else {
         llmItems.push(item)
       }
     }
 
-    // Call LLM for remaining items
     const llmResults: ClassifiedBlock[] = []
     if (llmItems.length > 0) {
-      const results = await this.copilotRepo.classifyDay(date,
+      const results = await this.copilotRepo.classifyDay(
+        date,
         llmItems,
         this.availableProjects,
         this.availableServices,
         cacheHints,
+        context,
       )
 
       for (const result of results) {
@@ -135,6 +137,8 @@ export class GroupAndClassifyDayUseCase {
             overlappingMeetings: [event],
             rawTitles: meetingTitles.slice(0, 5),
             rawUrls: meetingUrls.slice(0, 5).map(sanitizeUrl),
+            ...(context?.commits !== undefined ? { commits: context.commits } : {}),
+            ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
@@ -152,6 +156,8 @@ export class GroupAndClassifyDayUseCase {
             origin: 'llm',
             rawTitles: block.titles.slice(0, 5),
             rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
+            ...(context?.commits !== undefined ? { commits: context.commits } : {}),
+            ...(context?.linearIssues !== undefined ? { linearIssues: context.linearIssues } : {}),
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
@@ -160,7 +166,6 @@ export class GroupAndClassifyDayUseCase {
       }
     }
 
-    // Merge and sort by startTime ascending
     const all = [...cacheResults, ...llmResults]
     all.sort((a, b) => a.startTime.localeCompare(b.startTime))
     return all

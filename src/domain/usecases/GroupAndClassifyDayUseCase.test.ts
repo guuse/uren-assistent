@@ -4,6 +4,7 @@ import type { ICopilotRepository, Project, Service, DayClassificationResult } fr
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { CalendarEvent } from '../entities/CalendarEvent'
+import type { DayContext } from '../entities/DayContext'
 
 const makeBlock = (overrides: Partial<HistoryBlock> = {}): HistoryBlock => ({
   date: '2024-01-15',
@@ -154,5 +155,16 @@ describe('GroupAndClassifyDayUseCase', () => {
     const calledItems = (copilotRepo.classifyDay as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { kind: string; cacheKey: string }[]
     const meetingItem = calledItems.find(i => i.kind === 'meeting')!
     expect(meetingItem.cacheKey).toBe('Standup:dominant.com')
+  })
+
+  it('accepts optional DayContext without crashing on empty day', async () => {
+    const context: DayContext = {
+      commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'guuse/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00' }],
+      linearIssues: [{ identifier: 'ENG-42', title: 'Booking modal', completedAt: '2026-05-20T14:00:00Z', url: 'https://linear.app/eng/issue/ENG-42' }],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2026-05-20', [], [], context)
+    expect(result).toEqual([])
   })
 })
