@@ -13,6 +13,8 @@ export function AccountSettings() {
   const setSimplicateData = useAppStore((s) => s.setSimplicateData)
   const setSimplicateEmployeeId = useAppStore((s) => s.setSimplicateEmployeeId)
   const setCopilotToken = useAppStore((s) => s.setCopilotToken)
+  const setGithubToken = useAppStore((s) => s.setGithubToken)
+  const setLinearToken = useAppStore((s) => s.setLinearToken)
   const projects = useAppStore((s) => s.projects)
   const { logout } = useAuth()
   const { starredIds, toggle: toggleStar } = useStarredProjects()
@@ -28,6 +30,14 @@ export function AccountSettings() {
   const [hasCopilotToken, setHasCopilotToken] = useState(false)
   const [copilotSaved, setCopilotSaved] = useState(false)
 
+  const [githubTokenInput, setGithubTokenInput] = useState('')
+  const [hasGithubToken, setHasGithubToken] = useState(false)
+  const [githubSaved, setGithubSaved] = useState(false)
+
+  const [linearTokenInput, setLinearTokenInput] = useState('')
+  const [hasLinearToken, setHasLinearToken] = useState(false)
+  const [linearSaved, setLinearSaved] = useState(false)
+
   useEffect(() => {
     async function loadExisting() {
       const key = await keychainRepo.get('simplicate-api-key')
@@ -35,9 +45,13 @@ export function AccountSettings() {
       if (key && secret) setHasExisting(true)
       const ct = await keychainRepo.get('copilot-token')
       if (ct) { setHasCopilotToken(true); setCopilotToken(ct) }
+      const gt = await keychainRepo.get('github-token')
+      if (gt) { setHasGithubToken(true); setGithubToken(gt) }
+      const lt = await keychainRepo.get('linear-token')
+      if (lt) { setHasLinearToken(true); setLinearToken(lt) }
     }
     void loadExisting()
-  }, [setCopilotToken])
+  }, [setCopilotToken, setGithubToken, setLinearToken])
 
   async function save() {
     await keychainRepo.set('simplicate-api-key', apiKey)
@@ -87,6 +101,22 @@ export function AccountSettings() {
     setHasCopilotToken(true)
     setCopilotSaved(true)
     setTimeout(() => setCopilotSaved(false), 2000)
+  }
+
+  async function saveGithubToken() {
+    await keychainRepo.set('github-token', githubTokenInput)
+    setGithubToken(githubTokenInput)
+    setHasGithubToken(true)
+    setGithubSaved(true)
+    setTimeout(() => setGithubSaved(false), 2000)
+  }
+
+  async function saveLinearToken() {
+    await keychainRepo.set('linear-token', linearTokenInput)
+    setLinearToken(linearTokenInput)
+    setHasLinearToken(true)
+    setLinearSaved(true)
+    setTimeout(() => setLinearSaved(false), 2000)
   }
 
   return (
@@ -175,6 +205,66 @@ export function AccountSettings() {
           className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
         >
           {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
+        </button>
+      </div>
+
+      {/* GitHub token sectie */}
+      <div className="flex flex-col gap-3">
+        <div className="text-xs uppercase tracking-widest text-[#7a7268]">GitHub token</div>
+        <div className="text-xs text-[#4a4540]">
+          Verkrijg via: <code className="bg-[#1e1b18] px-1 rounded">gh auth token</code> — heeft <code className="bg-[#1e1b18] px-1 rounded">repo</code> scope nodig.
+        </div>
+
+        {hasGithubToken && githubTokenInput === '' && (
+          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
+            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+          </div>
+        )}
+
+        <input
+          type="password"
+          value={githubTokenInput}
+          onChange={e => setGithubTokenInput(e.target.value)}
+          placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
+          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
+        />
+
+        <button
+          onClick={saveGithubToken}
+          disabled={githubTokenInput.length === 0}
+          className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
+        >
+          {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
+        </button>
+      </div>
+
+      {/* Linear API key sectie */}
+      <div className="flex flex-col gap-3">
+        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Linear API key</div>
+        <div className="text-xs text-[#4a4540]">
+          Verkrijg via: linear.me → Settings → API → Personal API keys
+        </div>
+
+        {hasLinearToken && linearTokenInput === '' && (
+          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
+            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+          </div>
+        )}
+
+        <input
+          type="password"
+          value={linearTokenInput}
+          onChange={e => setLinearTokenInput(e.target.value)}
+          placeholder={hasLinearToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'lin_api_...'}
+          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
+        />
+
+        <button
+          onClick={saveLinearToken}
+          disabled={linearTokenInput.length === 0}
+          className="bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
+        >
+          {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
         </button>
       </div>
 
