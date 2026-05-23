@@ -32,8 +32,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "macOS": {
-      "urls": ["uren-schrijven://"]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["uren-schrijven"]
+      }
     }
   }
 }
