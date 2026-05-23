@@ -19,9 +19,13 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   const modalTitle = evidenceBlock?.blockName ?? title
 
   const confidenceBadge = evidenceBlock
-    ? evidenceBlock.origin === 'cache'
-      ? { label: 'Cache', bg: '#1a3a1a', color: '#5a8a6a' }
-      : { label: `${Math.round(evidenceBlock.confidence * 100)}% zeker`, bg: '#1a3a1a', color: '#5a8a6a' }
+    ? {
+        label: evidenceBlock.origin === 'cache'
+          ? 'Cache'
+          : `${Math.round(evidenceBlock.confidence * 100)}% zeker`,
+        bg: '#1a3a1a',
+        color: '#5a8a6a',
+      }
     : null
 
   const dateLabel = evidenceBlock
@@ -58,8 +62,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
             <div className="text-[#e8e2d9] font-bold text-base mb-[3px]">{modalTitle}</div>
             {evidenceBlock && (
               <div className="text-[#7a7268] text-[0.6875rem] flex items-center gap-2 flex-wrap">
-                {dateLabel && <span>{dateLabel}</span>}
-                <span className="text-[#4a4540]">·</span>
+                {dateLabel && <><span>{dateLabel}</span><span className="text-[#4a4540]">·</span></>}
                 <span className="text-[#e8e2d9]">{evidenceBlock.startTime}–{evidenceBlock.endTime}</span>
                 <span className="text-[#4a4540]">·</span>
                 <span>{evidenceBlock.hours}u</span>
