@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useBooking } from '../hooks/useBooking'
 import { FieldSelector } from '../components/FieldSelector'
 import { TimeSelect } from '../components/TimeSelect'
@@ -15,6 +16,14 @@ interface Props {
 
 export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenceBlock, onClose, onBooked }: Props) {
   const booking = useBooking(initialEntry)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const modalTitle = evidenceBlock?.blockName ?? title
 
