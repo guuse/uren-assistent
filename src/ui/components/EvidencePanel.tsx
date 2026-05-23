@@ -1,47 +1,103 @@
 interface Props {
-  rawTitles?: string[] | undefined
   rawUrls?: string[] | undefined
+  rawTitles?: string[] | undefined
+  urls?: string[] | undefined
+  titles?: string[] | undefined
+  summary?: string | undefined
+  startTime?: string | undefined
+  endTime?: string | undefined
 }
 
-function displayUrl(url: string): string {
+function displayUrl(url: string): { host: string; path: string } {
   try {
-    const u = new URL(url)
-    return u.host + u.pathname
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return { host: u.hostname, path: u.pathname.replace(/\/$/, '') }
   } catch {
-    return url
+    return { host: url, path: '' }
   }
 }
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max) + '…' : text
+function domainStyle(hostname: string): { bg: string; color: string } {
+  if (/harborn/i.test(hostname)) return { bg: '#1a3a1a', color: '#5a8a6a' }
+  if (/^accounts\.|^auth\.|^login\.|^sso\./i.test(hostname))
+    return { bg: '#3a2e10', color: '#a07848' }
+  return { bg: '#252220', color: '#7a7268' }
 }
 
-export default function EvidencePanel({ rawTitles, rawUrls }: Props) {
-  const hasUrls = rawUrls && rawUrls.length > 0
-  const hasTitles = rawTitles && rawTitles.length > 0
+export default function EvidencePanel({
+  rawUrls,
+  rawTitles,
+  urls,
+  titles,
+  summary,
+  startTime,
+  endTime,
+}: Props) {
+  const urlList = rawUrls?.length ? rawUrls : urls ?? []
+  const titleList = rawTitles?.length ? rawTitles : titles ?? []
 
-  if (!hasUrls && !hasTitles) return null
+  if (urlList.length === 0 && titleList.length === 0 && !summary) return null
 
-  const items = hasUrls ? rawUrls!.slice(0, 5) : rawTitles!.slice(0, 5)
+  const timeLabel = startTime && endTime ? ` · ${startTime}–${endTime}` : ''
 
   return (
-    <div className="bg-[#2a2622] border border-[#2e2a26] rounded-lg px-3 py-2.5">
-      <div className="text-[#4a4540] text-[9px] font-semibold uppercase tracking-[0.07em] mb-1.5">
-        Wat je deed
+    <div className="bg-[#1c1917] border border-[#2e2a26] rounded-lg overflow-hidden">
+      {/* Kopregel */}
+      <div className="px-3 py-[7px] border-b border-[#2e2a26] flex justify-between items-center">
+        <span className="text-[#4a4540] text-[0.5625rem] uppercase tracking-[.08em] font-semibold">
+          Bezochte pagina's
+        </span>
+        <span className="text-[#4a4540] text-[0.5625rem]">
+          {urlList.length}{timeLabel}
+        </span>
       </div>
-      <ul className="flex flex-col gap-1">
-        {items.map((item, i) => (
-          <li key={item} className="flex items-center gap-1.5 min-w-0">
-            <span className="w-[3px] h-[3px] rounded-full bg-[#4a4540] flex-shrink-0" />
-            <span className="text-[#7a7268] text-[10px] truncate">
-              {hasUrls ? displayUrl(item) : truncate(item, 80)}
-              {hasUrls && hasTitles && rawTitles![i] && (
-                <span className="text-[#4a4540]"> — {truncate(rawTitles![i]!, 50)}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
+
+      {/* URL-lijst */}
+      {urlList.length > 0 && (
+        <div className="overflow-y-auto px-3 py-2 flex flex-col gap-[7px]" style={{ maxHeight: '138px' }}>
+          {urlList.map((url, i) => {
+            const { host, path } = displayUrl(url)
+            const style = domainStyle(host)
+            const initial = host.replace(/^www\./, '')[0]?.toUpperCase() ?? '?'
+            const pageTitle = titleList[i]
+            return (
+              <div key={i} className="flex gap-[10px] items-start">
+                <div
+                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
+                  style={{ background: style.bg, color: style.color }}
+                >
+                  {initial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                    {host}{path}
+                  </div>
+                  {pageTitle && (
+                    <div className="text-[#7a7268] text-[0.625rem] mt-[1px] truncate">
+                      {pageTitle}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* LLM-samenvatting */}
+      {summary && (
+        <div className="border-t border-[#2e2a26] px-3 py-[9px] bg-[#1c1917] flex gap-2 items-start">
+          <div className="w-[2px] flex-shrink-0 bg-[#5a8a6a] rounded-sm self-stretch" />
+          <div>
+            <div className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em] mb-[3px]">
+              LLM samenvatting
+            </div>
+            <div className="text-[#94a3b8] text-[0.6875rem] leading-[1.5] italic">
+              "{summary}"
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
