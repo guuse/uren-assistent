@@ -59,9 +59,9 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
             {evidenceBlock && (
               <div className="text-[#7a7268] text-[0.6875rem] flex items-center gap-2 flex-wrap">
                 {dateLabel && <span>{dateLabel}</span>}
-                <span className="text-[#2e2a26]">·</span>
+                <span className="text-[#4a4540]">·</span>
                 <span className="text-[#e8e2d9]">{evidenceBlock.startTime}–{evidenceBlock.endTime}</span>
-                <span className="text-[#2e2a26]">·</span>
+                <span className="text-[#4a4540]">·</span>
                 <span>{evidenceBlock.hours}u</span>
                 {confidenceBadge && (
                   <span
