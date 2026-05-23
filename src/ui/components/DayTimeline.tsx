@@ -4,6 +4,7 @@ import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { useAppStore } from '../../store/appStore'
+import { DragOverlay } from './DragOverlay'
 
 const DAY_START = '08:00'
 const DAY_END = '18:00'
@@ -41,6 +42,7 @@ interface Props {
   onConceptClick?: (block: ClassifiedBlock) => void
   onUploadCsv?: (csvContent: string) => void
   isClassifying?: boolean
+  onDragNew?: (startTime: string, endTime: string) => void
 }
 
 export function DayTimeline({
@@ -53,6 +55,7 @@ export function DayTimeline({
   onConceptClick,
   onUploadCsv,
   isClassifying = false,
+  onDragNew,
 }: Props) {
   const projects = useAppStore((s) => s.projects)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -193,9 +196,19 @@ export function DayTimeline({
               ))}
             </div>
 
-            {/* Blokken */}
-            <div className="flex-1 flex flex-col gap-[1px]">
-              {blocks.map((block, i) => {
+            {/* Blokken — omhullende div voor drag overlay */}
+            <div className="flex-1 relative">
+              {onDragNew && (
+                <DragOverlay
+                  totalHeightPx={HOUR_HEIGHT_PX * 10}
+                  dayStartMinutes={8 * 60}
+                  snapMinutes={30}
+                  minDurationMinutes={30}
+                  onDragComplete={onDragNew}
+                />
+              )}
+              <div className="flex flex-col gap-[1px]" style={{ position: 'relative', zIndex: 1 }}>
+                {blocks.map((block, i) => {
                 const height = blockHeight(block.startTime, block.endTime)
 
                 if (block.type === 'entry') {
@@ -277,7 +290,8 @@ export function DayTimeline({
                     className="w-full bg-[#16213e] rounded border border-[#1e293b]"
                   />
                 )
-              })}
+                })}
+              </div>
             </div>
           </div>
         </div>
