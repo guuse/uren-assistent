@@ -18,20 +18,27 @@ import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y!, m! - 1, d!)
+}
+
+function toLocalDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function getWeekNumber(dateStr: string): number {
-  const d = new Date(dateStr)
+  const d = parseLocalDate(dateStr)
   const startOfYear = new Date(d.getFullYear(), 0, 1)
   return Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7)
 }
 
 function weekLabel(weekStart: string): string {
-  const thisMonday = (() => {
-    const d = new Date()
-    const day = d.getDay()
-    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
-    return d.toISOString().split('T')[0]!
-  })()
-  if (weekStart === thisMonday) return 'deze week'
+  const today = new Date()
+  const day = today.getDay()
+  const mondayOffset = day === 0 ? -6 : 1 - day
+  const thisMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset)
+  if (weekStart === toLocalDateString(thisMonday)) return 'deze week'
   const wn = getWeekNumber(weekStart)
   return `week ${wn}`
 }
@@ -47,6 +54,8 @@ export function WeekPage() {
   const linearToken = useAppStore((s) => s.linearToken)
   const copilotToken = useAppStore((s) => s.copilotToken)
   const projects = useAppStore((s) => s.projects)
+  const setDayContext = useAppStore((s) => s.setDayContext)
+  const dayContexts = useAppStore((s) => s.dayContexts)
   const services = useAppStore((s) => s.services)
 
   const [bookingEntry, setBookingEntry] = useState<Partial<HourEntry> | null>(null)
@@ -109,7 +118,7 @@ export function WeekPage() {
     await importState.analyseFile(csvContent)
   }, [importState])
 
-  const { saveBlocksForDate } = historyStore
+  const { saveBlocksForDate, reloadForDate } = historyStore
 
   useEffect(() => {
     if (importState.status !== 'ready' || importState.blocks.length === 0) return
@@ -142,8 +151,12 @@ export function WeekPage() {
   }
 
   async function handleProcessWeek() {
-    if (!copilotToken || !githubToken || !linearToken) return
+    if (!copilotToken || !githubToken || !linearToken) {
+      console.warn('[ProcessWeek] tokens ontbreken:', { copilotToken: !!copilotToken, githubToken: !!githubToken, linearToken: !!linearToken })
+      return
+    }
     const username = githubUsername ?? 'guuse'
+    console.log('[ProcessWeek] start', { username, weekStart: week.selectedWeekStart, weekEnd: week.selectedWeekEnd })
 
     setIsProcessingWeek(true)
     setDayProcessingStates(new Map())
@@ -167,9 +180,21 @@ export function WeekPage() {
 
       for await (const progress of useCase.execute(week.selectedWeekStart, week.selectedWeekEnd)) {
         if (abortRef.current) break
-        if (progress.phase === 'classifying-day' && progress.day) {
+        console.log('[ProcessWeek] progress:', progress.phase, 'day' in progress ? progress.day : '')
+        if (progress.phase === 'context-ready' && progress.commitsByDay && progress.linearIssues) {
+          for (const [date, commits] of Object.entries(progress.commitsByDay)) {
+            setDayContext(date, { commits, linearIssues: progress.linearIssues })
+          }
+          console.log('[ProcessWeek] context-ready: commits per dag:', Object.fromEntries(
+            Object.entries(progress.commitsByDay).map(([d, c]) => [d, c.length])
+          ))
+        } else if (progress.phase === 'classifying-day' && progress.day) {
+          // Als een nieuwe dag begint, is de vorige klaar — reload de geselecteerde dag
+          void reloadForDate(week.selectedDate)
           setDayProcessingStates(prev => new Map(prev).set(progress.day!, 'classifying'))
         } else if (progress.phase === 'done') {
+          // Reload blocks voor de geselecteerde dag zodat de tijdlijn bijwerkt
+          void reloadForDate(week.selectedDate)
           setDayProcessingStates(prev => {
             const next = new Map(prev)
             for (const day of week.weekDays) {
@@ -180,9 +205,12 @@ export function WeekPage() {
             return next
           })
         } else if (progress.phase === 'error' && progress.day) {
+          console.error('[ProcessWeek] error op dag', progress.day, 'error' in progress ? progress.error : '')
           setDayProcessingStates(prev => new Map(prev).set(progress.day!, 'error'))
         }
       }
+    } catch (err) {
+      console.error('[ProcessWeek] fatale fout:', err)
     } finally {
       setIsProcessingWeek(false)
       void week.refresh()
@@ -191,6 +219,10 @@ export function WeekPage() {
 
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
   const isClassifying = importState.status === 'classifying' || importState.status === 'parsing'
+
+  const dayCommits = dayContexts[week.selectedDate]?.commits ?? historyStore.blocksForDate[0]?.commits ?? []
+  const dayLinearIssues = dayContexts[week.selectedDate]?.linearIssues ?? historyStore.blocksForDate[0]?.linearIssues ?? []
+  console.log('[WeekPage] date:', week.selectedDate, 'commits:', dayCommits.length, 'linear:', dayLinearIssues.length)
   const canProcessWeek = !!(githubToken && linearToken && copilotToken)
 
   return (
@@ -229,6 +261,8 @@ export function WeekPage() {
           entries={selectedEntries}
           suggestions={suggestions}
           conceptBlocks={historyStore.blocksForDate}
+          commits={dayCommits}
+          linearIssues={dayLinearIssues}
           onBookSuggestion={handleBookSuggestion}
           onEditEntry={handleEditEntry}
           onConceptClick={handleConceptClick}

@@ -46,5 +46,6 @@ export function useHistoryStore(selectedDate: string) {
     saveBlocksForDate,
     removeBlock,
     conceptCountForDate,
+    reloadForDate: reload,
   }
 }
