@@ -74,9 +74,20 @@ export function WeekPage() {
     setBookingConcept(block)
   }
 
+  function handleDragNew(startTime: string, endTime: string) {
+    setBookingConcept(null)
+    setBookingEntry({
+      startDate: week.selectedDate,
+      startTime,
+      endTime,
+    })
+  }
+
   const handleUploadCsv = useCallback(async (csvContent: string) => {
     await importState.analyseFile(csvContent)
   }, [importState])
+
+  const { saveBlocksForDate } = historyStore
 
   // Na classificatie: sla blokken op in historyStore
   useEffect(() => {
@@ -87,9 +98,9 @@ export function WeekPage() {
       byDate[block.date]!.push(block)
     }
     for (const [date, blocks] of Object.entries(byDate)) {
-      void historyStore.saveBlocksForDate(date, blocks)
+      void saveBlocksForDate(date, blocks)
     }
-  }, [importState.status, importState.blocks, historyStore])
+  }, [importState.status, importState.blocks, saveBlocksForDate])
 
   async function handleBooked() {
     setBookingEntry(null)
@@ -151,6 +162,7 @@ export function WeekPage() {
           onConceptClick={handleConceptClick}
           onUploadCsv={handleUploadCsv}
           isClassifying={isClassifying}
+          onDragNew={handleDragNew}
         />
       )}
 
