@@ -24,6 +24,16 @@ interface AppState {
   copilotToken: string | null
   setCopilotToken: (token: string) => void
 
+  // GitHub
+  githubToken: string | null
+  setGithubToken: (token: string) => void
+  githubUsername: string | null
+  setGithubUsername: (username: string) => void
+
+  // Linear
+  linearToken: string | null
+  setLinearToken: (token: string) => void
+
   // UI
   isLoading: boolean
   setLoading: (loading: boolean) => void
@@ -38,6 +48,9 @@ const initialState = {
   services: [],
   hourTypes: [],
   copilotToken: null,
+  githubToken: null,
+  githubUsername: null,
+  linearToken: null,
   isLoading: false,
   error: null,
 }
@@ -53,6 +66,10 @@ export const useAppStore = create<AppState>()((set) => ({
   setSimplicateData: (data) => set(data),
 
   setCopilotToken: (copilotToken) => set({ copilotToken }),
+
+  setGithubToken: (githubToken) => set({ githubToken }),
+  setGithubUsername: (githubUsername) => set({ githubUsername }),
+  setLinearToken: (linearToken) => set({ linearToken }),
 
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
