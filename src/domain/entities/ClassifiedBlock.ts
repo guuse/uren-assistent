@@ -1,4 +1,6 @@
 import type { HistoryBlock } from './HistoryBlock'
+import type { GitHubCommit } from './GitHubCommit'
+import type { LinearIssue } from './LinearIssue'
 
 export interface ClassifiedBlock extends HistoryBlock {
   blockName: string
@@ -13,4 +15,6 @@ export interface ClassifiedBlock extends HistoryBlock {
   overlappingMeetings?: import('./CalendarEvent').CalendarEvent[]
   rawTitles?: string[]
   rawUrls?: string[]
+  commits?: GitHubCommit[]
+  linearIssues?: LinearIssue[]
 }
