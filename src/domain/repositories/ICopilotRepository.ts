@@ -1,6 +1,7 @@
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { CalendarEvent } from '../entities/CalendarEvent'
+import type { DayContext } from '../entities/DayContext'
 
 export interface Project {
   id: string
@@ -52,5 +53,6 @@ export interface ICopilotRepository {
     availableProjects: Project[],
     availableServices: Service[],
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
+    context?: DayContext,
   ): Promise<DayClassificationResult[]>
 }
