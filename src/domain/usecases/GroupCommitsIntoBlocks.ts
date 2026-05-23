@@ -57,7 +57,7 @@ export function groupCommitsIntoBlocks(commits: GitHubCommit[], date: string): H
     if (current.length > 0) sessions.push(current)
 
     const [owner, repoName] = repo.split('/')
-    const urlPattern = `github.com/${owner}/${repoName}`
+    const repoUrl = `github.com/${owner}/${repoName}`
 
     for (const session of sessions) {
       const first = session[0]!
@@ -66,6 +66,10 @@ export function groupCommitsIntoBlocks(commits: GitHubCommit[], date: string): H
       const lastMin = timeToMinutes(last.time) + SESSION_TAIL_MINUTES
       const durationMins = lastMin - firstMin
       const hours = roundToHalf(durationMins / 60)
+
+      // Uniek urlPattern per sessie (repo + starttijd) zodat meerdere sessies
+      // van dezelfde repo niet worden samengevoegd in HistoryStore.
+      const urlPattern = `${repoUrl}@${first.time}`
 
       const seen = new Set<string>()
       const titles: string[] = []
@@ -79,7 +83,7 @@ export function groupCommitsIntoBlocks(commits: GitHubCommit[], date: string): H
       blocks.push({
         date,
         urlPattern,
-        urls: [urlPattern],
+        urls: [repoUrl],  // canonical repo URL voor weergave en de `attachHistoryToMeetings` check
         titles,
         visitCount: session.length,
         firstVisitTime: first.time,

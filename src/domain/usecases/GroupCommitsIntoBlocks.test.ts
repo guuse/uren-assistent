@@ -22,7 +22,7 @@ describe('groupCommitsIntoBlocks', () => {
   it('maakt één block van één commit', () => {
     const blocks = groupCommitsIntoBlocks([makeCommit('09:15')], '2026-04-01')
     expect(blocks).toHaveLength(1)
-    expect(blocks[0]!.urlPattern).toBe('github.com/Org/Repo')
+    expect(blocks[0]!.urlPattern).toBe('github.com/Org/Repo@09:15')
     expect(blocks[0]!.firstVisitTime).toBe('09:15')
     expect(blocks[0]!.lastVisitTime).toBe('09:45') // +30 min
     expect(blocks[0]!.hours).toBe(0.5)
@@ -64,8 +64,8 @@ describe('groupCommitsIntoBlocks', () => {
     const blocks = groupCommitsIntoBlocks(commits, '2026-04-01')
     expect(blocks).toHaveLength(2)
     expect(blocks.map(b => b.urlPattern).sort()).toEqual([
-      'github.com/Org/RepoA',
-      'github.com/Org/RepoB',
+      'github.com/Org/RepoA@09:00',
+      'github.com/Org/RepoB@09:10',
     ])
   })
 
