@@ -2,15 +2,20 @@ const DAY_LABELS: Record<string, string> = {
   '1': 'MA', '2': 'DI', '3': 'WO', '4': 'DO', '5': 'VR',
 }
 
+export type DayProcessingState = 'idle' | 'classifying' | 'done' | 'error'
+
 interface Props {
-  weekDays: string[]           // YYYY-MM-DD strings ma t/m vr
+  weekDays: string[]
   selectedDate: string
   hoursForDate: (date: string) => number
   onSelectDate: (date: string) => void
   onPrevWeek: () => void
   onNextWeek: () => void
-  weekLabel: string            // bijv. "week 21" of "vorige week"
+  weekLabel: string
   conceptCountForDate?: (date: string) => number
+  onProcessWeek?: () => void
+  processingStateForDate?: (date: string) => DayProcessingState
+  isProcessingWeek?: boolean
 }
 
 const TARGET_HOURS = 8
@@ -34,10 +39,13 @@ export function WeekDayList({
   onNextWeek,
   weekLabel,
   conceptCountForDate,
+  onProcessWeek,
+  processingStateForDate,
+  isProcessingWeek = false,
 }: Props) {
   return (
     <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
-      <div className="text-[#4a4540] text-[9px] uppercase tracking-widest mb-2 px-1">{weekLabel}</div>
+      <div className="text-[#4a4540] text-[0.5625rem] uppercase tracking-widest mb-2 px-1">{weekLabel}</div>
 
       <div className="flex flex-col gap-1 flex-1">
         {weekDays.map((date) => {
@@ -48,6 +56,7 @@ export function WeekDayList({
           const isSelected = date === selectedDate
           const isFull = hours >= TARGET_HOURS
           const conceptCount = conceptCountForDate?.(date) ?? 0
+          const processingState = processingStateForDate?.(date) ?? 'idle'
 
           return (
             <button
@@ -61,22 +70,35 @@ export function WeekDayList({
             >
               <div className="flex justify-between items-center">
                 <span
-                  className={`text-[10px] font-semibold ${
+                  className={`text-[0.625rem] font-semibold ${
                     isSelected ? 'text-[#a5b4fc]' : isFull ? 'text-[#94a3b8]' : 'text-[#64748b]'
                   }`}
                 >
                   {label} {dayOfMonth}
                 </span>
-                {isFull && <span className="text-green-500 text-[9px]">✓</span>}
-                {!isFull && hours > 0 && <span className="text-amber-500 text-[9px]">●</span>}
+                {processingState === 'classifying' && (
+                  <span className="text-[#a07848] text-[0.5625rem]">···</span>
+                )}
+                {processingState === 'done' && (
+                  <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
+                )}
+                {processingState === 'error' && (
+                  <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
+                )}
+                {processingState === 'idle' && isFull && (
+                  <span className="text-green-500 text-[0.5625rem]">✓</span>
+                )}
+                {processingState === 'idle' && !isFull && hours > 0 && (
+                  <span className="text-amber-500 text-[0.5625rem]">●</span>
+                )}
               </div>
               <ProgressBar hours={hours} />
-              <div className="text-[8px] text-[#475569] mt-1">
+              <div className="text-[0.5rem] text-[#475569] mt-1">
                 {hours > 0 ? `${hours} / ${TARGET_HOURS}u` : `0 / ${TARGET_HOURS}u`}
               </div>
-              {conceptCount > 0 && !isFull && (
+              {conceptCount > 0 && !isFull && processingState === 'idle' && (
                 <div className="mt-1">
-                  <span className="bg-[#2a2010] text-[#a07848] text-[8px] px-[5px] py-[1px] rounded">
+                  <span className="bg-[#2a2010] text-[#a07848] text-[0.5rem] px-[5px] py-[1px] rounded">
                     {conceptCount} concept{conceptCount !== 1 ? 'en' : ''}
                   </span>
                 </div>
@@ -86,6 +108,18 @@ export function WeekDayList({
         })}
       </div>
 
+      {onProcessWeek && (
+        <div className="mt-2 px-1">
+          <button
+            onClick={onProcessWeek}
+            disabled={isProcessingWeek}
+            className="w-full bg-[#252220] disabled:opacity-40 border border-[#3e3a36] text-[#e8e2d9] text-[0.625rem] font-medium py-[6px] rounded-lg hover:border-[#5e5a56] transition-colors cursor-pointer disabled:cursor-default"
+          >
+            {isProcessingWeek ? 'Bezig...' : 'Verwerk week'}
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center px-1 mt-2">
         <button
           onClick={onPrevWeek}
@@ -93,7 +127,7 @@ export function WeekDayList({
         >
           ‹
         </button>
-        <span className="text-[#4a4540] text-[8px]">{weekLabel}</span>
+        <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
         <button
           onClick={onNextWeek}
           className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
