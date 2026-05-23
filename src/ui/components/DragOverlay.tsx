@@ -1,14 +1,15 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 // ─── Pure helpers (geëxporteerd voor tests) ───────────────────────────────────
+
+const TOTAL_MINUTES = 600 // 08:00–18:00 = 10 hours
 
 export function pixelToMinutes(
   pixelY: number,
   totalHeightPx: number,
   dayStartMinutes: number,
 ): number {
-  const totalMinutes = 600 // 08:00–18:00
-  return dayStartMinutes + (pixelY / totalHeightPx) * totalMinutes
+  return dayStartMinutes + (pixelY / totalHeightPx) * TOTAL_MINUTES
 }
 
 export function snapToInterval(minutes: number, snapMinutes: number): number {
@@ -54,17 +55,16 @@ export function DragOverlay({
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  function getMinutes(e: React.MouseEvent | MouseEvent): number {
+  const getMinutes = useCallback((e: MouseEvent) => {
     const rect = containerRef.current!.getBoundingClientRect()
     const y = Math.max(0, Math.min(e.clientY - rect.top, totalHeightPx))
-    const raw = pixelToMinutes(y, totalHeightPx, dayStartMinutes)
-    return snapToInterval(raw, snapMinutes)
-  }
+    return snapToInterval(pixelToMinutes(y, totalHeightPx, dayStartMinutes), snapMinutes)
+  }, [totalHeightPx, dayStartMinutes, snapMinutes])
 
   function handleMouseDown(e: React.MouseEvent) {
     if (e.button !== 0) return
     e.preventDefault()
-    const startMin = getMinutes(e)
+    const startMin = getMinutes(e.nativeEvent)
     isDragging.current = true
     setDrag({ startMin, endMin: startMin })
   }
@@ -72,7 +72,7 @@ export function DragOverlay({
   useEffect(() => {
     function handleMouseMove(e: MouseEvent) {
       if (!isDragging.current || !drag) return
-      const endMin = getMinutes(e as unknown as React.MouseEvent)
+      const endMin = getMinutes(e)
       setDrag((prev) => prev ? { ...prev, endMin } : prev)
     }
 
@@ -101,14 +101,14 @@ export function DragOverlay({
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [drag, minDurationMinutes, onDragComplete])
+  }, [drag, minDurationMinutes, onDragComplete, getMinutes])
 
   // Preview-blok berekening
   let preview: { top: number; height: number; startTime: string; endTime: string } | null = null
   if (drag) {
     const { start, end } = swapIfNeeded(drag.startMin, drag.endMin)
-    const topFraction = (start - dayStartMinutes) / 600
-    const endFraction = (end - dayStartMinutes) / 600
+    const topFraction = (start - dayStartMinutes) / TOTAL_MINUTES
+    const endFraction = (end - dayStartMinutes) / TOTAL_MINUTES
     preview = {
       top: topFraction * totalHeightPx,
       height: Math.max(1, (endFraction - topFraction) * totalHeightPx),
