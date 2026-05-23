@@ -35,7 +35,7 @@ function firstName(email: string): string {
 }
 
 function formatTime(date: Date): string {
-  return date.toTimeString().slice(0, 5)
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
 function attendeeLabel(attendees: string[]): string {
@@ -129,8 +129,11 @@ export default function EvidencePanel({
           </div>
           <div className="px-3 pb-2 flex flex-col gap-[7px]">
             {meetingList.map((meeting) => {
-              const statusColor = meeting.status === 'accepted' ? '#5a8a6a' : '#a07848'
-              const statusLabel = meeting.status === 'accepted' ? '✓ accepted' : '? tentative'
+              const statusConfig: Record<CalendarEvent['status'], { color: string; label: string }> = {
+                accepted: { color: '#5a8a6a', label: '✓ accepted' },
+                tentative: { color: '#a07848', label: '? tentative' },
+              }
+              const { color: statusColor, label: statusLabel } = statusConfig[meeting.status]
               const timeRange = `${formatTime(meeting.start)}–${formatTime(meeting.end)}`
               const attendees = attendeeLabel(meeting.attendees)
               return (
