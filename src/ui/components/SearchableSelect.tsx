@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import React from 'react'
 
 interface Option {
   id: string
@@ -14,9 +15,11 @@ interface Props {
   disabled?: boolean
   placeholder?: string
   highlight?: boolean
+  renderSuffix?: (option: Option) => React.ReactNode
+  groupSeparatorAfter?: string
 }
 
-export function SearchableSelect({ label, options, value, onChange, required, disabled, placeholder = 'Kies...', highlight }: Props) {
+export function SearchableSelect({ label, options, value, onChange, required, disabled, placeholder = 'Kies...', highlight, renderSuffix, groupSeparatorAfter }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -111,17 +114,28 @@ export function SearchableSelect({ label, options, value, onChange, required, di
               {filtered.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-[#4a4540]">Geen resultaten</div>
               ) : (
-                filtered.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleSelect(opt.id)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-[#252220] transition-colors ${
-                      opt.id === value ? 'text-[#e8e2d9] font-medium' : 'text-[#7a7268]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
+                filtered.map((opt, idx) => (
+                  <div key={opt.id}>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleSelect(opt.id)}
+                        className={`flex-1 text-left px-3 py-2 text-sm hover:bg-[#252220] transition-colors ${
+                          opt.id === value ? 'text-[#e8e2d9] font-medium' : 'text-[#7a7268]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                      {renderSuffix && (
+                        <div className="pr-2 flex-shrink-0">
+                          {renderSuffix(opt)}
+                        </div>
+                      )}
+                    </div>
+                    {groupSeparatorAfter && opt.id === groupSeparatorAfter && idx < filtered.length - 1 && (
+                      <div className="border-t border-[#2e2a26] mx-2 my-1" />
+                    )}
+                  </div>
                 ))
               )}
             </div>

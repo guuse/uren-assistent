@@ -1,4 +1,5 @@
 import { SearchableSelect } from './SearchableSelect'
+import React from 'react'
 
 interface Option {
   id: string
@@ -13,9 +14,11 @@ interface Props {
   required?: boolean
   disabled?: boolean
   highlight?: boolean
+  renderSuffix?: (option: Option) => React.ReactNode
+  groupSeparatorAfter?: string
 }
 
-export function FieldSelector({ label, options, value, onChange, required, disabled, highlight }: Props) {
+export function FieldSelector({ label, options, value, onChange, required, disabled, highlight, renderSuffix, groupSeparatorAfter }: Props) {
   return (
     <SearchableSelect
       label={label}
@@ -25,6 +28,8 @@ export function FieldSelector({ label, options, value, onChange, required, disab
       {...(required !== undefined && { required })}
       {...(disabled !== undefined && { disabled })}
       {...(highlight !== undefined && { highlight })}
+      {...(renderSuffix !== undefined && { renderSuffix })}
+      {...(groupSeparatorAfter !== undefined && { groupSeparatorAfter })}
     />
   )
 }
