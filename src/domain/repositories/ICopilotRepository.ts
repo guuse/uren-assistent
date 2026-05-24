@@ -36,7 +36,7 @@ export interface PatternBlock {
   projectId: string | null
   serviceId: string | null
   note: string
-  confidence: number
+  confidence: 1 | 2 | 3 | 4 | 5
   estimatedHours: number
   origin: 'llm-pattern'
 }
@@ -48,7 +48,7 @@ export interface DayClassificationResult {
   projectId: string | null
   serviceId: string | null
   note: string
-  confidence: number
+  confidence: 1 | 2 | 3 | 4 | 5
   relatedIssueIds?: string[]  // e.g. ["GMS-4", "SCHP-41"] — LLM-determined relevant Linear issues
   isPatternBlock?: boolean
   estimatedHours?: number
