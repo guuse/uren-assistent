@@ -1,3 +1,4 @@
+// src/domain/usecases/ProcessWeekUseCase.ts
 import type { IGitHubRepository } from '../repositories/IGitHubRepository'
 import type { ILinearRepository } from '../repositories/ILinearRepository'
 import type { IGoogleCalendarRepository } from '../repositories/IGoogleCalendarRepository'
@@ -6,8 +7,7 @@ import type { ICopilotRepository, Project, Service } from '../repositories/ICopi
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
-import { GroupAndClassifyDayUseCase } from './GroupAndClassifyDayUseCase'
-import { groupCommitsIntoBlocks } from './GroupCommitsIntoBlocks'
+import { ProcessDayUseCase } from './ProcessDayUseCase'
 import type { GitHubCommit } from '../entities/GitHubCommit'
 import type { LinearIssue } from '../entities/LinearIssue'
 
@@ -23,11 +23,12 @@ export interface ProcessWeekProgress {
 
 function weekDays(weekStart: string): string[] {
   const days: string[] = []
-  const start = new Date(weekStart)
+  const [y, m, d] = weekStart.split('-').map(Number)
+  const start = new Date(y!, m! - 1, d!)
   for (let i = 0; i < 5; i++) {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    days.push(d.toISOString().split('T')[0]!)
+    const day = new Date(start)
+    day.setDate(start.getDate() + i)
+    days.push(`${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`)
   }
   return days
 }
@@ -35,20 +36,32 @@ function weekDays(weekStart: string): string[] {
 export class ProcessWeekUseCase {
   private readonly fetchGitHub: FetchGitHubContextUseCase
   private readonly fetchLinear: FetchLinearContextUseCase
+  private readonly processDayUseCase: ProcessDayUseCase
 
   constructor(
     githubRepo: IGitHubRepository,
     linearRepo: ILinearRepository,
-    private readonly calendarRepo: IGoogleCalendarRepository,
-    private readonly historyStore: IHistoryStore,
-    private readonly copilotRepo: ICopilotRepository,
-    private readonly cacheRepo: IMappingCacheRepository,
-    private readonly availableProjects: Project[],
-    private readonly availableServices: Service[],
+    calendarRepo: IGoogleCalendarRepository,
+    historyStore: IHistoryStore,
+    copilotRepo: ICopilotRepository,
+    cacheRepo: IMappingCacheRepository,
+    availableProjects: Project[],
+    availableServices: Service[],
     private readonly githubUsername: string,
   ) {
     this.fetchGitHub = new FetchGitHubContextUseCase(githubRepo)
     this.fetchLinear = new FetchLinearContextUseCase(linearRepo)
+    this.processDayUseCase = new ProcessDayUseCase(
+      githubRepo,
+      linearRepo,
+      calendarRepo,
+      historyStore,
+      copilotRepo,
+      cacheRepo,
+      availableProjects,
+      availableServices,
+      githubUsername,
+    )
   }
 
   async *execute(weekStart: string, weekEnd: string): AsyncGenerator<ProcessWeekProgress> {
@@ -58,7 +71,6 @@ export class ProcessWeekUseCase {
     yield { phase: 'fetching-linear' }
     const linearIssues = await this.fetchLinear.execute(weekStart, weekEnd)
 
-    // Build per-day commit map and emit context-ready so UI can store it
     const days = weekDays(weekStart)
     const commitsByDay: Record<string, GitHubCommit[]> = {}
     for (const day of days) {
@@ -66,38 +78,15 @@ export class ProcessWeekUseCase {
     }
     yield { phase: 'context-ready', commitsByDay, linearIssues }
 
-    const groupAndClassify = new GroupAndClassifyDayUseCase(
-      this.copilotRepo,
-      this.cacheRepo,
-      this.availableProjects,
-      this.availableServices,
-    )
-
     for (let i = 0; i < days.length; i++) {
       const day = days[i]!
       yield { phase: 'classifying-day', day, dayIndex: i }
 
-      try {
-        const dayCommits: GitHubCommit[] = commitsByDay[day] ?? []
-
-        const dayStart = new Date(day + 'T00:00:00')
-        const dayEnd = new Date(day + 'T23:59:59')
-        const [historyBlocks, calendarEvents] = await Promise.all([
-          this.historyStore.getBlocksForDate(day),
-          this.calendarRepo.fetchEvents(dayStart, dayEnd),
-        ])
-
-        const commitBlocks = groupCommitsIntoBlocks(dayCommits, day)
-        const allBlocks = [...historyBlocks, ...commitBlocks]
-
-        const classified = await groupAndClassify.execute(day, allBlocks, calendarEvents, {
-          commits: dayCommits,
-          linearIssues,
-        })
-
-        await this.historyStore.setBlocksForDate(day, classified)
-      } catch (err) {
-        yield { phase: 'error', day, dayIndex: i, error: err instanceof Error ? err.message : String(err) }
+      for await (const progress of this.processDayUseCase.execute(day)) {
+        if (progress.phase === 'error') {
+          yield { phase: 'error', day, dayIndex: i, ...(progress.error !== undefined ? { error: progress.error } : {}) }
+        }
+        // fetching-context, classifying-day, done — geen forward nodig naar WeekPage
       }
     }
 

@@ -30,6 +30,7 @@ const historyStore: IHistoryStore = {
   setBlocksForDate: vi.fn().mockResolvedValue(undefined),
   removeBlock: vi.fn().mockResolvedValue(undefined),
   hasDataForDate: vi.fn().mockResolvedValue(false),
+  hasHistoryForWeek: vi.fn().mockResolvedValue(false),
 }
 const copilotRepo: ICopilotRepository = {
   classify: vi.fn().mockResolvedValue([]),
@@ -57,8 +58,8 @@ describe('ProcessWeekUseCase', () => {
     expect(phases).toContain('fetching-linear')
     expect(phases.filter(p => p === 'classifying-day')).toHaveLength(5)
     expect(phases).toContain('done')
-    expect(githubRepo.getCommitsForWeek).toHaveBeenCalledTimes(1)
-    expect(linearRepo.getCompletedIssuesForWeek).toHaveBeenCalledTimes(1)
+    expect(githubRepo.getCommitsForWeek).toHaveBeenCalledTimes(6) // 1 week + 5 days (ProcessDayUseCase fetches per day)
+    expect(linearRepo.getCompletedIssuesForWeek).toHaveBeenCalledTimes(6) // 1 week + 5 days
     expect(historyStore.setBlocksForDate).toHaveBeenCalledTimes(5)
   })
 })
