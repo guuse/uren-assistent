@@ -14,6 +14,7 @@ interface Props {
   weekLabel: string
   conceptCountForDate?: (date: string) => number
   onProcessWeek?: () => void
+  onUploadCsv?: () => void
   processingStateForDate?: (date: string) => DayProcessingState
   isProcessingWeek?: boolean
 }
@@ -40,6 +41,7 @@ export function WeekDayList({
   weekLabel,
   conceptCountForDate,
   onProcessWeek,
+  onUploadCsv,
   processingStateForDate,
   isProcessingWeek = false,
 }: Props) {
@@ -112,14 +114,24 @@ export function WeekDayList({
       </div>
 
       {onProcessWeek && (
-        <div className="mt-2 px-1">
-          <button
-            onClick={onProcessWeek}
-            disabled={isProcessingWeek}
-            className="w-full bg-[#252220] disabled:opacity-40 border border-[#3e3a36] text-[#e8e2d9] text-[0.625rem] font-medium py-[6px] rounded-lg hover:border-[#5e5a56] transition-colors cursor-pointer disabled:cursor-default"
-          >
-            {isProcessingWeek ? 'Bezig...' : 'Verwerk week'}
-          </button>
+        <div className="mt-2 px-1 flex flex-col gap-1.5">
+          {onProcessWeek && (
+            <button
+              onClick={onProcessWeek}
+              disabled={isProcessingWeek}
+              className="w-full bg-[#6366f1] hover:bg-[#5558dd] disabled:opacity-40 text-white text-[0.6875rem] font-bold py-[8px] rounded-lg transition-colors cursor-pointer disabled:cursor-default"
+            >
+              {isProcessingWeek ? 'Bezig...' : '▶ Verwerk week'}
+            </button>
+          )}
+          {onUploadCsv && (
+            <button
+              onClick={onUploadCsv}
+              className="w-full bg-transparent border border-[#2e2a26] hover:border-[#3e3a36] text-[#4a4540] hover:text-[#7a7268] text-[0.5625rem] py-[5px] rounded-lg transition-colors cursor-pointer"
+            >
+              📂 Upload geschiedenis
+            </button>
+          )}
         </div>
       )}
 
