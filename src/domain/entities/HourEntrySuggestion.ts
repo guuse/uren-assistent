@@ -4,6 +4,6 @@ export interface HourEntrySuggestion {
   hourTypeId: string
   startTime?: string
   endTime?: string
-  reason: 'pattern' | 'last-week'
+  reason: 'pattern' | 'last-week' | 'llm-pattern'
   occurrences: number
 }
