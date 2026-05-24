@@ -44,6 +44,12 @@ const cacheRepo: IMappingCacheRepository = {
 }
 const simplicateRepo: ISimplicateRepository = {
   getActiveProjects: vi.fn().mockResolvedValue([]),
+  getProjects: vi.fn().mockResolvedValue([]),
+  getHourEntries: vi.fn().mockResolvedValue([]),
+  getServices: vi.fn().mockResolvedValue([]),
+  getHourTypes: vi.fn().mockResolvedValue([]),
+  getEmployee: vi.fn().mockResolvedValue({}),
+  bookHours: vi.fn().mockResolvedValue(undefined),
 } as unknown as ISimplicateRepository
 
 describe('ProcessWeekUseCase', () => {

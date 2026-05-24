@@ -40,6 +40,12 @@ function makeCache(): IMappingCacheRepository {
 function makeSimplicateRepo(): ISimplicateRepository {
   return {
     getActiveProjects: vi.fn().mockResolvedValue([]),
+    getProjects: vi.fn().mockResolvedValue([]),
+    getHourEntries: vi.fn().mockResolvedValue([]),
+    getServices: vi.fn().mockResolvedValue([]),
+    getHourTypes: vi.fn().mockResolvedValue([]),
+    getEmployee: vi.fn().mockResolvedValue({}),
+    bookHours: vi.fn().mockResolvedValue(undefined),
   } as unknown as ISimplicateRepository
 }
 
