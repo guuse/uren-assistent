@@ -140,7 +140,7 @@ Nieuwe gedeelde modal, getriggerd door zowel "Verwerk week" als "Verwerk dag" al
 - `ParseBrowserHistoryUseCase`, `ClassifyHistoryBlocksUseCase`, `GroupAndClassifyDayUseCase` — ongewijzigd
 - `HistoryStore`, `MappingCacheRepository` — ongewijzigd
 - `BookingModal`, `EvidencePanel`, `FieldSelector` — ongewijzigd
-- Drag-and-drop op de timeline als alternatieve CSV-upload — kan blijven of worden verwijderd (buiten scope)
+- Drag-and-drop op de timeline als alternatieve CSV-upload — **blijft werken** als alternatief voor de file picker in WeekDayList; alleen de grote CTA-kaart ("Chrome history uploaden") verdwijnt
 - `useImport` hook — wordt hergebruikt door zowel de WeekDayList-knop als de popup-upload
 
 ---
@@ -157,3 +157,5 @@ Nieuwe gedeelde modal, getriggerd door zowel "Verwerk week" als "Verwerk dag" al
 | `src/ui/components/WeekDayList.tsx` | "Verwerk week" stijl, CSV-knop toevoegen |
 | `src/ui/components/DayTimeline.tsx` | Header-balk met dag-CTA, lege staat aanpassen |
 | `src/ui/components/NoHistoryWarningModal.tsx` | Nieuw — gedeelde warning popup |
+| `src/domain/repositories/IHistoryStore.ts` | `hasHistoryForDate` en `hasHistoryForWeek` toevoegen aan interface |
+| `src/infrastructure/storage/HistoryStore.ts` | Implementatie van `hasHistoryForDate` en `hasHistoryForWeek` |
