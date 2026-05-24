@@ -13,7 +13,7 @@ vi.mock('@tauri-apps/api/core', () => ({
           projectId: 'proj-1',
           serviceId: 'svc-1',
           note: 'review',
-          confidence: 0.9,
+          confidence: 4,
         }]),
       },
     }],

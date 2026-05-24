@@ -37,7 +37,7 @@ function makeLLMResult(block: HistoryBlock) {
     projectId: 'p1',
     serviceId: 's1',
     note: 'PR review',
-    confidence: 0.9,
+    confidence: 4,
     origin: 'llm' as const,
   }
 }
@@ -65,12 +65,12 @@ describe('ClassifyHistoryBlocksUseCase', () => {
       expect(result[0]!.origin).toBe('llm')
     })
 
-    it('clamps confidence to [0, 1]', async () => {
-      const classifyMock = vi.fn().mockResolvedValue([{ ...makeLLMResult(baseBlock), confidence: 1.5 }])
+    it('klampt confidence naar [1, 5]', async () => {
+      const classifyMock = vi.fn().mockResolvedValue([{ ...makeLLMResult(baseBlock), confidence: 8 }])
       const cacheMock = { get: vi.fn().mockReturnValue(undefined) }
       const uc = new ClassifyHistoryBlocksUseCase({ classify: classifyMock } as never, cacheMock as never)
       const result = await uc.execute([baseBlock], projects, services)
-      expect(result[0]!.confidence).toBe(1)
+      expect(result[0]!.confidence).toBe(5)
     })
   })
 

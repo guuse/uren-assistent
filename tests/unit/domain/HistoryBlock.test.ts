@@ -31,10 +31,10 @@ describe('ClassifiedBlock', () => {
       projectId: 'p1',
       serviceId: 's1',
       note: 'Eindhoven Doet development',
-      confidence: 0.9,
+      confidence: 4,
       origin: 'llm',
     }
     expect(block.origin).toBe('llm')
-    expect(block.confidence).toBe(0.9)
+    expect(block.confidence).toBe(4)
   })
 })

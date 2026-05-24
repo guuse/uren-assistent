@@ -25,7 +25,7 @@ describe('ClassifyCalendarBlocksUseCase', () => {
         projectId: 'p1',
         serviceId: 's1',
         note: '',
-        confidence: 0.8,
+        confidence: 4,
         origin: 'calendar' as const,
         date: '2024-03-01',
         urls: [],

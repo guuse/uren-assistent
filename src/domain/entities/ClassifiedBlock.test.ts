@@ -16,7 +16,7 @@ describe('ClassifiedBlock', () => {
       summary: 'Code review',
       startTime: '09:00',
       endTime: '10:00',
-      confidence: 0.9,
+      confidence: 4,
       origin: 'llm',
     }
     expectTypeOf(block.rawTitles).toEqualTypeOf<string[] | undefined>()
@@ -37,7 +37,7 @@ describe('ClassifiedBlock', () => {
       summary: 'Code review',
       startTime: '09:00',
       endTime: '10:00',
-      confidence: 0.9,
+      confidence: 4,
       origin: 'llm',
       rawTitles: ['Pull Request #42 · org/repo', 'Files changed · Pull Request #42'],
       rawUrls: ['github.com/org/repo/pull/42', 'github.com/org/repo/pull/42/files'],

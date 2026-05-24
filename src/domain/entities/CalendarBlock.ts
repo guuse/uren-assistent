@@ -32,7 +32,7 @@ export function calendarEventToBlock(event: CalendarEvent): CalendarBlock {
     summary: '',
     startTime: toTime(event.start),
     endTime: toTime(event.end),
-    confidence: 0,
+    confidence: 3,
     origin: 'calendar',
     // CalendarBlock fields
     calendarEventId: event.id,

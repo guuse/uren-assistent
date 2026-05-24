@@ -38,7 +38,7 @@ describe('HistoryStore.hasHistoryForWeek', () => {
       lastVisitTime: '10:00',
       hours: 1,
       date: '2026-05-19',
-      confidence: 0.9,
+      confidence: 4,
       origin: 'llm',
     }])
     const result = await store.hasHistoryForWeek('2026-05-18')
@@ -59,7 +59,7 @@ describe('HistoryStore.hasHistoryForWeek', () => {
       lastVisitTime: '10:00',
       hours: 1,
       date: '2026-05-11',
-      confidence: 0.9,
+      confidence: 4,
       origin: 'llm',
     }])
     const result = await store.hasHistoryForWeek('2026-05-18')

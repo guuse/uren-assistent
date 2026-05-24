@@ -35,7 +35,7 @@ const makeResult = (index: number, overrides: Partial<DayClassificationResult> =
   projectId: 'proj-1',
   serviceId: 'svc-1',
   note: 'note',
-  confidence: 0.9,
+  confidence: 4,
   ...overrides,
 })
 

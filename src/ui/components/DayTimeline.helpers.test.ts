@@ -102,7 +102,7 @@ function makeConcept(startTime: string, endTime: string): ClassifiedBlock {
     summary: '',
     startTime,
     endTime,
-    confidence: 0.9,
+    confidence: 4,
     origin: 'llm',
   }
 }

@@ -58,7 +58,7 @@ export class ClassifyHistoryBlocksUseCase {
           projectId: cached.projectId,
           serviceId: cached.serviceId,
           note: cached.note,
-          confidence: 1.0,
+          confidence: 5,
           origin: 'cache',
           overlappingMeetings: getOverlappingMeetings(block, calendarEvents),
         })

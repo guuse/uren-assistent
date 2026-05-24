@@ -16,7 +16,7 @@ function makeConcept(startTime: string, endTime: string, urlPattern = 'github.co
     date: '2026-05-21', urlPattern, urls: [], titles: [],
     visitCount: 1, firstVisitTime: '09:00', lastVisitTime: '10:00', hours: 1,
     blockName: 'Test', summary: 'test', startTime, endTime,
-    confidence: 0.9, origin: 'llm',
+    confidence: 4, origin: 'llm',
   }
 }
 

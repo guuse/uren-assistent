@@ -28,7 +28,7 @@ function makeBlock(urlPattern: string, date: string): ClassifiedBlock {
     summary: 'test',
     startTime: '09:00',
     endTime: '10:00',
-    confidence: 0.9,
+    confidence: 4,
     origin: 'llm',
   }
 }

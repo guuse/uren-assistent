@@ -42,7 +42,7 @@ describe('ClassifyHistoryBlocksUseCase', () => {
 
     expect(mockCopilot.classify).not.toHaveBeenCalled()
     expect(result[0]!.origin).toBe('cache')
-    expect(result[0]!.confidence).toBe(1.0)
+    expect(result[0]!.confidence).toBe(5)
     expect(result[0]!.projectId).toBe('p1')
   })
 
@@ -55,7 +55,7 @@ describe('ClassifyHistoryBlocksUseCase', () => {
       projectId: 'p1',
       serviceId: 's1',
       note: 'Eindhoven Doet work',
-      confidence: 0.85,
+      confidence: 4,
       origin: 'llm',
     }])
 
@@ -68,7 +68,7 @@ describe('ClassifyHistoryBlocksUseCase', () => {
       [],
     )
     expect(result[0]!.origin).toBe('llm')
-    expect(result[0]!.confidence).toBe(0.85)
+    expect(result[0]!.confidence).toBe(4)
   })
 
   it('propagates error when LLM fails', async () => {
@@ -94,7 +94,7 @@ describe('ClassifyHistoryBlocksUseCase', () => {
       projectId: 'p1',
       serviceId: 's1',
       note: 'Hosting',
-      confidence: 0.7,
+      confidence: 3,
       origin: 'llm',
     }])
 
