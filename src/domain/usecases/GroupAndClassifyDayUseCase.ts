@@ -249,7 +249,16 @@ export class GroupAndClassifyDayUseCase {
       }
     }
 
-    const all = [...cacheResults, ...llmResults, ...patternClassified]
+    const coveredProjectService = new Set(
+      [...cacheResults, ...llmResults]
+        .filter(b => b.projectId && b.serviceId)
+        .map(b => `${b.projectId}__${b.serviceId}`)
+    )
+    const dedupedPatterns = patternClassified.filter(
+      b => !b.projectId || !b.serviceId || !coveredProjectService.has(`${b.projectId}__${b.serviceId}`)
+    )
+
+    const all = [...cacheResults, ...llmResults, ...dedupedPatterns]
     all.sort((a, b) => a.startTime.localeCompare(b.startTime))
     return all
   }

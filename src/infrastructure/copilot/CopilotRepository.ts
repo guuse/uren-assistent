@@ -336,15 +336,17 @@ Elk item in "patternBlocks" heeft:
 - serviceId (string | null)
 - note (string, max 80 tekens)
 - confidence (integer 1–5):
-  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
-  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
-  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
-  2 = Twijfelachtig — weinig bewijs, gok op basis van context
-  1 = Onzeker — geen duidelijke match, vul in als best guess
+  5 = Zeer zeker — patroon klopt exact en er is geen andere activiteit die het al dekt
+  4 = Zeker — sterk patroon, kleine twijfel
+  3 = Aannemelijk — patroon klopt, maar minder frequent of recent
+  2 = Twijfelachtig — zwak patroon, weinig historisch bewijs
+  1 = Onzeker — nauwelijks bewijs voor dit patroon
 
 Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
 - estimatedHours (number, schatting in uren op basis van historisch gemiddelde)
 - origin (altijd "llm-pattern")
+
+BELANGRIJK: Voeg een item ALLEEN toe aan "patternBlocks" als het project+dienst NIET al voorkomt in "blocks". Als hetzelfde project+dienst al in "blocks" staat (via browser-activiteit of agenda), voeg het dan NIET toe aan "patternBlocks".
 
 Gebruik de cache-hints als leidraad maar overschrijf ze als de context duidelijk op een ander project wijst.
 Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
