@@ -26,15 +26,16 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
     let verifier = generate_code_verifier();
     let challenge = generate_code_challenge(&verifier);
 
-    let auth_url = format!(
-        "https://accounts.google.com/o/oauth2/v2/auth\
-         ?client_id={client_id}\
-         &redirect_uri={REDIRECT_URI}\
-         &response_type=code\
-         &scope=openid%20email%20profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly\
-         &code_challenge={challenge}\
-         &code_challenge_method=S256",
-    );
+    let mut auth_url = url::Url::parse("https://accounts.google.com/o/oauth2/v2/auth")
+        .expect("static URL is valid");
+    auth_url.query_pairs_mut()
+        .append_pair("client_id", &client_id)
+        .append_pair("redirect_uri", REDIRECT_URI)
+        .append_pair("response_type", "code")
+        .append_pair("scope", "openid email profile https://www.googleapis.com/auth/calendar.readonly")
+        .append_pair("code_challenge", &challenge)
+        .append_pair("code_challenge_method", "S256");
+    let auth_url = auth_url.to_string();
 
     // Register one-shot sender before opening the browser
     let (tx, rx) = oneshot::channel::<String>();
@@ -51,7 +52,7 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
     // Wait for deep link callback (max 120 seconds)
     let callback_url = timeout(Duration::from_secs(OAUTH_TIMEOUT_SECS), rx)
         .await
-        .map_err(|_| "OAuth timeout: no callback received within 120 seconds")?
+        .map_err(|_| format!("OAuth timeout: no callback received within {OAUTH_TIMEOUT_SECS} seconds"))?
         .map_err(|_| "OAuth channel closed before callback")?;
 
     // Extract code from uren-schrijven://oauth/callback?code=xxx
