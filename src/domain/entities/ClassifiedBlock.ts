@@ -11,7 +11,7 @@ export interface ClassifiedBlock extends HistoryBlock {
   serviceId?: string
   note?: string
   confidence: number
-  origin: 'llm' | 'cache' | 'manual' | 'calendar'
+  origin: 'llm' | 'cache' | 'manual' | 'calendar' | 'llm-pattern'
   overlappingMeetings?: import('./CalendarEvent').CalendarEvent[]
   rawTitles?: string[]
   rawUrls?: string[]

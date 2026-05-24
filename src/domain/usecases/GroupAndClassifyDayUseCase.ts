@@ -2,6 +2,7 @@ import type { ICopilotRepository, DayItem, Project, Service } from '../repositor
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
 import type { CalendarEvent } from '../entities/CalendarEvent'
 import type { HistoryBlock } from '../entities/HistoryBlock'
+import type { HourEntry } from '../entities/HourEntry'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { DayContext } from '../entities/DayContext'
 import { attachHistoryToMeetings } from './attachHistoryToMeetings'
@@ -34,6 +35,7 @@ export class GroupAndClassifyDayUseCase {
     private readonly cacheRepo: IMappingCacheRepository,
     private readonly availableProjects: Project[],
     private readonly availableServices: Service[],
+    private readonly historicalEntries: HourEntry[] = [],
   ) {}
 
   async execute(
@@ -104,6 +106,7 @@ export class GroupAndClassifyDayUseCase {
     }
 
     const llmResults: ClassifiedBlock[] = []
+    const patternClassified: ClassifiedBlock[] = []
     if (llmItems.length > 0) {
       const results = await this.copilotRepo.classifyDay(
         date,
@@ -112,9 +115,40 @@ export class GroupAndClassifyDayUseCase {
         this.availableServices,
         cacheHints,
         context,
+        this.historicalEntries,
       )
 
-      for (const result of results) {
+      // Verwerk patroonblokken (isPatternBlock: true, aangemaakt door LLM op basis van patroonherkenning)
+      patternClassified.push(...results
+        .filter(r => r.isPatternBlock === true)
+        .map(r => {
+          const block: ClassifiedBlock = {
+            date,
+            urlPattern: `llm-pattern:${r.blockName}`,
+            urls: [],
+            titles: [r.blockName],
+            visitCount: 0,
+            firstVisitTime: '00:00',
+            lastVisitTime: '00:00',
+            hours: r.estimatedHours ?? 1,
+            blockName: r.blockName,
+            summary: r.summary,
+            startTime: '00:00',
+            endTime: '00:00',
+            note: r.note,
+            confidence: r.confidence,
+            origin: 'llm-pattern' as const,
+            rawTitles: [],
+            rawUrls: [],
+          }
+          if (r.projectId !== null) block.projectId = r.projectId
+          if (r.serviceId !== null) block.serviceId = r.serviceId
+          return block
+        }))
+
+      const regularResults = results.filter(r => r.isPatternBlock !== true)
+
+      for (const result of regularResults) {
         const matchedItem = llmItems.find(i => i.index === result.index)
         if (!matchedItem) continue
 
@@ -214,7 +248,7 @@ export class GroupAndClassifyDayUseCase {
       }
     }
 
-    const all = [...cacheResults, ...llmResults]
+    const all = [...cacheResults, ...llmResults, ...patternClassified]
     all.sort((a, b) => a.startTime.localeCompare(b.startTime))
     return all
   }
