@@ -393,7 +393,7 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
       projectId: pb.projectId,
       serviceId: pb.serviceId,
       note: pb.note,
-      confidence: pb.confidence,
+      confidence: toConfidenceScore(pb.confidence),
       relatedIssueIds: [],
       isPatternBlock: true,
       estimatedHours: pb.estimatedHours,

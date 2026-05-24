@@ -120,7 +120,7 @@ export function useImport(): ImportState {
       serviceId: mapping.serviceId,
       note: mapping.note,
       origin: 'manual',
-      confidence: 1.0,
+      confidence: 1,
     })
   }, [blocks, updateBlock])
 

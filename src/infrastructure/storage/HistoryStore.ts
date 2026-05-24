@@ -3,6 +3,7 @@ import { readTextFile, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-f
 import { appDataDir } from '@tauri-apps/api/path'
 import type { IHistoryStore } from '../../domain/repositories/IHistoryStore'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
+import { toConfidenceScore } from '../../domain/usecases/toConfidenceScore'
 
 const FILENAME = 'history-store.json'
 
@@ -29,6 +30,7 @@ export class HistoryStore implements IHistoryStore {
               end: new Date(m.end),
             }))
           }
+          block.confidence = toConfidenceScore(block.confidence)
         }
       }
       this.data = parsed

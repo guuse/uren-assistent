@@ -6,6 +6,7 @@ import type { HourEntry } from '../entities/HourEntry'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { DayContext } from '../entities/DayContext'
 import { attachHistoryToMeetings } from './attachHistoryToMeetings'
+import { toConfidenceScore } from './toConfidenceScore'
 
 function sanitizeUrl(url: string): string {
   try {
@@ -136,7 +137,7 @@ export class GroupAndClassifyDayUseCase {
             startTime: '00:00',
             endTime: '00:00',
             note: r.note,
-            confidence: r.confidence,
+            confidence: toConfidenceScore(r.confidence),
             origin: 'llm-pattern' as const,
             rawTitles: [],
             rawUrls: [],
@@ -171,7 +172,7 @@ export class GroupAndClassifyDayUseCase {
             startTime: toTime(event.start),
             endTime: toTime(event.end),
             note: result.note,
-            confidence: result.confidence,
+            confidence: toConfidenceScore(result.confidence),
             origin: 'llm',
             overlappingMeetings: [event],
             rawTitles: meetingTitles.slice(0, 5),
@@ -234,7 +235,7 @@ export class GroupAndClassifyDayUseCase {
             startTime: block.firstVisitTime,
             endTime: block.lastVisitTime,
             note: result.note,
-            confidence: result.confidence,
+            confidence: toConfidenceScore(result.confidence),
             origin: 'llm',
             rawTitles: block.titles.slice(0, 5),
             rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
