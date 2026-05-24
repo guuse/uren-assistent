@@ -1,23 +1,25 @@
 // src/ui/hooks/useImport.ts
 import { useState, useCallback } from 'react'
-import { useAppStore } from '../../store/appStore'
 import {
   mappingCacheRepo,
-  createCopilotRepository,
   keychainRepo,
   createSimplicateRepository,
-  createCalendarRepository,
-  createFetchCalendarEventsUseCase,
-  createGroupAndClassifyDayUseCase,
 } from '../../application/container'
 import { ParseBrowserHistoryUseCase, ParseError } from '../../domain/usecases/ParseBrowserHistoryUseCase'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
-import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
+import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { CachedMapping } from '../../domain/repositories/IMappingCacheRepository'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
 export type ImportStatus = 'idle' | 'parsing' | 'classifying' | 'ready' | 'booking' | 'done'
+
+export interface UploadResult {
+  dateCount: number
+  dateFrom: string
+  dateTo: string
+  blocks: HistoryBlock[]
+}
 
 export interface ImportState {
   status: ImportStatus
@@ -25,7 +27,7 @@ export interface ImportState {
   blocks: ClassifiedBlock[]
   minVisits: number
   setMinVisits: (n: number) => void
-  analyseFile: (csvContent: string) => Promise<void>
+  analyseFile: (csvContent: string) => Promise<UploadResult | null>
   updateBlock: (index: number, updates: Partial<ClassifiedBlock>) => void
   removeBlock: (index: number) => void
   confirmBlock: (index: number, mapping: CachedMapping) => Promise<void>
@@ -45,7 +47,7 @@ export function useImport(): ImportState {
   const [minVisits, setMinVisits] = useState(3)
   const [bookingResults, setBookingResults] = useState<Record<number, 'success' | 'error' | string>>({})
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null)
-  const [hasCalendarScope, setHasCalendarScope] = useState(true)
+  const [hasCalendarScope] = useState(true)
 
   const openBlock = useCallback((index: number) => {
     setSelectedBlockIndex(index)
@@ -63,86 +65,29 @@ export function useImport(): ImportState {
     return simplicateRepo.getServices(projectId)
   }, [])
 
-  const projects = useAppStore(s => s.projects)
-  const services = useAppStore(s => s.services)
-  const copilotToken = useAppStore(s => s.copilotToken)
-
-  const analyseFile = useCallback(async (csvContent: string) => {
+  const analyseFile = useCallback(async (csvContent: string): Promise<UploadResult | null> => {
     setError(null)
     setStatus('parsing')
     try {
-      await mappingCacheRepo.load()
-
       const parseUseCase = new ParseBrowserHistoryUseCase()
-      const historyBlocks = await parseUseCase.execute(csvContent, minVisits)
+      const rawBlocks = await parseUseCase.execute(csvContent, minVisits)
 
-      if (historyBlocks.length === 0) {
-        setBlocks([])
+      if (rawBlocks.length === 0) {
+        setBlocks([] as ClassifiedBlock[])
         setStatus('ready')
-        return
+        return null
       }
 
-      if (projects.length === 0) {
-        setError('Laad eerst je projecten via de instellingen.')
-        setStatus('idle')
-        return
-      }
-
-      const token = copilotToken
-      if (!token) {
-        setError('Stel eerst een GitHub Copilot token in via de instellingen.')
-        setStatus('idle')
-        return
-      }
-
-      // Determine date range from parsed blocks
-      const dates = historyBlocks.map(b => b.date).sort()
-      const startDate = new Date(dates[0]! + 'T00:00:00')
-      const endDate = new Date(dates[dates.length - 1]! + 'T23:59:59')
-
-      // Fetch calendar events — never blocks the import on failure
-      let calendarEvents: CalendarEvent[] = []
-      try {
-        const calendarRepo = createCalendarRepository()
-        const hasScope = await calendarRepo.hasCalendarScope()
-        setHasCalendarScope(hasScope)
-        if (hasScope) {
-          const calendarUc = createFetchCalendarEventsUseCase()
-          calendarEvents = await calendarUc.execute(startDate, endDate)
-        }
-      } catch (err) {
-        console.error('[Calendar] fetch failed:', err)
-        calendarEvents = []
-      }
-
-      setStatus('classifying')
-
-      const copilotRepo = createCopilotRepository(token)
-      const groupAndClassifyUseCase = createGroupAndClassifyDayUseCase(copilotRepo, projects, services)
-
-      // Group unique dates, classify each day
-      const uniqueDates = [...new Set(historyBlocks.map(b => b.date))].sort()
-      const allDayBlocks: ClassifiedBlock[] = []
-
-      for (const date of uniqueDates) {
-        const dayBlocks = historyBlocks.filter(b => b.date === date)
-        const dayEvents = calendarEvents.filter(e => {
-          const evDate = `${e.start.getFullYear()}-${String(e.start.getMonth() + 1).padStart(2, '0')}-${String(e.start.getDate()).padStart(2, '0')}`
-          return evDate === date
-        })
-        const classified = await groupAndClassifyUseCase.execute(date, dayBlocks, dayEvents)
-        allDayBlocks.push(...classified)
-      }
-
-      // Sort by date + startTime
-      const allBlocks = allDayBlocks.sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date)
-        if (dateCompare !== 0) return dateCompare
-        return a.startTime.localeCompare(b.startTime)
-      })
-
-      setBlocks(allBlocks)
+      setBlocks(rawBlocks as unknown as ClassifiedBlock[])
       setStatus('ready')
+
+      const dates = [...new Set(rawBlocks.map(b => b.date))].sort()
+      return {
+        dateCount: dates.length,
+        dateFrom: dates[0]!,
+        dateTo: dates[dates.length - 1]!,
+        blocks: rawBlocks,
+      }
     } catch (e) {
       if (e instanceof ParseError) {
         setError(e.message)
@@ -150,8 +95,9 @@ export function useImport(): ImportState {
         setError(e instanceof Error ? e.message : String(e))
       }
       setStatus('idle')
+      return null
     }
-  }, [minVisits, projects, services, copilotToken])
+  }, [minVisits])
 
   const updateBlock = useCallback((index: number, updates: Partial<ClassifiedBlock>) => {
     setBlocks(prev => prev.map((b, i) => i === index ? { ...b, ...updates } : b))
