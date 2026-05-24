@@ -10,9 +10,12 @@ import { BookingModal } from './BookingModal'
 import {
   mappingCacheRepo,
   createProcessWeekUseCase,
+  createProcessDayUseCase,
   createCalendarRepository,
   createCopilotRepository,
+  historyStore as domainHistoryStore,
 } from '../../application/container'
+import { NoHistoryWarningModal } from '../components/NoHistoryWarningModal'
 import { useAppStore } from '../../store/appStore'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
@@ -66,6 +69,16 @@ export function WeekPage() {
   const [dayProcessingStates, setDayProcessingStates] = useState<Map<string, DayProcessingState>>(new Map())
   const [processWeekError, setProcessWeekError] = useState<string | null>(null)
   const abortRef = useRef(false)
+
+  // Dag-verwerking state
+  const [isProcessingDay, setIsProcessingDay] = useState(false)
+
+  // Warning modal state
+  type WarningScope = { kind: 'week' } | { kind: 'day'; date: string } | null
+  const [warningScope, setWarningScope] = useState<WarningScope>(null)
+
+  // File input ref voor WeekDayList CSV-upload
+  const csvInputRef = useRef<HTMLInputElement>(null)
 
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
@@ -151,6 +164,16 @@ export function WeekPage() {
     void week.refresh()
   }
 
+  async function handleProcessWeekWithCheck() {
+    if (!copilotToken || !githubToken || !linearToken) return
+    const hasHistory = await domainHistoryStore.hasHistoryForWeek(week.selectedWeekStart)
+    if (!hasHistory) {
+      setWarningScope({ kind: 'week' })
+      return
+    }
+    await handleProcessWeek()
+  }
+
   async function handleProcessWeek() {
     if (!copilotToken || !githubToken || !linearToken) {
       console.warn('[ProcessWeek] tokens ontbreken:', { copilotToken: !!copilotToken, githubToken: !!githubToken, linearToken: !!linearToken })
@@ -223,6 +246,78 @@ export function WeekPage() {
     }
   }
 
+  async function handleProcessDay(date: string) {
+    if (!copilotToken || !githubToken || !linearToken) return
+    const hasHistory = await domainHistoryStore.hasDataForDate(date)
+    if (!hasHistory) {
+      setWarningScope({ kind: 'day', date })
+      return
+    }
+    await runProcessDay(date)
+  }
+
+  async function runProcessDay(date: string) {
+    if (!copilotToken || !githubToken || !linearToken) return
+    const username = githubUsername ?? 'guuse'
+
+    setIsProcessingDay(true)
+    setDayProcessingStates(prev => new Map(prev).set(date, 'classifying'))
+
+    try {
+      const calendarRepo = createCalendarRepository()
+      const copilotRepo = createCopilotRepository(copilotToken)
+      const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
+      const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
+
+      const useCase = createProcessDayUseCase(
+        githubToken,
+        linearToken,
+        calendarRepo,
+        copilotRepo,
+        domainProjects,
+        domainServices,
+        username,
+      )
+
+      for await (const progress of useCase.execute(date)) {
+        if (progress.phase === 'error') {
+          setDayProcessingStates(prev => new Map(prev).set(date, 'error'))
+          setProcessWeekError(`Fout op ${date}: ${progress.error ?? 'onbekend'}`)
+        }
+      }
+
+      setDayProcessingStates(prev => new Map(prev).set(date, 'done'))
+      void reloadForDate(week.selectedDate)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setProcessWeekError(`Fout bij verwerken dag: ${msg}`)
+      setDayProcessingStates(prev => new Map(prev).set(date, 'error'))
+    } finally {
+      setIsProcessingDay(false)
+      void week.refresh()
+    }
+  }
+
+  function warningLabel(): string {
+    if (!warningScope) return ''
+    if (warningScope.kind === 'week') return weekLabel(week.selectedWeekStart)
+    const d = new Date(warningScope.date + 'T12:00:00')
+    return d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  function handleWarningConfirm() {
+    const scope = warningScope
+    setWarningScope(null)
+    if (!scope) return
+    if (scope.kind === 'week') void handleProcessWeek()
+    else void runProcessDay(scope.date)
+  }
+
+  function handleWarningUpload() {
+    setWarningScope(null)
+    csvInputRef.current?.click()
+  }
+
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
   const isClassifying = importState.status === 'classifying' || importState.status === 'parsing'
 
@@ -241,7 +336,8 @@ export function WeekPage() {
         onPrevWeek={week.prevWeek}
         onNextWeek={week.nextWeek}
         weekLabel={weekLabel(week.selectedWeekStart)}
-        {...(canProcessWeek ? { onProcessWeek: handleProcessWeek } : {})}
+        {...(canProcessWeek ? { onProcessWeek: handleProcessWeekWithCheck } : {})}
+        {...(canProcessWeek ? { onUploadCsv: () => csvInputRef.current?.click() } : {})}
         processingStateForDate={processingStateForDate}
         isProcessingWeek={isProcessingWeek}
       />
@@ -279,8 +375,9 @@ export function WeekPage() {
             onEditEntry={handleEditEntry}
             onConceptClick={handleConceptClick}
             onUploadCsv={handleUploadCsv}
-            isClassifying={isClassifying}
+            isClassifying={isClassifying || isProcessingDay}
             onDragNew={handleDragNew}
+            {...(canProcessWeek ? { onProcessDay: () => void handleProcessDay(week.selectedDate) } : {})}
           />
         </>
       )}
@@ -292,6 +389,32 @@ export function WeekPage() {
           {...(bookingConcept ? { evidenceBlock: bookingConcept } : {})}
           onClose={() => { setBookingEntry(null); setBookingConcept(null) }}
           onBooked={() => void handleBooked()}
+        />
+      )}
+
+      {/* Hidden CSV input voor WeekDayList upload-knop */}
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) {
+            void f.text().then(text => handleUploadCsv(text))
+          }
+          e.target.value = ''
+        }}
+      />
+
+      {/* Warning modal: geen browsergeschiedenis */}
+      {warningScope && (
+        <NoHistoryWarningModal
+          scope={warningScope.kind}
+          label={warningLabel()}
+          onConfirm={handleWarningConfirm}
+          onUpload={handleWarningUpload}
+          onCancel={() => setWarningScope(null)}
         />
       )}
     </div>
