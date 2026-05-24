@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useWeek } from '../hooks/useWeek'
 import { useSuggestions } from '../hooks/useSuggestions'
 import { useImport } from '../hooks/useImport'
@@ -20,6 +20,7 @@ import { useAppStore } from '../../store/appStore'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
+import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -80,6 +81,9 @@ export function WeekPage() {
   // File input ref voor WeekDayList CSV-upload
   const csvInputRef = useRef<HTMLInputElement>(null)
 
+  const [uploadToast, setUploadToast] = useState<string | null>(null)
+  const pendingScopeRef = useRef<{ kind: 'week' } | { kind: 'day'; date: string } | null>(null)
+
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
   }
@@ -128,23 +132,44 @@ export function WeekPage() {
     })
   }
 
-  const handleUploadCsv = useCallback(async (csvContent: string) => {
-    await importState.analyseFile(csvContent)
-  }, [importState])
-
   const { saveBlocksForDate, reloadForDate } = historyStore
 
-  useEffect(() => {
-    if (importState.status !== 'ready' || importState.blocks.length === 0) return
-    const byDate: Record<string, ClassifiedBlock[]> = {}
-    for (const block of importState.blocks) {
+  const handleUploadCsv = useCallback(async (csvContent: string) => {
+    const result = await importState.analyseFile(csvContent)
+    if (!result) return
+
+    // Save all blocks per date into HistoryStore
+    const byDate: Record<string, HistoryBlock[]> = {}
+    for (const block of result.blocks) {
       if (!byDate[block.date]) byDate[block.date] = []
       byDate[block.date]!.push(block)
     }
     for (const [date, blocks] of Object.entries(byDate)) {
-      void saveBlocksForDate(date, blocks)
+      void saveBlocksForDate(date, blocks as ClassifiedBlock[])
     }
-  }, [importState.status, importState.blocks, saveBlocksForDate])
+
+    // Show toast
+    const fromLabel = result.dateFrom.slice(8) + '-' + result.dateFrom.slice(5, 7)
+    const toLabel = result.dateTo.slice(8) + '-' + result.dateTo.slice(5, 7)
+    const msg = result.dateFrom === result.dateTo
+      ? `Geschiedenis geüpload voor ${fromLabel}`
+      : `Geschiedenis geüpload voor ${result.dateCount} dagen (${fromLabel} t/m ${toLabel})`
+    setUploadToast(msg)
+    setTimeout(() => setUploadToast(null), 3000)
+
+    // If there was a pending warning scope, start processing for that scope
+    const pending = pendingScopeRef.current
+    pendingScopeRef.current = null
+    if (pending) {
+      if (pending.kind === 'week') {
+        void handleProcessWeek()
+      } else {
+        void runProcessDay(pending.date)
+      }
+    } else {
+      void week.refresh()
+    }
+  }, [importState, saveBlocksForDate, week])
 
   async function handleBooked() {
     setBookingEntry(null)
@@ -314,12 +339,13 @@ export function WeekPage() {
   }
 
   function handleWarningUpload() {
+    pendingScopeRef.current = warningScope
     setWarningScope(null)
     csvInputRef.current?.click()
   }
 
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
-  const isClassifying = importState.status === 'classifying' || importState.status === 'parsing'
+  const isClassifying = importState.status === 'parsing'
 
   const dayCommits = dayContexts[week.selectedDate]?.commits ?? historyStore.blocksForDate[0]?.commits ?? []
   const dayLinearIssues = dayContexts[week.selectedDate]?.linearIssues ?? historyStore.blocksForDate[0]?.linearIssues ?? []
@@ -406,6 +432,12 @@ export function WeekPage() {
           e.target.value = ''
         }}
       />
+
+      {uploadToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e1b18] border border-[#3e3a36] rounded-lg px-4 py-2.5 text-[#e8e2d9] text-[0.75rem] shadow-lg pointer-events-none">
+          {uploadToast}
+        </div>
+      )}
 
       {/* Warning modal: geen browsergeschiedenis */}
       {warningScope && (
