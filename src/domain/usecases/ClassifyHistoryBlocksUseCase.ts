@@ -1,4 +1,5 @@
 import type { HistoryBlock } from '../entities/HistoryBlock'
+import { toConfidenceScore } from './toConfidenceScore'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { CalendarEvent } from '../entities/CalendarEvent'
 import type { ICopilotRepository, Project, Service } from '../repositories/ICopilotRepository'
@@ -76,7 +77,7 @@ export class ClassifyHistoryBlocksUseCase {
       const raw = await this.copilot.classify(blocksWithMeetings, projects, services, calendarEvents)
       llmResults = raw.map(r => ({
         ...r,
-        confidence: Math.min(1, Math.max(0, r.confidence)),
+        confidence: toConfidenceScore(r.confidence),
       }))
     }
 

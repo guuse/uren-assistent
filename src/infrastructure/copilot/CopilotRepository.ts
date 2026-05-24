@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { toConfidenceScore } from '../../domain/usecases/toConfidenceScore'
 import type { ICopilotRepository, Project, Service, DayItem, DayClassificationResult, PatternBlock } from '../../domain/repositories/ICopilotRepository'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
@@ -155,7 +156,14 @@ Return a JSON array. Each item must have:
 - projectId (string | null, must be one of the available project IDs)
 - serviceId (string | null, must be a service ID whose projectId matches the chosen project)
 - note (string, short booking note, max 80 chars)
-- confidence (number 0-1, how confident you are in the project match)
+- confidence (integer 1–5):
+  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
+  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
+  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
+  2 = Twijfelachtig — weinig bewijs, gok op basis van context
+  1 = Onzeker — geen duidelijke match, vul in als best guess
+
+Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
 
 Return ONLY a valid JSON array, no markdown, no explanation.`
 
@@ -200,7 +208,7 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
         summary: match?.summary ?? '',
         startTime: block.firstVisitTime,
         endTime: block.lastVisitTime || addHours(block.firstVisitTime, block.hours),
-        confidence: Math.min(1, Math.max(0, match?.confidence ?? 0)),
+        confidence: toConfidenceScore(match?.confidence),
         origin: 'llm' as const,
         rawTitles: block.titles.slice(0, 5),
         rawUrls: block.urls.slice(0, 5).map(sanitizeUrl),
@@ -311,7 +319,14 @@ Elk item in "blocks" heeft:
 - projectId (string | null, moet een van de beschikbare project-ID's zijn)
 - serviceId (string | null, moet een dienst-ID zijn waarvan projectId overeenkomt)
 - note (string, korte boekingsnotitie max 80 tekens)
-- confidence (number 0-1, hoe zeker je bent van de projectkeuze)
+- confidence (integer 1–5):
+  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
+  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
+  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
+  2 = Twijfelachtig — weinig bewijs, gok op basis van context
+  1 = Onzeker — geen duidelijke match, vul in als best guess
+
+Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
 - relatedIssueIds (string[], identifiers van Linear issues die bij dit blok horen. Lege array als niets van toepassing.)
 
 Elk item in "patternBlocks" heeft:
@@ -320,7 +335,14 @@ Elk item in "patternBlocks" heeft:
 - projectId (string | null)
 - serviceId (string | null)
 - note (string, max 80 tekens)
-- confidence (number 0-1)
+- confidence (integer 1–5):
+  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
+  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
+  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
+  2 = Twijfelachtig — weinig bewijs, gok op basis van context
+  1 = Onzeker — geen duidelijke match, vul in als best guess
+
+Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
 - estimatedHours (number, schatting in uren op basis van historisch gemiddelde)
 - origin (altijd "llm-pattern")
 
