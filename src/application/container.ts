@@ -20,6 +20,7 @@ import type { Project, Service } from '../domain/repositories/ICopilotRepository
 import { GitHubRepository } from '../infrastructure/github/GitHubRepository'
 import { LinearRepository } from '../infrastructure/linear/LinearRepository'
 import { ProcessWeekUseCase } from '../domain/usecases/ProcessWeekUseCase'
+import { ProcessDayUseCase } from '../domain/usecases/ProcessDayUseCase'
 import type { IGitHubRepository } from '../domain/repositories/IGitHubRepository'
 import type { ILinearRepository } from '../domain/repositories/ILinearRepository'
 
@@ -90,6 +91,28 @@ export function createProcessWeekUseCase(
   githubUsername: string,
 ): ProcessWeekUseCase {
   return new ProcessWeekUseCase(
+    new GitHubRepository(githubToken),
+    new LinearRepository(linearToken),
+    calendarRepo,
+    historyStore,
+    copilotRepo,
+    mappingCacheRepo,
+    projects,
+    services,
+    githubUsername,
+  )
+}
+
+export function createProcessDayUseCase(
+  githubToken: string,
+  linearToken: string,
+  calendarRepo: ReturnType<typeof createCalendarRepository>,
+  copilotRepo: ICopilotRepository,
+  projects: Project[],
+  services: Service[],
+  githubUsername: string,
+): ProcessDayUseCase {
+  return new ProcessDayUseCase(
     new GitHubRepository(githubToken),
     new LinearRepository(linearToken),
     calendarRepo,
