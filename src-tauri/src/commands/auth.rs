@@ -80,6 +80,11 @@ fn success_html() -> String {
       text-decoration: none;
     }
     a:hover { text-decoration: underline; }
+    .countdown {
+      font-size: 13px;
+      color: #bbb;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -88,9 +93,24 @@ fn success_html() -> String {
       <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
     <h1>Inloggen geslaagd</h1>
-    <p>Je bent ingelogd. Je kunt dit tabblad sluiten en terugkeren naar de app.</p>
+    <p>Je bent ingelogd en wordt teruggestuurd naar de app.</p>
     <a href="javascript:window.close()">Sluit dit tabblad</a>
+    <div class="countdown" id="cd">Dit venster sluit over 3 seconden…</div>
   </div>
+  <script>
+    var n = 3;
+    var el = document.getElementById('cd');
+    var iv = setInterval(function() {
+      n--;
+      if (n <= 0) {
+        clearInterval(iv);
+        el.textContent = '';
+        window.close();
+      } else {
+        el.textContent = 'Dit venster sluit over ' + n + (n === 1 ? ' seconde…' : ' seconden…');
+      }
+    }, 1000);
+  </script>
 </body>
 </html>"#.to_string()
 }
@@ -163,6 +183,9 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
     );
     let _ = stream.write_all(response.as_bytes()).await;
     drop(stream);
+
+    // Give the user 3 seconds to see the success page before the app takes focus
+    tokio::time::sleep(Duration::from_secs(3)).await;
 
     // Focus the app window
     if let Some(window) = app.get_webview_window("main") {
