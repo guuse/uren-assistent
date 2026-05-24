@@ -43,7 +43,7 @@ const cacheRepo: IMappingCacheRepository = {
 }
 
 describe('ProcessWeekUseCase', () => {
-  it('yields progress for each day and fetches github/linear once', async () => {
+  it('yields progress for each day (fetches github/linear once for week + once per day via ProcessDayUseCase)', async () => {
     const useCase = new ProcessWeekUseCase(
       githubRepo, linearRepo, calendarRepo, historyStore, copilotRepo, cacheRepo,
       [], [], 'guuse',
