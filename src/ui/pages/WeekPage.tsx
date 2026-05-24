@@ -64,6 +64,7 @@ export function WeekPage() {
   // Week processing state
   const [isProcessingWeek, setIsProcessingWeek] = useState(false)
   const [dayProcessingStates, setDayProcessingStates] = useState<Map<string, DayProcessingState>>(new Map())
+  const [processWeekError, setProcessWeekError] = useState<string | null>(null)
   const abortRef = useRef(false)
 
   function conceptCountForDate(date: string): number {
@@ -160,6 +161,7 @@ export function WeekPage() {
 
     setIsProcessingWeek(true)
     setDayProcessingStates(new Map())
+    setProcessWeekError(null)
     abortRef.current = false
 
     try {
@@ -205,12 +207,16 @@ export function WeekPage() {
             return next
           })
         } else if (progress.phase === 'error' && progress.day) {
-          console.error('[ProcessWeek] error op dag', progress.day, 'error' in progress ? progress.error : '')
+          const msg = 'error' in progress ? progress.error : 'onbekende fout'
+          console.error('[ProcessWeek] error op dag', progress.day, msg)
+          setProcessWeekError(`Fout op ${progress.day}: ${msg ?? 'onbekend'}`)
           setDayProcessingStates(prev => new Map(prev).set(progress.day!, 'error'))
         }
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
       console.error('[ProcessWeek] fatale fout:', err)
+      setProcessWeekError(`Fatale fout: ${msg}`)
     } finally {
       setIsProcessingWeek(false)
       void week.refresh()
@@ -255,20 +261,28 @@ export function WeekPage() {
           </button>
         </div>
       ) : (
-        <DayTimeline
-          date={week.selectedDate}
-          entries={selectedEntries}
-          suggestions={suggestions}
-          conceptBlocks={historyStore.blocksForDate}
-          commits={dayCommits}
-          linearIssues={dayLinearIssues}
-          onBookSuggestion={handleBookSuggestion}
-          onEditEntry={handleEditEntry}
-          onConceptClick={handleConceptClick}
-          onUploadCsv={handleUploadCsv}
-          isClassifying={isClassifying}
-          onDragNew={handleDragNew}
-        />
+        <>
+          {processWeekError && (
+            <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-red-900/40 border border-red-700/50 text-red-300 text-sm flex items-start gap-2">
+              <span className="shrink-0 mt-0.5">⚠</span>
+              <span className="break-all">{processWeekError}</span>
+            </div>
+          )}
+          <DayTimeline
+            date={week.selectedDate}
+            entries={selectedEntries}
+            suggestions={suggestions}
+            conceptBlocks={historyStore.blocksForDate}
+            commits={dayCommits}
+            linearIssues={dayLinearIssues}
+            onBookSuggestion={handleBookSuggestion}
+            onEditEntry={handleEditEntry}
+            onConceptClick={handleConceptClick}
+            onUploadCsv={handleUploadCsv}
+            isClassifying={isClassifying}
+            onDragNew={handleDragNew}
+          />
+        </>
       )}
 
       {bookingEntry && (
