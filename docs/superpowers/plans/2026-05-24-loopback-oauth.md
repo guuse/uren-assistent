@@ -1,3 +1,32 @@
+# Loopback OAuth (TCP Server) Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Revert OAuth callback from custom URI scheme (`uren-schrijven://`) to `http://127.0.0.1:{port}/callback` via a Tokio TCP listener, because Google blocks custom URI schemes for desktop OAuth clients.
+
+**Architecture:** `auth.rs` binds a random ephemeral port, constructs the auth URL with the loopback redirect URI, opens the browser, accepts exactly one TCP connection, parses the `code` query param from the raw HTTP request line, serves the success card HTML response, then focuses the app window. The `OAuthSender` managed state and deep link event handler in `lib.rs` are removed (no longer needed). The deep link plugin remains registered for potential future use.
+
+**Tech Stack:** Rust, Tauri v2, `tokio::net::TcpListener`, `tokio::io::AsyncReadExt / AsyncWriteExt`
+
+---
+
+## File Map
+
+| Actie | Bestand | Verantwoordelijkheid |
+|---|---|---|
+| Modify | `src-tauri/src/commands/auth.rs` | TCP loopback server + success card HTML |
+| Modify | `src-tauri/src/lib.rs` | Remove OAuthSender state + deep link event handler |
+
+---
+
+### Task 1: Rewrite `auth.rs` — loopback TCP server
+
+**Files:**
+- Modify: `src-tauri/src/commands/auth.rs`
+
+- [ ] **Step 1: Replace the full contents of `auth.rs`**
+
+```rust
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
@@ -176,3 +205,120 @@ pub async fn start_google_oauth(app: AppHandle, client_id: String) -> Result<Str
     })
     .to_string())
 }
+```
+
+- [ ] **Step 2: Verify it compiles**
+
+```bash
+cd src-tauri && cargo check 2>&1
+```
+
+Expected: no errors. Warnings about unused imports are fine as long as there are no errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src-tauri/src/commands/auth.rs
+git commit -m "feat: replace deep link oauth with loopback tcp server"
+```
+
+---
+
+### Task 2: Clean up `lib.rs` — remove OAuthSender and deep link handler
+
+**Files:**
+- Modify: `src-tauri/src/lib.rs`
+
+- [ ] **Step 1: Replace the full contents of `lib.rs`**
+
+```rust
+mod commands;
+
+use commands::auth::start_google_oauth;
+use commands::copilot::copilot_request;
+use commands::keychain::{delete_secret, get_secret, set_secret};
+use commands::simplicate::simplicate_request;
+use commands::storage::ensure_app_data_dir;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_deep_link::init())
+        .invoke_handler(tauri::generate_handler![
+            get_secret,
+            set_secret,
+            delete_secret,
+            start_google_oauth,
+            simplicate_request,
+            copilot_request,
+            ensure_app_data_dir,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application")
+}
+```
+
+Note: `tauri_plugin_deep_link::init()` is kept so the registered URL scheme in `tauri.conf.json` stays active (macOS registers the scheme at app install time via the bundle config). The `OAuthSender` type, managed state, and event handler are removed.
+
+- [ ] **Step 2: Verify it compiles**
+
+```bash
+cd src-tauri && cargo check 2>&1
+```
+
+Expected: no errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src-tauri/src/lib.rs
+git commit -m "chore: remove OAuthSender state and deep link handler"
+```
+
+---
+
+### Task 3: Update Google Cloud Console redirect URI
+
+This is a manual step — not automated.
+
+- [ ] **Step 1: Update redirect URI in Google Cloud Console**
+
+Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your OAuth 2.0 Client (Desktop app type).
+
+Under **Authorised redirect URIs**, the loopback redirect does NOT need to be explicitly listed for Desktop app clients — Google automatically allows `http://127.0.0.1` with any port for OAuth clients of type "Desktop app". Verify your client is type "Desktop app" (not "Web application"). If it is "Web application", you must change it to "Desktop app" or add `http://127.0.0.1` as an allowed redirect URI.
+
+Remove `uren-schrijven://oauth/callback` if you added it.
+
+- [ ] **Step 2: Test the full flow**
+
+Start the app with `make run`. Click "Login met Google".
+
+Expected:
+1. Browser opens Google login page
+2. After login: browser redirects to `http://127.0.0.1:{port}/callback?code=...`
+3. Browser shows the success card (white card, green checkmark, "Inloggen geslaagd")
+4. App gets focus
+5. App logs in and shows the main page
+
+---
+
+### Task 4: Verify no regressions
+
+- [ ] **Step 1: Run typecheck and lint**
+
+```bash
+npm run typecheck 2>&1
+npm run lint 2>&1
+```
+
+Expected: no errors.
+
+- [ ] **Step 2: Run unit tests**
+
+```bash
+npm run test 2>&1
+```
+
+Expected: all pass.
