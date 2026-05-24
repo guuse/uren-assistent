@@ -20,16 +20,19 @@ function timeToMinutes(time: string): number {
 }
 
 
-function conceptStatus(block: ClassifiedBlock): 'ok' | 'warn' | 'low' {
-  if (!block.projectId || !block.serviceId) return 'warn'
-  if (block.confidence < 0.6) return 'low'
-  return 'ok'
+const CONFIDENCE_COLORS: Record<1 | 2 | 3 | 4 | 5, { bg: string; border: string; sub: string; badge: string }> = {
+  5: { bg: 'bg-[#1a2a1a]', border: 'border border-dashed border-[#5a8a6a]', sub: 'text-[#5a8a6a]', badge: 'bg-[#1a3a1a] text-[#5a8a6a]' },
+  4: { bg: 'bg-[#1e2a18]', border: 'border border-dashed border-[#6a8a50]', sub: 'text-[#6a8a50]', badge: 'bg-[#203018] text-[#6a8a50]' },
+  3: { bg: 'bg-[#2a2510]', border: 'border border-dashed border-[#8a7a40]', sub: 'text-[#8a7a40]', badge: 'bg-[#332e10] text-[#8a7a40]' },
+  2: { bg: 'bg-[#2a1c10]', border: 'border border-dashed border-[#a06030]', sub: 'text-[#a06030]', badge: 'bg-[#332210] text-[#a06030]' },
+  1: { bg: 'bg-[#2a1010]', border: 'border border-dashed border-[#8a3a3a]', sub: 'text-[#8a3a3a]', badge: 'bg-[#3a1010] text-[#8a3a3a]' },
 }
 
-const CONCEPT_STYLES = {
-  ok:   { bg: 'bg-[#1a2a1a]', border: 'border border-dashed border-[#5a8a6a]', sub: 'text-[#5a8a6a]', badge: 'bg-[#1a3a1a] text-[#5a8a6a]' },
-  warn: { bg: 'bg-[#2a2010]', border: 'border border-dashed border-[#a07848]', sub: 'text-[#a07848]', badge: 'bg-[#3a2e10] text-[#a07848]' },
-  low:  { bg: 'bg-[#2a1010]', border: 'border border-dashed border-[#8a3a3a]', sub: 'text-[#8a3a3a]', badge: 'bg-[#3a1010] text-[#8a3a3a]' },
+const WARN_STYLE = { bg: 'bg-[#2a2010]', border: 'border border-dashed border-[#a07848]', sub: 'text-[#a07848]', badge: 'bg-[#3a2e10] text-[#a07848]' }
+
+function blockStyle(block: ClassifiedBlock) {
+  if (!block.projectId || !block.serviceId) return WARN_STYLE
+  return CONFIDENCE_COLORS[block.confidence]
 }
 
 interface Props {
@@ -175,11 +178,10 @@ export function DayTimeline({
     }
 
     if (block.type === 'concept') {
-      const status = conceptStatus(block.block)
-      const s = CONCEPT_STYLES[status]
+      const s = blockStyle(block.block)
       const badgeLabel = block.block.origin === 'cache'
         ? 'Cache'
-        : `${Math.round(block.block.confidence * 100)}% zeker`
+        : `${block.block.confidence}/5`
       return (
         <button
           key={key}
