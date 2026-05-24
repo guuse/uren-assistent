@@ -27,17 +27,22 @@ pub fn run() {
                 let payload = event.payload().to_string();
                 // payload is a JSON array of URLs: ["uren-schrijven://oauth/callback?code=xxx"]
                 // Extract the first URL string
-                let url = serde_json::from_str::<Vec<String>>(&payload)
+                let url = match serde_json::from_str::<Vec<String>>(&payload)
                     .ok()
                     .and_then(|v| v.into_iter().next())
-                    .unwrap_or(payload);
-
-                let sender = app_handle.state::<OAuthSender>();
-                if let Ok(mut guard) = sender.lock() {
-                    if let Some(tx) = guard.take() {
-                        let _ = tx.send(url);
+                {
+                    Some(u) => u,
+                    None => {
+                        eprintln!("[deep-link] Failed to extract URL from payload: {payload}");
+                        return;
                     }
                 };
+
+                let sender = app_handle.state::<OAuthSender>();
+                let Ok(mut guard) = sender.lock() else { return; };
+                if let Some(tx) = guard.take() {
+                    let _ = tx.send(url);
+                }
             });
             Ok(())
         })
