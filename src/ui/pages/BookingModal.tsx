@@ -6,6 +6,22 @@ import EvidencePanel from '../components/EvidencePanel'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
+const CONFIDENCE_BG: Record<1 | 2 | 3 | 4 | 5, string> = {
+  5: '#1a3a1a',
+  4: '#203018',
+  3: '#332e10',
+  2: '#332210',
+  1: '#3a1010',
+}
+
+const CONFIDENCE_TEXT: Record<1 | 2 | 3 | 4 | 5, string> = {
+  5: '#5a8a6a',
+  4: '#6a8a50',
+  3: '#8a7a40',
+  2: '#a06030',
+  1: '#8a3a3a',
+}
+
 interface Props {
   initialEntry?: Partial<HourEntry>
   title?: string
@@ -31,9 +47,9 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
     ? {
         label: evidenceBlock.origin === 'cache'
           ? 'Cache'
-          : `${Math.round(evidenceBlock.confidence * 100)}% zeker`,
-        bg: '#1a3a1a',
-        color: '#5a8a6a',
+          : `${evidenceBlock.confidence}/5`,
+        bg: evidenceBlock.origin === 'cache' ? '#1a3a1a' : CONFIDENCE_BG[evidenceBlock.confidence],
+        color: evidenceBlock.origin === 'cache' ? '#5a8a6a' : CONFIDENCE_TEXT[evidenceBlock.confidence],
       }
     : null
 
