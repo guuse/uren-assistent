@@ -45,6 +45,7 @@ interface Props {
   onUploadCsv?: (csvContent: string) => void
   isClassifying?: boolean
   onDragNew?: (startTime: string, endTime: string) => void
+  onProcessDay?: () => void
 }
 
 export function DayTimeline({
@@ -60,6 +61,7 @@ export function DayTimeline({
   onUploadCsv,
   isClassifying = false,
   onDragNew,
+  onProcessDay,
 }: Props) {
   const projects = useAppStore((s) => s.projects)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -128,7 +130,7 @@ export function DayTimeline({
 
   const hasConcepts = conceptBlocks.length > 0
   const hasEntries = entries.length > 0
-  const showCta = !hasConcepts && !hasEntries && !isClassifying
+  const showEmptyHint = !hasConcepts && !hasEntries && !isClassifying
 
   const flatBlocks = hasConcepts || hasEntries
     ? mergeConceptsIntoTimeline(entries, conceptBlocks, DAY_START, DAY_END)
@@ -290,6 +292,14 @@ export function DayTimeline({
         <div className="flex-1 h-[5px] bg-[#2e2a26] rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${pct}%` }} />
         </div>
+        {onProcessDay && (
+          <button
+            onClick={onProcessDay}
+            className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
+          >
+            ▶ Verwerk dag
+          </button>
+        )}
         {(hasConcepts || hasEntries) && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -307,10 +317,10 @@ export function DayTimeline({
         </div>
       )}
 
-      {/* CTA — geen history */}
-      {showCta && (
+      {/* Lege staat hint */}
+      {showEmptyHint && (
         <div
-          className="flex-1 flex items-center justify-center px-4"
+          className="flex-1 relative"
           onDragOver={e => e.preventDefault()}
           onDrop={e => {
             e.preventDefault()
@@ -318,25 +328,51 @@ export function DayTimeline({
             if (file) void handleFileDrop(file)
           }}
         >
-          <div className="border-2 border-dashed border-[#3a5a2a] rounded-xl px-8 py-10 flex flex-col items-center gap-3 w-full max-w-sm bg-[#1e2418]">
-            <div className="w-12 h-12 bg-[#2a3a20] rounded-full flex items-center justify-center text-[#6aaa4a] text-2xl">↑</div>
-            <div className="text-[#e8e2d9] text-[0.8125rem] font-bold text-center">Geen browsergeschiedenis voor deze dag</div>
-            <div className="text-[#7a7268] text-[0.625rem] text-center leading-relaxed">
-              Upload een Chrome history CSV om deze dag automatisch<br/>te laten invullen via de LLM.
+          {/* Tijdlijn raster ook in lege staat */}
+          <div className="overflow-y-auto px-4 py-3 h-full">
+            <div className="flex gap-3">
+              <div className="flex flex-col flex-shrink-0 w-8">
+                {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
+                  <div
+                    key={hour}
+                    className="relative flex-shrink-0"
+                    style={{ height: HOUR_HEIGHT_PX }}
+                  >
+                    <span className="absolute top-0 text-[#475569] text-[0.5625rem]">
+                      {hour.toString().padStart(2, '0')}
+                    </span>
+                    <span
+                      className="absolute text-[#2e3a4a] text-[0.5rem]"
+                      style={{ top: HOUR_HEIGHT_PX / 2 }}
+                    >
+                      :30
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 relative" style={{ minHeight: HOUR_HEIGHT_PX * 10 }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="border-t border-[#1e1b18]"
+                    style={{ height: HOUR_HEIGHT_PX }}
+                  />
+                ))}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <p className="text-[#2e2a26] text-[0.75rem]">
+                    Klik op{' '}
+                    <strong className="text-[#3e3a36]">Verwerk dag</strong>
+                    {' '}om voorstellen te genereren
+                  </p>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-[#e8e2d9] text-[#1c1917] border-none rounded-lg px-5 py-2 text-[0.6875rem] font-bold cursor-pointer hover:bg-[#d5cfc6] transition-colors"
-            >
-              + Chrome history uploaden
-            </button>
-            <div className="text-[#4a4540] text-[0.5625rem]">of sleep een .csv bestand hiernaartoe</div>
           </div>
         </div>
       )}
 
       {/* Tijdlijn */}
-      {!showCta && !isClassifying && (
+      {!showEmptyHint && !isClassifying && (
         <div className="flex-1 overflow-y-auto px-4 py-3">
           <div className="flex gap-3">
             {/* Uurlabels */}
