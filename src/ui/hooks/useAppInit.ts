@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { keychainRepo } from '../../application/container'
 import { useAppStore } from '../../store/appStore'
 import { testCopilotToken, testGitHubToken, testLinearToken } from '../../infrastructure/tokenTest'
@@ -13,6 +14,7 @@ export function useAppInit(): void {
   useEffect(() => {
     async function init() {
       try {
+        await invoke('ensure_app_data_dir')
         const ct = await keychainRepo.get('copilot-token')
         if (ct) {
           setCopilotToken(ct)
