@@ -113,7 +113,7 @@ export function WeekDayList({
         })}
       </div>
 
-      {onProcessWeek && (
+      {(onProcessWeek || onUploadCsv) && (
         <div className="mt-2 px-1 flex flex-col gap-1.5">
           {onProcessWeek && (
             <button
