@@ -85,4 +85,16 @@ export class HistoryStore implements IHistoryStore {
   async hasDataForDate(date: string): Promise<boolean> {
     return (this.data[date]?.length ?? 0) > 0
   }
+
+  async hasHistoryForWeek(weekStart: string): Promise<boolean> {
+    const [y, m, d] = weekStart.split('-').map(Number)
+    const start = new Date(y!, m! - 1, d!)
+    for (let i = 0; i < 5; i++) {
+      const day = new Date(start)
+      day.setDate(start.getDate() + i)
+      const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+      if ((this.data[dateStr]?.length ?? 0) > 0) return true
+    }
+    return false
+  }
 }

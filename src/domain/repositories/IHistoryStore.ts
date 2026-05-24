@@ -7,4 +7,5 @@ export interface IHistoryStore {
   setBlocksForDate(date: string, blocks: ClassifiedBlock[]): Promise<void>
   removeBlock(date: string, urlPattern: string): Promise<void>
   hasDataForDate(date: string): Promise<boolean>
+  hasHistoryForWeek(weekStart: string): Promise<boolean>
 }
