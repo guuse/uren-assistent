@@ -49,6 +49,8 @@ function toConfidenceScore(raw: unknown): 1 | 2 | 3 | 4 | 5 {
 }
 ```
 
+De helper komt in `src/domain/usecases/toConfidenceScore.ts` (één export, nul dependencies).
+
 **Bestaande clamp-sites:**
 - `src/domain/usecases/ClassifyHistoryBlocksUseCase.ts:79` — `Math.min(1, Math.max(0, r.confidence))` → `toConfidenceScore(r.confidence)`
 - `src/infrastructure/copilot/CopilotRepository.ts:203` — `Math.min(1, Math.max(0, match?.confidence ?? 0))` → `toConfidenceScore(match?.confidence)`
