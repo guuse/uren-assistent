@@ -50,11 +50,13 @@ Dit geldt voor:
 
 **Signatuur:**
 ```ts
-execute(targetDate: string): Promise<{
+execute(targetDate: string, employeeId: string): Promise<{
   activeProjects: SimplicateProject[]
   historicalEntries: HourEntry[]
 }>
 ```
+
+`employeeId` wordt door de caller (`ProcessDayUseCase`) meegegeven, consistent met hoe bestaande use cases de employee-context krijgen.
 
 **Algoritme:**
 1. Bereken `vensterStart = targetDate - 28 dagen`
@@ -165,6 +167,10 @@ reason: 'pattern' | 'last-week' | 'llm-pattern'
 | `src/infrastructure/copilot/CopilotRepository.ts` | Prompt uitbreiding + `patternBlocks` in output |
 | `src/application/container.ts` | Registreer `GetActiveProjectsForDateUseCase` |
 | `src/domain/entities/HourEntrySuggestion.ts` | `reason` uitbreiden met `'llm-pattern'` |
+
+### Callers van `classifyDay`
+
+`GroupAndClassifyDayUseCase` is de enige caller van `classifyDay`. Die use case verwerkt het nieuwe `patternBlocks`-veld door het samen met `blocks` terug te geven aan `ProcessDayUseCase`, die beide lijsten samenvoegt voor opslag in `HistoryStore`. In de UI worden `patternBlocks` weergegeven als reguliere blokken (bestaande rendering), herkenbaar via `origin: 'llm-pattern'`.
 
 ### Ongewijzigd
 
