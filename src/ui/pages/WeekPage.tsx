@@ -135,6 +135,7 @@ export function WeekPage() {
   const { saveBlocksForDate, reloadForDate } = historyStore
 
   const handleUploadCsv = useCallback(async (csvContent: string) => {
+    try {
     const result = await importState.analyseFile(csvContent)
     if (!result) return
 
@@ -168,6 +169,9 @@ export function WeekPage() {
       }
     } else {
       void week.refresh()
+    }
+    } catch (err) {
+      console.error('[handleUploadCsv] crash:', err)
     }
   }, [importState, saveBlocksForDate, week])
 
@@ -394,7 +398,7 @@ export function WeekPage() {
             date={week.selectedDate}
             entries={selectedEntries}
             suggestions={suggestions}
-            conceptBlocks={historyStore.blocksForDate}
+            conceptBlocks={historyStore.blocksForDate.filter(b => b.startTime != null)}
             commits={dayCommits}
             linearIssues={dayLinearIssues}
             onBookSuggestion={handleBookSuggestion}
