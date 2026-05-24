@@ -9,14 +9,18 @@ import { DayTimeline } from '../components/DayTimeline'
 import { BookingModal } from './BookingModal'
 import {
   mappingCacheRepo,
+  keychainRepo,
   createProcessWeekUseCase,
   createProcessDayUseCase,
   createCalendarRepository,
   createCopilotRepository,
+  createSimplicateRepository,
   historyStore as domainHistoryStore,
 } from '../../application/container'
 import { NoHistoryWarningModal } from '../components/NoHistoryWarningModal'
 import { useAppStore } from '../../store/appStore'
+
+const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
@@ -61,6 +65,7 @@ export function WeekPage() {
   const setDayContext = useAppStore((s) => s.setDayContext)
   const dayContexts = useAppStore((s) => s.dayContexts)
   const services = useAppStore((s) => s.services)
+  const simplicateEmployeeId = useAppStore((s) => s.simplicateEmployeeId)
 
   const [bookingEntry, setBookingEntry] = useState<Partial<HourEntry> | null>(null)
   const [bookingConcept, setBookingConcept] = useState<ClassifiedBlock | null>(null)
@@ -222,6 +227,10 @@ export function WeekPage() {
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
       const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
 
+      const apiKey = await keychainRepo.get('simplicate-api-key')
+      const apiSecret = await keychainRepo.get('simplicate-api-secret')
+      const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey!, apiSecret!)
+
       const useCase = createProcessWeekUseCase(
         githubToken,
         linearToken,
@@ -230,6 +239,8 @@ export function WeekPage() {
         domainProjects,
         domainServices,
         username,
+        simplicateRepo,
+        simplicateEmployeeId ?? '',
       )
 
       for await (const progress of useCase.execute(week.selectedWeekStart, week.selectedWeekEnd)) {
@@ -298,6 +309,10 @@ export function WeekPage() {
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
       const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
 
+      const apiKey = await keychainRepo.get('simplicate-api-key')
+      const apiSecret = await keychainRepo.get('simplicate-api-secret')
+      const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey!, apiSecret!)
+
       const useCase = createProcessDayUseCase(
         githubToken,
         linearToken,
@@ -306,6 +321,8 @@ export function WeekPage() {
         domainProjects,
         domainServices,
         username,
+        simplicateRepo,
+        simplicateEmployeeId ?? '',
       )
 
       for await (const progress of useCase.execute(date)) {

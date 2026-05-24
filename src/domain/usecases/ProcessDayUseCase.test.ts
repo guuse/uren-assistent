@@ -7,6 +7,7 @@ import type { IGoogleCalendarRepository } from '../repositories/IGoogleCalendarR
 import type { IHistoryStore } from '../repositories/IHistoryStore'
 import type { ICopilotRepository, Project, Service } from '../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
+import type { ISimplicateRepository } from '../repositories/ISimplicateRepository'
 
 function makeGitHub(): IGitHubRepository {
   return { fetchCommits: vi.fn().mockResolvedValue([]) } as unknown as IGitHubRepository
@@ -36,6 +37,11 @@ function makeCopilot(): ICopilotRepository {
 function makeCache(): IMappingCacheRepository {
   return { get: vi.fn().mockReturnValue(undefined), set: vi.fn(), getAll: vi.fn().mockReturnValue({}) } as unknown as IMappingCacheRepository
 }
+function makeSimplicateRepo(): ISimplicateRepository {
+  return {
+    getActiveProjects: vi.fn().mockResolvedValue([]),
+  } as unknown as ISimplicateRepository
+}
 
 describe('ProcessDayUseCase', () => {
   it('yields classifying-day and done for a single date', async () => {
@@ -49,6 +55,8 @@ describe('ProcessDayUseCase', () => {
       [] as Project[],
       [] as Service[],
       'testuser',
+      makeSimplicateRepo(),
+      'employee-1',
     )
 
     const phases: string[] = []
@@ -74,6 +82,8 @@ describe('ProcessDayUseCase', () => {
       [] as Project[],
       [] as Service[],
       'testuser',
+      makeSimplicateRepo(),
+      'employee-1',
     )
 
     const phases: string[] = []

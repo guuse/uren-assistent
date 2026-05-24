@@ -5,6 +5,7 @@ import type { IGoogleCalendarRepository } from '../repositories/IGoogleCalendarR
 import type { IHistoryStore } from '../repositories/IHistoryStore'
 import type { ICopilotRepository, Project, Service } from '../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
+import type { ISimplicateRepository } from '../repositories/ISimplicateRepository'
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
 import { ProcessDayUseCase } from './ProcessDayUseCase'
@@ -48,6 +49,8 @@ export class ProcessWeekUseCase {
     availableProjects: Project[],
     availableServices: Service[],
     private readonly githubUsername: string,
+    simplicateRepo: ISimplicateRepository,
+    simplicateEmployeeId: string,
   ) {
     this.fetchGitHub = new FetchGitHubContextUseCase(githubRepo)
     this.fetchLinear = new FetchLinearContextUseCase(linearRepo)
@@ -61,6 +64,8 @@ export class ProcessWeekUseCase {
       availableProjects,
       availableServices,
       githubUsername,
+      simplicateRepo,
+      simplicateEmployeeId,
     )
   }
 

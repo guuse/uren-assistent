@@ -21,6 +21,7 @@ import { GitHubRepository } from '../infrastructure/github/GitHubRepository'
 import { LinearRepository } from '../infrastructure/linear/LinearRepository'
 import { ProcessWeekUseCase } from '../domain/usecases/ProcessWeekUseCase'
 import { ProcessDayUseCase } from '../domain/usecases/ProcessDayUseCase'
+import { GetActiveProjectsForDateUseCase } from '../domain/usecases/GetActiveProjectsForDateUseCase'
 import type { IGitHubRepository } from '../domain/repositories/IGitHubRepository'
 import type { ILinearRepository } from '../domain/repositories/ILinearRepository'
 
@@ -81,6 +82,10 @@ export function createLinearRepository(token: string): ILinearRepository {
   return new LinearRepository(token)
 }
 
+export function createGetActiveProjectsUseCase(simplicateRepo: ISimplicateRepository): GetActiveProjectsForDateUseCase {
+  return new GetActiveProjectsForDateUseCase(simplicateRepo)
+}
+
 export function createProcessWeekUseCase(
   githubToken: string,
   linearToken: string,
@@ -89,6 +94,8 @@ export function createProcessWeekUseCase(
   projects: Project[],
   services: Service[],
   githubUsername: string,
+  simplicateRepo: ISimplicateRepository,
+  simplicateEmployeeId: string,
 ): ProcessWeekUseCase {
   return new ProcessWeekUseCase(
     new GitHubRepository(githubToken),
@@ -100,6 +107,8 @@ export function createProcessWeekUseCase(
     projects,
     services,
     githubUsername,
+    simplicateRepo,
+    simplicateEmployeeId,
   )
 }
 
@@ -111,6 +120,8 @@ export function createProcessDayUseCase(
   projects: Project[],
   services: Service[],
   githubUsername: string,
+  simplicateRepo: ISimplicateRepository,
+  simplicateEmployeeId: string,
 ): ProcessDayUseCase {
   return new ProcessDayUseCase(
     new GitHubRepository(githubToken),
@@ -122,5 +133,7 @@ export function createProcessDayUseCase(
     projects,
     services,
     githubUsername,
+    simplicateRepo,
+    simplicateEmployeeId,
   )
 }

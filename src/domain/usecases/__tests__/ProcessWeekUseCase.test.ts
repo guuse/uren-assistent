@@ -6,6 +6,7 @@ import type { IGoogleCalendarRepository } from '../../repositories/IGoogleCalend
 import type { IHistoryStore } from '../../repositories/IHistoryStore'
 import type { ICopilotRepository } from '../../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../../repositories/IMappingCacheRepository'
+import type { ISimplicateRepository } from '../../repositories/ISimplicateRepository'
 import type { GitHubCommit } from '../../entities/GitHubCommit'
 import type { LinearIssue } from '../../entities/LinearIssue'
 
@@ -41,12 +42,15 @@ const cacheRepo: IMappingCacheRepository = {
   getAll: vi.fn().mockReturnValue({}),
   set: vi.fn(),
 }
+const simplicateRepo: ISimplicateRepository = {
+  getActiveProjects: vi.fn().mockResolvedValue([]),
+} as unknown as ISimplicateRepository
 
 describe('ProcessWeekUseCase', () => {
   it('yields progress for each day (fetches github/linear once for week + once per day via ProcessDayUseCase)', async () => {
     const useCase = new ProcessWeekUseCase(
       githubRepo, linearRepo, calendarRepo, historyStore, copilotRepo, cacheRepo,
-      [], [], 'guuse',
+      [], [], 'guuse', simplicateRepo, 'employee-1',
     )
 
     const phases: string[] = []
