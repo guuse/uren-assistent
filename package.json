@@ -14,6 +14,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@heroicons/react": "^2.2.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-fs": "^2.5.1",
