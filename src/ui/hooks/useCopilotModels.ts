@@ -1,5 +1,5 @@
 // src/ui/hooks/useCopilotModels.ts
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { CopilotModel } from '../../domain/entities/CopilotModel'
 import { createCopilotRepository, createGetCopilotModelsUseCase } from '../../application/container'
 import { useAppStore } from '../../store/appStore'
@@ -8,40 +8,34 @@ export function useCopilotModels(): { models: CopilotModel[]; loading: boolean; 
   const copilotToken = useAppStore((s) => s.copilotToken)
   const [models, setModels] = useState<CopilotModel[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!copilotToken) {
-      setError('Geen Copilot token ingesteld')
-      return
-    }
+  const fetchModels = useCallback(async () => {
+    if (!copilotToken) return
 
-    let cancelled = false
     setLoading(true)
-    setError(null)
+    setFetchError(null)
 
     const copilotRepo = createCopilotRepository(copilotToken)
     const useCase = createGetCopilotModelsUseCase(copilotRepo)
 
-    useCase
-      .execute()
-      .then((result) => {
-        if (!cancelled) {
-          setModels(result)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Ophalen modellen mislukt')
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
+    try {
+      const result = await useCase.execute()
+      setModels(result)
+    } catch (err: unknown) {
+      setFetchError(err instanceof Error ? err.message : 'Ophalen modellen mislukt')
+    } finally {
+      setLoading(false)
     }
   }, [copilotToken])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchModels()
+  }, [fetchModels])
+
+  // Derive the no-token error outside the effect
+  const error = !copilotToken ? 'Geen Copilot token ingesteld' : fetchError
 
   return { models, loading, error }
 }
