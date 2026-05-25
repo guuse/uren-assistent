@@ -29,6 +29,8 @@ interface Props {
   isClearingWeek?: boolean
   clearWeekError?: string | null
   totalLlmBlockCount?: number
+  isCurrentWeek?: boolean
+  onGoToCurrentWeek?: () => void
 }
 
 const TARGET_HOURS = 8
@@ -64,6 +66,8 @@ export function WeekDayList({
   isClearingWeek = false,
   clearWeekError,
   totalLlmBlockCount = 0,
+  isCurrentWeek = true,
+  onGoToCurrentWeek,
 }: Props) {
   const [confirmDate, setConfirmDate] = useState<string | null>(null)
   const [confirmWeek, setConfirmWeek] = useState(false)
@@ -194,7 +198,16 @@ export function WeekDayList({
         >
           ‹
         </button>
-        <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+        {!isCurrentWeek && onGoToCurrentWeek ? (
+          <button
+            onClick={onGoToCurrentWeek}
+            className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer"
+          >
+            Nu
+          </button>
+        ) : (
+          <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+        )}
         <button
           onClick={onNextWeek}
           className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
