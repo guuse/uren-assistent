@@ -20,15 +20,21 @@ function timeToMinutes(time: string): number {
 }
 
 
-const CONFIDENCE_COLORS: Record<1 | 2 | 3 | 4 | 5, { bg: string; border: string; sub: string; badge: string }> = {
-  5: { bg: 'bg-[#1a2a1a]', border: 'border border-dashed border-[#5a8a6a]', sub: 'text-[#5a8a6a]', badge: 'bg-[#1a3a1a] text-[#5a8a6a]' },
-  4: { bg: 'bg-[#1e2a18]', border: 'border border-dashed border-[#6a8a50]', sub: 'text-[#6a8a50]', badge: 'bg-[#203018] text-[#6a8a50]' },
-  3: { bg: 'bg-[#2a2510]', border: 'border border-dashed border-[#8a7a40]', sub: 'text-[#8a7a40]', badge: 'bg-[#332e10] text-[#8a7a40]' },
-  2: { bg: 'bg-[#2a1c10]', border: 'border border-dashed border-[#a06030]', sub: 'text-[#a06030]', badge: 'bg-[#332210] text-[#a06030]' },
-  1: { bg: 'bg-[#2a1010]', border: 'border border-dashed border-[#8a3a3a]', sub: 'text-[#8a3a3a]', badge: 'bg-[#3a1010] text-[#8a3a3a]' },
+const CONFIDENCE_COLORS: Record<1 | 2 | 3 | 4 | 5, {
+  bg: string; borderStyle: string; borderColor: string; borderLeft: string;
+  titleColor: string; subColor: string; badgeBg: string; badgeColor: string
+}> = {
+  5: { bg: '#f0fdf4', borderStyle: 'solid',  borderColor: '#86efac', borderLeft: '#16a34a', titleColor: '#14532d', subColor: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a' },
+  4: { bg: '#f0fdf4', borderStyle: 'solid',  borderColor: '#86efac', borderLeft: '#16a34a', titleColor: '#14532d', subColor: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a' },
+  3: { bg: '#fffbeb', borderStyle: 'solid',  borderColor: '#fcd34d', borderLeft: '#d97706', titleColor: '#78350f', subColor: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706' },
+  2: { bg: '#fff1f2', borderStyle: 'dashed', borderColor: '#fca5a5', borderLeft: '#ef4444', titleColor: '#7f1d1d', subColor: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444' },
+  1: { bg: '#fff1f2', borderStyle: 'dashed', borderColor: '#fca5a5', borderLeft: '#ef4444', titleColor: '#7f1d1d', subColor: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444' },
 }
 
-const WARN_STYLE = { bg: 'bg-[#2a2010]', border: 'border border-dashed border-[#a07848]', sub: 'text-[#a07848]', badge: 'bg-[#3a2e10] text-[#a07848]' }
+const WARN_STYLE = {
+  bg: '#fffbeb', borderStyle: 'dashed' as const, borderColor: '#fcd34d', borderLeft: '#d97706',
+  titleColor: '#78350f', subColor: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706'
+}
 
 function blockStyle(block: ClassifiedBlock) {
   if (!block.projectId || !block.serviceId) return WARN_STYLE
@@ -161,24 +167,35 @@ export function DayTimeline({
         <button
           key={key}
           onClick={() => onEditEntry(block.entry)}
-          style={baseStyle}
-          className="text-left bg-[#1e3a5f] border-l-[3px] border-[#4a8abf] rounded-r px-3 py-1 hover:bg-[#254a72] transition-colors cursor-pointer flex flex-col justify-center overflow-hidden"
+          style={{
+            ...baseStyle,
+            background: '#6366f1',
+            borderLeft: '3px solid rgba(255,255,255,.3)',
+            borderRadius: 5,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4px 12px',
+            textAlign: 'left',
+          }}
         >
-          <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate">
+          <div style={{ color: 'rgba(255,255,255,.95)', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {projectName(block.entry.projectId)}
           </div>
-          <div className="text-[#7ab8e8] text-[0.5625rem] truncate">
+          <div style={{ color: 'rgba(255,255,255,.65)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
           </div>
           {block.entry.note && height > 52 && (
-            <div className="text-[#5a8aaa] text-[0.5625rem] truncate">{block.entry.note}</div>
+            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.entry.note}</div>
           )}
         </button>
       )
     }
 
     if (block.type === 'concept') {
-      const s = blockStyle(block.block)
+      const cs = blockStyle(block.block)
       const badgeLabel = block.block.origin === 'cache'
         ? 'Cache'
         : `${block.block.confidence}/5`
@@ -186,21 +203,34 @@ export function DayTimeline({
         <button
           key={key}
           onClick={() => onConceptClick?.(block.block)}
-          style={baseStyle}
-          className={`relative text-left ${s.bg} ${s.border} rounded px-3 py-1 hover:brightness-110 transition-all cursor-pointer flex flex-col justify-center overflow-hidden`}
+          style={{
+            ...baseStyle,
+            background: cs.bg,
+            border: `1.5px ${cs.borderStyle} ${cs.borderColor}`,
+            borderLeft: `3px solid ${cs.borderLeft}`,
+            borderRadius: 5,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            position: 'absolute',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4px 12px',
+            textAlign: 'left',
+          }}
         >
-          <span className={`absolute right-2 top-1.5 text-[0.5625rem] px-[6px] py-[2px] rounded ${s.badge}`}>
+          <span style={{ background: cs.badgeBg, color: cs.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '1px 4px', position: 'absolute', top: 3, right: 4 }}>
             {badgeLabel}
           </span>
-          <div className="text-[#e8e2d9] text-[0.6875rem] font-semibold truncate pr-16">
+          <div style={{ color: cs.titleColor, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
             {block.block.blockName}
           </div>
-          <div className={`text-[0.5625rem] truncate ${s.sub}`}>
+          <div style={{ color: cs.subColor, fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3, marginTop: 1 }}>
             {block.block.startTime}–{block.block.endTime}
             {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
           </div>
           {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
-            <div className="text-[#7a7268] text-[0.5625rem] truncate">⚠ Project ontbreekt — klik om in te vullen</div>
+            <div style={{ fontSize: 8, color: '#a8a29e', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>⚠ Project ontbreekt — klik om in te vullen</div>
           )}
         </button>
       )
@@ -278,38 +308,59 @@ export function DayTimeline({
       />
 
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#2e2a26] flex items-center gap-4 flex-shrink-0">
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--surface)' }}>
         <div>
-          <div className="text-[#e8e2d9] font-bold capitalize">{dateLabel}</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }} className="capitalize">{dateLabel}</div>
           {hasConcepts ? (
-            <div className="text-[#a07848] text-[0.6875rem] mt-0.5">
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {totalHours}u geboekt · {pendingCount > 0 ? `${pendingCount} concept${pendingCount !== 1 ? 'en' : ''} te bevestigen` : 'alle concepten compleet'}
             </div>
           ) : (
-            <div className={`text-[0.6875rem] mt-0.5 ${totalHours >= 8 ? 'text-green-400' : 'text-amber-400'}`}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {totalHours}u geboekt · {Math.max(0, 8 - totalHours)}u te gaan
             </div>
           )}
         </div>
-        <div className="flex-1 h-[5px] bg-[#2e2a26] rounded-full overflow-hidden">
+        <div className="flex-1 h-[5px] bg-[#2e2a26] rounded-full overflow-hidden mx-4">
           <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${pct}%` }} />
         </div>
-        {onProcessDay && (
-          <button
-            onClick={onProcessDay}
-            className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
-          >
-            ▶ Verwerk dag
-          </button>
-        )}
-        {(hasConcepts || hasEntries) && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[0.625rem] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
-          >
-            ↑ Nieuwe CSV
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#6366f1' }} />
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>geboekt</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#f0fdf4', borderLeft: '2px solid #16a34a' }} />
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>hoog</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#fffbeb', borderLeft: '2px solid #d97706' }} />
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>midden</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#fff1f2', borderLeft: '2px dashed #ef4444' }} />
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>laag</span>
+            </div>
+          </div>
+          {onProcessDay && (
+            <button
+              onClick={onProcessDay}
+              className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
+            >
+              ▶ Verwerk dag
+            </button>
+          )}
+          {(hasConcepts || hasEntries) && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[0.625rem] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
+            >
+              ↑ Nieuwe CSV
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Classifying spinner */}
