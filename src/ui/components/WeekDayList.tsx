@@ -145,7 +145,7 @@ export function WeekDayList({
                 <button
                   onClick={() => setConfirmDate(date)}
                   title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
-                  className="absolute top-1.5 right-1.5 p-0.5 rounded transition-colors text-red-500/50 hover:text-red-400 cursor-pointer"
+                  className="absolute top-2 right-1.5 p-0.5 rounded transition-colors text-red-500/50 hover:text-red-400 cursor-pointer"
                 >
                   <Trash2 size={9} />
                 </button>
