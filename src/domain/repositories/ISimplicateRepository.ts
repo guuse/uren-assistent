@@ -32,4 +32,5 @@ export interface ISimplicateRepository {
   bookHours(entries: HourEntry[]): Promise<void>
   getHourEntries(employeeId: string, from: string, to: string): Promise<HourEntry[]>
   deleteHourEntry(id: string): Promise<void>
+  updateHourEntry(entry: HourEntry): Promise<void>
 }
