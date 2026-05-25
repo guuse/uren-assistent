@@ -73,7 +73,7 @@ const initialState = {
   services: [],
   hourTypes: [],
   copilotToken: null,
-  selectedCopilotModel: 'gpt-4o',
+  selectedCopilotModel: 'claude-sonnet-4.6',
   githubToken: null,
   githubUsername: null,
   linearToken: null,

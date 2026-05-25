@@ -193,7 +193,6 @@ export function AccountSettings() {
   const starredProjects = filteredProjects.filter((p) => starredIds.has(p.id))
   const unstarredProjects = filteredProjects.filter((p) => !starredIds.has(p.id))
 
-
   return (
     <div className="flex flex-col gap-6">
       {/* AI Model */}
@@ -441,6 +440,7 @@ export function AccountSettings() {
               value={projectSearch}
               onChange={(e) => setProjectSearch(e.target.value)}
               placeholder="Zoek op projectnaam…"
+              aria-label="Zoek op projectnaam"
               className="bg-[#1e1b18] border border-[#2e2a26] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 placeholder:text-[#4a4540] focus:outline-none focus:border-[#a07848] transition-colors"
             />
             <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
@@ -457,7 +457,7 @@ export function AccountSettings() {
                       key={p.id}
                       type="button"
                       onClick={() => void toggleStar(p.id)}
-                      className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9]"
+                      className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9] hover:border-[#b08858] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a07848]"
                     >
                       <span className="text-[#a07848]">★</span>
                       <span>{p.organizationName} — {p.name}</span>
@@ -473,7 +473,7 @@ export function AccountSettings() {
                   key={p.id}
                   type="button"
                   onClick={() => void toggleStar(p.id)}
-                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36]"
+                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a07848]"
                 >
                   <span className="text-[#a07848]">☆</span>
                   <span>{p.organizationName} — {p.name}</span>

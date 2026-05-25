@@ -1,5 +1,5 @@
 export type CopilotModel = {
-  id: string              // e.g. "gpt-4o"
-  name: string            // display name
-  tokenMultiplier: number // relative token cost — defaults to 1.0 if not present in API response
+  id: string       // e.g. "gpt-4o"
+  name: string     // display name
+  category: string // model_picker_category from API, e.g. "powerful", "fast", "balanced"
 }

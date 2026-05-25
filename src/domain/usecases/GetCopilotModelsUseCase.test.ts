@@ -10,7 +10,7 @@ const mockRepo = {
 
 describe('GetCopilotModelsUseCase', () => {
   it('returns models from repository', async () => {
-    const models = [{ id: 'gpt-4o', name: 'GPT-4o', tokenMultiplier: 1.0 }]
+    const models = [{ id: 'gpt-4o', name: 'GPT-4o', category: 'default' }]
     vi.mocked(mockRepo.listModels).mockResolvedValue(models)
     const useCase = new GetCopilotModelsUseCase(mockRepo)
     expect(await useCase.execute()).toEqual(models)

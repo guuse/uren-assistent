@@ -419,19 +419,18 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
       data: Array<{
         id: string
         name?: string
-        policy?: {
-          state?: string
-          terms?: string
-          premium_model_multiplier?: number
-        }
+        model_picker_category?: string
+        model_picker_enabled?: boolean
       }>
     }
 
     const data = JSON.parse(responseText) as ModelsApiResponse
-    return (data.data ?? []).map((m) => ({
-      id: m.id,
-      name: m.name ?? m.id,
-      tokenMultiplier: m.policy?.premium_model_multiplier ?? 1.0,
-    }))
+    return (data.data ?? [])
+      .filter((m) => m.model_picker_enabled !== false)
+      .map((m) => ({
+        id: m.id,
+        name: m.name ?? m.id,
+        category: m.model_picker_category ?? 'default',
+      }))
   }
 }
