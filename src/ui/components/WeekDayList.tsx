@@ -196,14 +196,14 @@ export function WeekDayList({
       )}
 
       <div className="relative">
-        <div className="flex items-center px-1 mt-2 gap-1">
+        <div className="flex justify-between items-center px-1 mt-2">
           <button
             onClick={() => { setIsPickerOpen(false); onPrevWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
             ‹
           </button>
-          <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-1">
             {!isCurrentWeek && onGoToCurrentWeek ? (
               <button
                 onClick={onGoToCurrentWeek}
@@ -214,6 +214,15 @@ export function WeekDayList({
             ) : (
               <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
             )}
+            {onGoToDate && (
+              <button
+                onClick={() => setIsPickerOpen((v) => !v)}
+                className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer leading-none"
+                title="Kies een dag"
+              >
+                <CalendarDays size={10} />
+              </button>
+            )}
           </div>
           <button
             onClick={() => { setIsPickerOpen(false); onNextWeek() }}
@@ -221,15 +230,6 @@ export function WeekDayList({
           >
             ›
           </button>
-          {onGoToDate && (
-            <button
-              onClick={() => setIsPickerOpen((v) => !v)}
-              className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer"
-              title="Kies een dag"
-            >
-              <CalendarDays size={11} />
-            </button>
-          )}
         </div>
         {isPickerOpen && onGoToDate && weekDays.length > 0 && (
           <MonthPickerPopup
