@@ -185,11 +185,9 @@ export function AccountSettings() {
   const label = (p: { organizationName: string; name: string }) =>
     `${p.organizationName} — ${p.name}`
 
+  const query = projectSearch.trim().toLowerCase()
   const filteredProjects = [...projects]
-    .filter((p) =>
-      projectSearch.trim() === '' ||
-      p.name.toLowerCase().includes(projectSearch.trim().toLowerCase())
-    )
+    .filter((p) => query === '' || p.name.toLowerCase().includes(query))
     .sort((a, b) => label(a).localeCompare(label(b)))
 
   const starredProjects = filteredProjects.filter((p) => starredIds.has(p.id))
