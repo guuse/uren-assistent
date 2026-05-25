@@ -38,6 +38,11 @@ describe('useWeek', () => {
     const { result } = renderHook(() => useWeek())
     act(() => { result.current.prevWeek() })
     act(() => { result.current.goToCurrentWeek() })
-    expect(result.current.selectedDate).toBe(result.current.selectedWeekStart)
+    const today = new Date()
+    const day = today.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    today.setDate(today.getDate() + diff)
+    const expectedMonday = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+    expect(result.current.selectedDate).toBe(expectedMonday)
   })
 })

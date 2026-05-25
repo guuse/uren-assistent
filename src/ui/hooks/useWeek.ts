@@ -73,12 +73,12 @@ export function useWeek() {
     setSelectedWeekStart((w) => addDays(w, 7))
   }
 
-  const isCurrentWeek = selectedWeekStart === getMondayOf(new Date())
+  const currentMonday = getMondayOf(new Date())
+  const isCurrentWeek = selectedWeekStart === currentMonday
 
   function goToCurrentWeek() {
-    const monday = getMondayOf(new Date())
-    setSelectedWeekStart(monday)
-    setSelectedDate(monday)
+    setSelectedWeekStart(currentMonday)
+    setSelectedDate(currentMonday)
   }
 
   const weekDays = [0, 1, 2, 3, 4].map((i) => addDays(selectedWeekStart, i))
