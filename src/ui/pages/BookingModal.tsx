@@ -194,7 +194,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
         {/* Body */}
         {evidenceBlock ? (
           /* Twee-kolommen layout */
-          <div className="flex flex-1 overflow-hidden min-h-0">
+          <div className="flex flex-1 overflow-hidden min-h-0" style={{ minHeight: '420px' }}>
             {/* Linkerkolom: formulier */}
             <div className="flex-1 px-5 py-4 flex flex-col gap-4 overflow-y-auto border-r border-[#2e2a26]">
               <BookingFormFields booking={booking} />
@@ -218,7 +218,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
           </div>
         ) : (
           /* Enkele kolom (geen evidenceBlock) */
-          <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto">
+          <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto" style={{ minHeight: '360px' }}>
             <BookingFormFields booking={booking} />
           </div>
         )}
