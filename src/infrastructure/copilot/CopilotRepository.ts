@@ -403,4 +403,9 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
 
     return [...parsed.blocks, ...patternResults]
   }
+
+  async listModels(): Promise<import('../../domain/entities/CopilotModel').CopilotModel[]> {
+    // TODO: implement via Copilot API — stub returns empty until Task 5+
+    return []
+  }
 }
