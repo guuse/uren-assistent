@@ -24,6 +24,7 @@ interface Props {
   llmBlockCountForDate?: (date: string) => number
   onClearDayBlocks?: (date: string) => Promise<void>
   isClearingDay?: boolean
+  clearError?: string | null
 }
 
 const TARGET_HOURS = 8
@@ -54,6 +55,7 @@ export function WeekDayList({
   llmBlockCountForDate,
   onClearDayBlocks,
   isClearingDay = false,
+  clearError,
 }: Props) {
   const [confirmDate, setConfirmDate] = useState<string | null>(null)
 
@@ -78,9 +80,12 @@ export function WeekDayList({
           const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
-            <button
+            <div
               key={date}
               onClick={() => onSelectDate(date)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDate(date) } }}
+              role="button"
+              tabIndex={0}
               className={`text-left px-2 py-2 rounded-lg transition-colors cursor-pointer ${
                 isSelected
                   ? 'bg-[#252220] border border-[#6366f1]'
@@ -141,7 +146,7 @@ export function WeekDayList({
                   </button>
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -195,6 +200,12 @@ export function WeekDayList({
           }}
           onCancel={() => setConfirmDate(null)}
         />
+      )}
+
+      {clearError && (
+        <div className="fixed bottom-4 right-4 z-50 bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg">
+          {clearError}
+        </div>
       )}
     </div>
   )

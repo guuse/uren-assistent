@@ -4,7 +4,7 @@ interface Props {
   confirmLabel?: string
   cancelLabel?: string
   isLoading?: boolean
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   onCancel: () => void
 }
 
