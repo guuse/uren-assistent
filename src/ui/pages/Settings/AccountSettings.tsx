@@ -53,6 +53,7 @@ export function AccountSettings() {
   const [linearTestLabel, setLinearTestLabel] = useState<string | null>(null)
 
   const [projectSearch, setProjectSearch] = useState('')
+  const [expandedToken, setExpandedToken] = useState<'copilot' | 'github' | 'linear' | null>(null)
 
   useEffect(() => {
     async function loadExisting() {
@@ -268,11 +269,73 @@ export function AccountSettings() {
     boxSizing: 'border-box',
   }
 
+  function TokenRow({
+    id: _id,
+    label: tokenLabel,
+    hasToken,
+    expanded,
+    onToggle,
+    children,
+    isLast = false,
+  }: {
+    id: string
+    label: string
+    hasToken: boolean
+    expanded: boolean
+    onToggle: () => void
+    children: React.ReactNode
+    isLast?: boolean
+  }) {
+    return (
+      <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+        <div style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+              background: hasToken ? 'var(--success)' : 'var(--text-faint)',
+              display: 'inline-block',
+            }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{tokenLabel}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{
+              background: expanded ? 'var(--bg)' : 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              padding: '4px 10px',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {expanded ? 'Annuleren' : hasToken ? 'Wijzigen' : 'Instellen'}
+          </button>
+        </div>
+        {expanded && (
+          <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {children}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* AI Model */}
+
+      {/* Kaart 1: Profiel & toegang */}
       <div style={sectionCard}>
-        <div style={sectionHeader}>AI Model</div>
+        <div style={sectionHeader}>Profiel &amp; toegang</div>
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={rowTitle}>{user?.name}</div>
+            <div style={rowSubtitle}>{user?.email}</div>
+          </div>
+          <button onClick={logout} style={dangerBtn}>Uitloggen</button>
+        </div>
         <div style={rowLast}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={rowTitle}>Copilot model</div>
@@ -281,7 +344,7 @@ export function AccountSettings() {
             {!modelsLoading && !modelsError && models.length === 0 && <div style={rowSubtitle}>Geen modellen beschikbaar</div>}
             {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
               <div style={{ ...rowSubtitle, color: 'var(--warning, #a07848)' }}>
-                Huidig model ({selectedCopilotModel}) staat niet in de lijst — mogelijk verouderd.
+                Huidig model ({selectedCopilotModel}) staat niet in de lijst.
               </div>
             )}
           </div>
@@ -301,24 +364,11 @@ export function AccountSettings() {
         </div>
       </div>
 
-      {/* Account */}
+      {/* Kaart 2: API-sleutels */}
       <div style={sectionCard}>
-        <div style={sectionHeader}>Account</div>
-        <div style={row}>
-          <div style={{ flex: 1 }}>
-            <div style={rowTitle}>Ingelogd als</div>
-            <div style={rowSubtitle}>{user?.name} ({user?.email})</div>
-          </div>
-        </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1 }} />
-          <button onClick={logout} style={dangerBtn}>Uitloggen</button>
-        </div>
-      </div>
+        <div style={sectionHeader}>API-sleutels</div>
 
-      {/* Simplicate API */}
-      <div style={sectionCard}>
-        <div style={sectionHeader}>Simplicate API</div>
+        {/* Simplicate — altijd inline */}
         <div style={row}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {hasExisting && apiKey === '' && (
@@ -340,16 +390,12 @@ export function AccountSettings() {
             />
           </div>
         </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1 }}>
-            {testState === 'ok' && <span style={labelConnected}>✓ Verbinding geslaagd</span>}
+        <div style={row}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1 }}>
+            {testState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ Verbinding geslaagd</span></>}
             {testState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{testError ?? 'Verbinding mislukt'}</span>}
-            {!hasExisting && testState === 'idle' && (
-              <><span style={dotDisconnected} />&nbsp;<span style={labelDisconnected}>Niet geconfigureerd</span></>
-            )}
-            {hasExisting && testState === 'idle' && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></span>
-            )}
+            {testState === 'idle' && hasExisting && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
+            {testState === 'idle' && !hasExisting && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={testConnection} disabled={!canTest || testState === 'testing'} style={{ ...ghostBtn, opacity: (!canTest || testState === 'testing') ? 0.4 : 1 }}>
@@ -360,141 +406,119 @@ export function AccountSettings() {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* GitHub Copilot token */}
-      <div style={sectionCard}>
-        <div style={sectionHeader}>GitHub Copilot token</div>
-        <div style={row}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={rowSubtitle}>
-              Verkrijg via: <code>gh auth token</code> in een terminal.
+        {/* GitHub Copilot token */}
+        <TokenRow
+          id="copilot"
+          label="GitHub Copilot token"
+          hasToken={hasCopilotToken}
+          expanded={expandedToken === 'copilot'}
+          onToggle={() => setExpandedToken(expandedToken === 'copilot' ? null : 'copilot')}
+        >
+          <div style={rowSubtitle}>Verkrijg via: <code>gh auth token</code> in een terminal.</div>
+          <input
+            type="password"
+            value={copilotTokenInput}
+            onChange={(e) => setCopilotTokenInput(e.target.value)}
+            placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
+            style={inputStyle}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {copilotTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {copilotTestLabel}</span></>}
+              {copilotTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{copilotTestLabel}</span>}
             </div>
-            {hasCopilotToken && copilotTokenInput === '' && (
-              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
-            )}
-            <input
-              type="password"
-              value={copilotTokenInput}
-              onChange={e => setCopilotTokenInput(e.target.value)}
-              placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-            {copilotTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {copilotTestLabel}</span></>}
-            {copilotTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{copilotTestLabel}</span>}
-            {copilotTestState === 'idle' && hasCopilotToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
-            {copilotTestState === 'idle' && !hasCopilotToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => void testCopilot()} disabled={!hasCopilotToken && copilotTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasCopilotToken && copilotTokenInput.length === 0) ? 0.4 : 1 }}>
               {copilotTestState === 'testing' ? 'Testen...' : 'Test'}
             </button>
-            <button onClick={saveCopilotToken} disabled={copilotTokenInput.length === 0} style={{ ...primaryBtn, opacity: copilotTokenInput.length === 0 ? 0.4 : 1 }}>
+            <button onClick={() => { void saveCopilotToken(); setExpandedToken(null) }} disabled={copilotTokenInput.length === 0} style={{ ...primaryBtn, opacity: copilotTokenInput.length === 0 ? 0.4 : 1 }}>
               {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
             </button>
           </div>
-        </div>
-      </div>
+        </TokenRow>
 
-      {/* GitHub token */}
-      <div style={sectionCard}>
-        <div style={sectionHeader}>GitHub token</div>
-        <div style={row}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={rowSubtitle}>
-              Verkrijg via: <code>gh auth token</code> — heeft <code>repo</code> scope nodig.
+        {/* GitHub token */}
+        <TokenRow
+          id="github"
+          label="GitHub token"
+          hasToken={hasGithubToken}
+          expanded={expandedToken === 'github'}
+          onToggle={() => setExpandedToken(expandedToken === 'github' ? null : 'github')}
+        >
+          <div style={rowSubtitle}>Verkrijg via: <code>gh auth token</code> — heeft <code>repo</code> scope nodig.</div>
+          <input
+            type="password"
+            value={githubTokenInput}
+            onChange={(e) => setGithubTokenInput(e.target.value)}
+            placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
+            style={inputStyle}
+          />
+          <input
+            type="text"
+            value={githubUsernameInput}
+            onChange={(e) => setGithubUsernameInput(e.target.value)}
+            placeholder="GitHub gebruikersnaam (bijv. guuse)"
+            style={inputStyle}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {githubTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {githubTestLabel}</span></>}
+              {githubTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{githubTestLabel}</span>}
             </div>
-            {hasGithubToken && githubTokenInput === '' && (
-              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
-            )}
-            <input
-              type="password"
-              value={githubTokenInput}
-              onChange={e => setGithubTokenInput(e.target.value)}
-              placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
-              style={inputStyle}
-            />
-            <input
-              type="text"
-              value={githubUsernameInput}
-              onChange={e => setGithubUsernameInput(e.target.value)}
-              placeholder="GitHub gebruikersnaam (bijv. guuse)"
-              style={inputStyle}
-            />
-          </div>
-        </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-            {githubTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {githubTestLabel}</span></>}
-            {githubTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{githubTestLabel}</span>}
-            {githubTestState === 'idle' && hasGithubToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
-            {githubTestState === 'idle' && !hasGithubToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => void testGithub()} disabled={!hasGithubToken && githubTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasGithubToken && githubTokenInput.length === 0) ? 0.4 : 1 }}>
               {githubTestState === 'testing' ? 'Testen...' : 'Test'}
             </button>
-            <button onClick={saveGithubToken} disabled={githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0} style={{ ...primaryBtn, opacity: (githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0) ? 0.4 : 1 }}>
+            <button onClick={() => { void saveGithubToken(); setExpandedToken(null) }} disabled={githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0} style={{ ...primaryBtn, opacity: (githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0) ? 0.4 : 1 }}>
               {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
             </button>
           </div>
-        </div>
-      </div>
+        </TokenRow>
 
-      {/* Linear API key */}
-      <div style={sectionCard}>
-        <div style={sectionHeader}>Linear API key</div>
-        <div style={row}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={rowSubtitle}>
-              Verkrijg via: linear.me → Settings → API → Personal API keys
+        {/* Linear API key */}
+        <TokenRow
+          id="linear"
+          label="Linear API key"
+          hasToken={hasLinearToken}
+          expanded={expandedToken === 'linear'}
+          onToggle={() => setExpandedToken(expandedToken === 'linear' ? null : 'linear')}
+          isLast
+        >
+          <div style={rowSubtitle}>Verkrijg via: linear.me → Settings → API → Personal API keys</div>
+          <input
+            type="password"
+            value={linearTokenInput}
+            onChange={(e) => setLinearTokenInput(e.target.value)}
+            placeholder={hasLinearToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'lin_api_...'}
+            style={inputStyle}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {linearTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {linearTestLabel}</span></>}
+              {linearTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{linearTestLabel}</span>}
             </div>
-            {hasLinearToken && linearTokenInput === '' && (
-              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
-            )}
-            <input
-              type="password"
-              value={linearTokenInput}
-              onChange={e => setLinearTokenInput(e.target.value)}
-              placeholder={hasLinearToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'lin_api_...'}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-            {linearTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {linearTestLabel}</span></>}
-            {linearTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{linearTestLabel}</span>}
-            {linearTestState === 'idle' && hasLinearToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
-            {linearTestState === 'idle' && !hasLinearToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => void testLinear()} disabled={!hasLinearToken && linearTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasLinearToken && linearTokenInput.length === 0) ? 0.4 : 1 }}>
               {linearTestState === 'testing' ? 'Testen...' : 'Test'}
             </button>
-            <button onClick={saveLinearToken} disabled={linearTokenInput.length === 0} style={{ ...primaryBtn, opacity: linearTokenInput.length === 0 ? 0.4 : 1 }}>
+            <button onClick={() => { void saveLinearToken(); setExpandedToken(null) }} disabled={linearTokenInput.length === 0} style={{ ...primaryBtn, opacity: linearTokenInput.length === 0 ? 0.4 : 1 }}>
               {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
             </button>
           </div>
-        </div>
+        </TokenRow>
+
       </div>
 
-      {/* Favoriete projecten */}
+      {/* Kaart 3: Favoriete projecten */}
       <div style={sectionCard}>
         <div style={sectionHeader}>Favoriete projecten</div>
-        <div style={row}>
+        <div style={{ ...row, borderBottom: 'none' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={rowSubtitle}>Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.</div>
           </div>
         </div>
         {projects.length === 0 ? (
-          <div style={rowLast}><span style={rowSubtitle}>Geen projecten geladen.</span></div>
+          <div style={{ padding: '0 14px 12px' }}><span style={rowSubtitle}>Geen projecten geladen.</span></div>
         ) : (
-          <div style={{ padding: '8px 14px' }}>
+          <div style={{ padding: '0 14px 12px' }}>
             <input
               type="text"
               value={projectSearch}
@@ -503,7 +527,7 @@ export function AccountSettings() {
               aria-label="Zoek op projectnaam"
               style={{ ...inputStyle, marginBottom: 8 }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 256, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 240, overflowY: 'auto' }}>
               {starredProjects.length === 0 && unstarredProjects.length === 0 && (
                 <span style={rowSubtitle}>Geen projecten gevonden.</span>
               )}
@@ -543,6 +567,7 @@ export function AccountSettings() {
           </div>
         )}
       </div>
+
     </div>
   )
 }
