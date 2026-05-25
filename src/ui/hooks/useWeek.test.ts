@@ -1,0 +1,43 @@
+import { describe, it, expect, vi } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { useWeek } from './useWeek'
+
+// Mock Tauri IPC en dependencies
+vi.mock('../../store/appStore', () => ({
+  useAppStore: vi.fn(() => 'employee-1'),
+}))
+vi.mock('../../application/container', () => ({
+  keychainRepo: { get: vi.fn().mockResolvedValue('key') },
+  createSimplicateRepository: vi.fn(),
+  createUseCases: vi.fn(() => ({
+    getWeekEntries: { execute: vi.fn().mockResolvedValue({}) },
+  })),
+}))
+
+describe('useWeek', () => {
+  it('isCurrentWeek is true wanneer selectedWeekStart de maandag van deze week is', () => {
+    const { result } = renderHook(() => useWeek())
+    expect(result.current.isCurrentWeek).toBe(true)
+  })
+
+  it('isCurrentWeek is false na prevWeek()', () => {
+    const { result } = renderHook(() => useWeek())
+    act(() => { result.current.prevWeek() })
+    expect(result.current.isCurrentWeek).toBe(false)
+  })
+
+  it('goToCurrentWeek reset selectedWeekStart naar maandag van huidige week', () => {
+    const { result } = renderHook(() => useWeek())
+    act(() => { result.current.prevWeek() })
+    expect(result.current.isCurrentWeek).toBe(false)
+    act(() => { result.current.goToCurrentWeek() })
+    expect(result.current.isCurrentWeek).toBe(true)
+  })
+
+  it('goToCurrentWeek zet selectedDate op maandag van huidige week', () => {
+    const { result } = renderHook(() => useWeek())
+    act(() => { result.current.prevWeek() })
+    act(() => { result.current.goToCurrentWeek() })
+    expect(result.current.selectedDate).toBe(result.current.selectedWeekStart)
+  })
+})
