@@ -198,7 +198,7 @@ export function WeekDayList({
       <div className="relative">
         <div className="flex justify-between items-center px-1 mt-2">
           <button
-            onClick={onPrevWeek}
+            onClick={() => { setIsPickerOpen(false); onPrevWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
             ‹
@@ -214,7 +214,7 @@ export function WeekDayList({
             <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
           )}
           <button
-            onClick={onNextWeek}
+            onClick={() => { setIsPickerOpen(false); onNextWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
             ›
@@ -229,7 +229,7 @@ export function WeekDayList({
             <CalendarDays size={12} />
           </button>
         )}
-        {isPickerOpen && onGoToDate && (
+        {isPickerOpen && onGoToDate && weekDays.length > 0 && (
           <MonthPickerPopup
             initialMonth={weekDays[0]!}
             onSelectDate={(date) => {
