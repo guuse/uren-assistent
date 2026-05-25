@@ -81,6 +81,12 @@ export function useWeek() {
     setSelectedDate(currentMonday)
   }
 
+  function goToDate(date: string) {
+    const [year, month, day] = date.split('-').map(Number)
+    setSelectedWeekStart(getMondayOf(new Date(year!, month! - 1, day!)))
+    setSelectedDate(date)
+  }
+
   const weekDays = [0, 1, 2, 3, 4].map((i) => addDays(selectedWeekStart, i))
 
   function hoursForDate(date: string): number {
@@ -101,6 +107,7 @@ export function useWeek() {
     nextWeek,
     isCurrentWeek,
     goToCurrentWeek,
+    goToDate,
     refresh: loadEntries,
   }
 }
