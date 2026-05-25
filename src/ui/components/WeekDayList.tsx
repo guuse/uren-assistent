@@ -77,7 +77,7 @@ export function WeekDayList({
           const conceptCount = conceptCountForDate?.(date) ?? 0
           const processingState = processingStateForDate?.(date) ?? 'idle'
           const llmCount = llmBlockCountForDate?.(date) ?? 0
-          const canClear = llmCount > 0 && !!onClearDayBlocks
+          const canClear = llmCount > 0 && !!onClearDayBlocks && isSelected
 
           return (
             <div
@@ -127,7 +127,7 @@ export function WeekDayList({
                   </span>
                 </div>
               )}
-              {onClearDayBlocks && (
+              {canClear && (
                 <div className="mt-1 flex justify-end">
                   <button
                     onClick={(e) => {
