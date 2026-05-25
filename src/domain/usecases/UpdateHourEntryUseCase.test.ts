@@ -43,8 +43,8 @@ describe('UpdateHourEntryUseCase', () => {
   it('gooit een fout als id ontbreekt', async () => {
     const repo = makeRepo()
     const useCase = new UpdateHourEntryUseCase(repo)
-    const entry = { ...validEntry(), id: undefined }
-    await expect(useCase.execute(entry)).rejects.toThrow('id ontbreekt')
+    const { id: _id, ...entryWithoutId } = validEntry()
+    await expect(useCase.execute(entryWithoutId as unknown as import('../entities/HourEntry').HourEntry)).rejects.toThrow('id ontbreekt')
   })
 
   it('gooit een fout als id leeg is', async () => {
