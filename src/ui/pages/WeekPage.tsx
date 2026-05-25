@@ -492,6 +492,7 @@ export function WeekPage() {
           {...(bookingConcept ? { evidenceBlock: bookingConcept } : {})}
           onClose={() => { setBookingEntry(null); setBookingConcept(null) }}
           onBooked={() => void handleBooked()}
+          onDeleted={() => void handleBooked()}
         />
       )}
 
