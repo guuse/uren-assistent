@@ -511,7 +511,7 @@ export function WeekPage() {
       />
 
       {uploadToast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e1b18] border border-[#3e3a36] rounded-lg px-4 py-2.5 text-[#e8e2d9] text-[0.75rem] shadow-lg pointer-events-none">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] text-[0.75rem] shadow-lg pointer-events-none">
           {uploadToast}
         </div>
       )}

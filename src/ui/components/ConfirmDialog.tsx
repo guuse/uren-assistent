@@ -28,14 +28,14 @@ export function ConfirmDialog({
         className="absolute inset-0 bg-black/60"
         onClick={onCancel}
       />
-      <div className="relative z-10 bg-[#1e1b18] border border-[#2e2a26] rounded-xl p-6 w-80 shadow-xl">
-        <h2 id="confirm-dialog-title" className="text-[#e8e2d9] font-semibold text-sm mb-2">{title}</h2>
-        <p className="text-[#7a7268] text-xs mb-5">{description}</p>
+      <div className="relative z-10 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 w-80 shadow-xl">
+        <h2 id="confirm-dialog-title" className="text-[var(--text-primary)] font-semibold text-sm mb-2">{title}</h2>
+        <p className="text-[var(--text-muted)] text-xs mb-5">{description}</p>
         <div className="flex gap-2 justify-end">
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="px-3 py-1.5 text-xs rounded-lg border border-[#2e2a26] text-[#7a7268] hover:text-[#e8e2d9] hover:border-[#4a4540] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-default"
+            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-default"
           >
             {cancelLabel}
           </button>

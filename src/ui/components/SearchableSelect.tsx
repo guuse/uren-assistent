@@ -82,7 +82,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
 
   return (
     <div className="flex flex-col gap-1" ref={containerRef}>
-      <label className="text-xs uppercase tracking-widest text-[#7a7268]">
+      <label className="text-xs uppercase tracking-widest text-[var(--text-muted)]">
         {label}
         {required && !value && <span className="text-[#a07848] ml-1">⚠</span>}
       </label>
@@ -93,40 +93,40 @@ export function SearchableSelect({ label, options, value, onChange, required, di
           type="button"
           onClick={handleOpen}
           disabled={disabled}
-          className={`w-full bg-[#1e1b18] text-left text-sm rounded-lg px-3 py-2 border focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2 ${highlight ? 'border-[#a07848] focus:border-[#a07848]' : 'border-[#2e2a26] focus:border-[#5a5248]'}`}
+          className={`w-full bg-[var(--surface)] text-left text-sm rounded-lg px-3 py-2 border focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2 ${highlight ? 'border-[#a07848] focus:border-[#a07848]' : 'border-[var(--border)] focus:border-[var(--border-strong)]'}`}
         >
-          <span className={selected ? 'text-[#e8e2d9]' : 'text-[#4a4540]'}>
+          <span className={selected ? 'text-[var(--text-primary)]' : 'text-[var(--text-faint)]'}>
             {selected ? selected.label : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {selected && (
               <span
                 onClick={handleClear}
-                className="text-[#4a4540] hover:text-[#e8e2d9] text-xs px-1 cursor-pointer"
+                className="text-[var(--text-faint)] hover:text-[var(--text-primary)] text-xs px-1 cursor-pointer"
                 role="button"
               >
                 ✕
               </span>
             )}
-            <span className="text-[#4a4540] text-xs">{open ? '▲' : '▼'}</span>
+            <span className="text-[var(--text-faint)] text-xs">{open ? '▲' : '▼'}</span>
           </div>
         </button>
 
         {open && ReactDOM.createPortal(
-          <div style={dropdownStyle} className="bg-[#1e1b18] border border-[#2e2a26] rounded-lg shadow-xl overflow-hidden">
-            <div className="p-2 border-b border-[#2e2a26]">
+          <div style={dropdownStyle} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden">
+            <div className="p-2 border-b border-[var(--border)]">
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Zoeken..."
-                className="w-full bg-[#252220] text-[#e8e2d9] text-sm rounded px-2 py-1.5 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none placeholder-[#4a4540]"
+                className="w-full bg-[var(--bg)] text-[var(--text-primary)] text-sm rounded px-2 py-1.5 border border-[var(--border)] focus:border-[var(--border-strong)] focus:outline-none placeholder-[var(--text-faint)]"
               />
             </div>
             <div className="max-h-[272px] overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-[#4a4540]">Geen resultaten</div>
+                <div className="px-3 py-2 text-sm text-[var(--text-faint)]">Geen resultaten</div>
               ) : (
                 filtered.map((opt, idx) => (
                   <div key={opt.id}>
@@ -134,8 +134,8 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                       <button
                         type="button"
                         onClick={() => handleSelect(opt.id)}
-                        className={`flex-1 text-left px-3 py-2 text-sm hover:bg-[#252220] transition-colors ${
-                          opt.id === value ? 'text-[#e8e2d9] font-medium' : 'text-[#7a7268]'
+                        className={`flex-1 text-left px-3 py-2 text-sm hover:bg-[var(--bg)] transition-colors ${
+                          opt.id === value ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)]'
                         }`}
                       >
                         {opt.label}
@@ -147,7 +147,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                       )}
                     </div>
                     {groupSeparatorAfter && opt.id === groupSeparatorAfter && idx < filtered.length - 1 && (
-                      <div className="border-t border-[#2e2a26] mx-2 my-1" />
+                      <div className="border-t border-[var(--border)] mx-2 my-1" />
                     )}
                   </div>
                 ))
