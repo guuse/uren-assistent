@@ -242,14 +242,15 @@ export function DayTimeline({
         <div
           key={key}
           style={baseStyle}
-          className="border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
+          className="border-b border-[#e7e5e4] px-3 py-1 flex items-center justify-between"
         >
-          <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.625rem' }} className="truncate flex-1 mr-2">
             → {suggestionLabel(block.suggestion)}
           </div>
           <button
             onClick={() => onBookSuggestion(block.suggestion!)}
-            className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+            style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '0.5625rem', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}
+            className="transition-colors"
           >
             + Boek
           </button>
@@ -261,14 +262,14 @@ export function DayTimeline({
       <div
         key={key}
         style={baseStyle}
-        className="border-b border-[#2e2a26]"
+        className="border-b border-[#e7e5e4]"
       />
     )
   }
 
   const totalHours = entries.reduce((sum, e) => sum + e.hours, 0)
   const pct = Math.min(100, (totalHours / 8) * 100)
-  const progressColor = totalHours >= 8 ? 'bg-green-500' : totalHours > 0 ? 'bg-amber-500' : 'bg-[#374151]'
+  const progressColor = totalHours >= 8 ? 'bg-green-500' : totalHours > 0 ? 'bg-amber-500' : 'bg-[#c7d2fe]'
 
   const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -321,7 +322,7 @@ export function DayTimeline({
             </div>
           )}
         </div>
-        <div className="flex-1 h-[5px] bg-[#2e2a26] rounded-full overflow-hidden mx-4">
+        <div className="flex-1 h-[5px] bg-[#f0ede8] rounded-full overflow-hidden mx-4">
           <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${pct}%` }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -355,7 +356,8 @@ export function DayTimeline({
           {(hasConcepts || hasEntries) && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-[#252220] border border-[#2e2a26] text-[#7a7268] rounded px-[10px] py-[4px] text-[0.625rem] hover:border-[#3e3a36] transition-colors cursor-pointer flex-shrink-0"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '4px 10px', fontSize: '0.625rem', cursor: 'pointer', flexShrink: 0 }}
+              className="transition-colors"
             >
               ↑ Nieuwe CSV
             </button>
@@ -366,7 +368,7 @@ export function DayTimeline({
       {/* Classifying spinner */}
       {isClassifying && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-[#7a7268] text-[0.75rem]">Bezig met classificeren...</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Bezig met classificeren...</div>
         </div>
       )}
 
@@ -391,12 +393,12 @@ export function DayTimeline({
                     className="relative flex-shrink-0"
                     style={{ height: HOUR_HEIGHT_PX }}
                   >
-                    <span className="absolute top-0 text-[#475569] text-[0.5625rem]">
+                    <span className="absolute top-0 text-[0.5625rem]" style={{ color: 'var(--text-faint)' }}>
                       {hour.toString().padStart(2, '0')}
                     </span>
                     <span
-                      className="absolute text-[#2e3a4a] text-[0.5rem]"
-                      style={{ top: HOUR_HEIGHT_PX / 2 }}
+                      className="absolute text-[0.5rem]"
+                      style={{ top: HOUR_HEIGHT_PX / 2, color: 'var(--text-faint)' }}
                     >
                       :30
                     </span>
@@ -407,14 +409,13 @@ export function DayTimeline({
                 {Array.from({ length: 10 }, (_, i) => (
                   <div
                     key={i}
-                    className="border-t border-[#1e1b18]"
-                    style={{ height: HOUR_HEIGHT_PX }}
+                    style={{ height: HOUR_HEIGHT_PX, borderTop: '1px solid #f0ede8' }}
                   />
                 ))}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <p className="text-[#2e2a26] text-[0.75rem]">
+                  <p style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>
                     Klik op{' '}
-                    <strong className="text-[#3e3a36]">Verwerk dag</strong>
+                    <strong style={{ color: 'var(--text-secondary)' }}>Verwerk dag</strong>
                     {' '}om voorstellen te genereren
                   </p>
                 </div>
@@ -436,12 +437,12 @@ export function DayTimeline({
                   className="relative flex-shrink-0"
                   style={{ height: HOUR_HEIGHT_PX }}
                 >
-                  <span className="absolute top-0 text-[#475569] text-[0.5625rem]">
+                  <span className="absolute top-0 text-[0.5625rem]" style={{ color: 'var(--text-faint)' }}>
                     {hour.toString().padStart(2, '0')}
                   </span>
                   <span
-                    className="absolute text-[#2e3a4a] text-[0.5rem]"
-                    style={{ top: HOUR_HEIGHT_PX / 2 }}
+                    className="absolute text-[0.5rem]"
+                    style={{ top: HOUR_HEIGHT_PX / 2, color: 'var(--text-faint)' }}
                   >
                     :30
                   </span>
@@ -475,8 +476,8 @@ export function DayTimeline({
                       left: 0,
                       right: 0,
                       height,
-                      background: 'rgba(90,138,106,0.2)',
-                      border: '2px dashed #5a8a6a',
+                      background: 'var(--accent-light)',
+                      border: '2px solid var(--accent)',
                       borderRadius: 4,
                       pointerEvents: 'none',
                       zIndex: 20,
@@ -487,11 +488,11 @@ export function DayTimeline({
                       overflow: 'hidden',
                     }}
                   >
-                    <div style={{ color: '#5a8a6a', fontSize: '0.6875rem', fontWeight: 600 }}>
+                    <div style={{ color: 'var(--accent)', fontSize: '0.6875rem', fontWeight: 600 }}>
                       {minutesToTime(start)} – {minutesToTime(end)}
                     </div>
                     {height > 36 && (
-                      <div style={{ color: '#5a8a6a', fontSize: '0.5625rem', opacity: 0.8 }}>
+                      <div style={{ color: 'var(--accent)', fontSize: '0.5625rem', opacity: 0.8 }}>
                         {durationLabel} · loslaten om te boeken
                       </div>
                     )}
@@ -539,15 +540,16 @@ export function DayTimeline({
                       return (
                         <div
                           key={`gap-${i}`}
-                          style={{ position: 'absolute', top, left: 0, width, height }}
-                          className="border-b border-[#2e2a26] px-3 py-1 flex items-center justify-between"
+                          style={{ position: 'absolute', top, left: 0, width, height, borderBottom: '1px solid var(--border)' }}
+                          className="px-3 py-1 flex items-center justify-between"
                         >
-                          <div className="text-[#4a4540] text-[0.625rem] truncate flex-1 mr-2">
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.625rem' }} className="truncate flex-1 mr-2">
                             → {suggestionLabel(block.suggestion!)}
                           </div>
                           <button
                             onClick={() => onBookSuggestion(block.suggestion!)}
-                            className="bg-[#1e3a2a] hover:bg-[#254a36] text-[#5a8a6a] border border-[#3a6a4a] text-[0.5625rem] px-2 py-1 rounded transition-colors flex-shrink-0 cursor-pointer"
+                            style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '0.5625rem', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}
+                            className="transition-colors"
                           >
                             + Boek
                           </button>
@@ -576,8 +578,8 @@ export function DayTimeline({
 
       {/* Evidence panel — GitHub commits + Linear issues voor deze dag */}
       {(commits.length > 0 || linearIssues.length > 0) && (
-        <div className="flex-shrink-0 border-t border-[#2e2a26] px-4 py-3">
-          <div className="text-[#7a7268] text-[0.5625rem] font-semibold uppercase tracking-wide mb-2">
+        <div className="flex-shrink-0 border-t px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.5625rem', fontWeight: 600 }} className="uppercase tracking-wide mb-2">
             Context voor deze dag
           </div>
           <EvidencePanel commits={commits} linearIssues={linearIssues} />
