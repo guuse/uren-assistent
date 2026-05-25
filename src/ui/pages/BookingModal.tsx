@@ -79,7 +79,12 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#252220] rounded-xl w-[420px] flex flex-col overflow-hidden">
+      <div
+        className={`bg-[#252220] rounded-xl flex flex-col overflow-hidden ${
+          evidenceBlock ? 'w-[720px]' : 'w-[420px]'
+        }`}
+        style={{ maxHeight: '90vh' }}
+      >
 
         {/* Header */}
         <div className="px-5 pt-[18px] pb-[14px] border-b border-[#2e2a26] flex justify-between items-start">
@@ -106,99 +111,182 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+        {evidenceBlock ? (
+          /* Twee-kolommen layout */
+          <div className="flex flex-1 overflow-hidden min-h-0">
+            {/* Linkerkolom: formulier */}
+            <div className="flex-1 px-5 py-4 flex flex-col gap-4 overflow-y-auto border-r border-[#2e2a26]">
+              {/* Tijden */}
+              <div className="flex gap-3">
+                <TimeSelect label="Van" value={booking.startTime} onChange={(time) => {
+                  booking.setStartTime(time)
+                  if (booking.endTime <= time) {
+                    const [h, m] = time.split(':').map(Number)
+                    const next = h! * 60 + m! + 30
+                    booking.setEndTime(
+                      `${Math.floor(next / 60).toString().padStart(2, '0')}:${(next % 60).toString().padStart(2, '0')}`
+                    )
+                  }
+                }} />
+                <TimeSelect label="Tot" value={booking.endTime} onChange={booking.setEndTime} />
+              </div>
 
-          {evidenceBlock && (
-            <EvidencePanel
-              rawUrls={evidenceBlock.rawUrls}
-              rawTitles={evidenceBlock.rawTitles}
-              urls={evidenceBlock.urls}
-              titles={evidenceBlock.titles}
-              summary={evidenceBlock.summary}
-              startTime={evidenceBlock.startTime}
-              endTime={evidenceBlock.endTime}
-              meetings={evidenceBlock.overlappingMeetings}
-              commits={evidenceBlock.commits ?? []}
-              linearIssues={evidenceBlock.linearIssues ?? []}
-            />
-          )}
+              {/* Project / dienst / urensoort */}
+              <FieldSelector
+                label="Project"
+                value={booking.projectId}
+                options={booking.projects.map((p) => ({ id: p.id, label: `${p.organizationName} — ${p.name}` }))}
+                onChange={booking.setProjectId}
+                highlight={!booking.projectId}
+                renderSuffix={(opt) => (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void booking.toggleStar(opt.id) }}
+                    className="p-1 text-[#a07848] hover:text-[#c09858] transition-colors"
+                    aria-label={booking.starredIds.has(opt.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
+                  >
+                    {booking.starredIds.has(opt.id) ? '★' : '☆'}
+                  </button>
+                )}
+                {...(booking.lastStarredId !== undefined && { groupSeparatorAfter: booking.lastStarredId })}
+              />
+              {booking.projectId && (
+                <FieldSelector
+                  label="Dienst"
+                  value={booking.serviceId}
+                  options={booking.services.map((s) => ({ id: s.id, label: s.name }))}
+                  onChange={booking.setServiceId}
+                  highlight={!booking.serviceId}
+                />
+              )}
+              {booking.serviceId && (
+                <FieldSelector
+                  label="Urensoort"
+                  value={booking.hourTypeId}
+                  options={booking.hourTypes.map((ht) => ({ id: ht.id, label: ht.label }))}
+                  onChange={booking.setHourTypeId}
+                />
+              )}
 
-          {/* Tijden */}
-          <div className="flex gap-3">
-            <TimeSelect label="Van" value={booking.startTime} onChange={(time) => {
-              booking.setStartTime(time)
-              if (booking.endTime <= time) {
-                const [h, m] = time.split(':').map(Number)
-                const next = h! * 60 + m! + 30
-                booking.setEndTime(
-                  `${Math.floor(next / 60).toString().padStart(2, '0')}:${(next % 60).toString().padStart(2, '0')}`
-                )
-              }
-            }} />
-            <TimeSelect label="Tot" value={booking.endTime} onChange={booking.setEndTime} />
-          </div>
+              {/* Toelichting */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs uppercase tracking-widest text-[#7a7268]">Toelichting</label>
+                <input
+                  value={booking.note}
+                  onChange={(e) => booking.setNote(e.target.value)}
+                  placeholder="Optioneel"
+                  className="bg-[#171512] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none"
+                />
+              </div>
 
-          {/* Project / dienst / urensoort */}
-          <FieldSelector
-            label="Project"
-            value={booking.projectId}
-            options={booking.projects.map((p) => ({ id: p.id, label: `${p.organizationName} — ${p.name}` }))}
-            onChange={booking.setProjectId}
-            highlight={!booking.projectId}
-            renderSuffix={(opt) => (
+              {booking.status === 'error' && (
+                <div className="text-red-400 text-sm">{booking.errorMessage}</div>
+              )}
+
               <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); void booking.toggleStar(opt.id) }}
-                className="p-1 text-[#a07848] hover:text-[#c09858] transition-colors"
-                aria-label={booking.starredIds.has(opt.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
+                onClick={booking.book}
+                disabled={!booking.canBook || booking.status === 'loading'}
+                className="bg-[#e8e2d9] text-[#1c1917] py-2 rounded-lg text-sm font-medium hover:bg-[#d5cfc6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {booking.starredIds.has(opt.id) ? '★' : '☆'}
+                {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
               </button>
-            )}
-            {...(booking.lastStarredId !== undefined && { groupSeparatorAfter: booking.lastStarredId })}
-          />
-          {booking.projectId && (
-            <FieldSelector
-              label="Dienst"
-              value={booking.serviceId}
-              options={booking.services.map((s) => ({ id: s.id, label: s.name }))}
-              onChange={booking.setServiceId}
-              highlight={!booking.serviceId}
-            />
-          )}
-          {booking.serviceId && (
-            <FieldSelector
-              label="Urensoort"
-              value={booking.hourTypeId}
-              options={booking.hourTypes.map((ht) => ({ id: ht.id, label: ht.label }))}
-              onChange={booking.setHourTypeId}
-            />
-          )}
+            </div>
 
-          {/* Toelichting */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-widest text-[#7a7268]">Toelichting</label>
-            <input
-              value={booking.note}
-              onChange={(e) => booking.setNote(e.target.value)}
-              placeholder="Optioneel"
-              className="bg-[#171512] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none"
-            />
+            {/* Rechterkolom: bewijs */}
+            <div className="flex-1 px-5 py-4 overflow-y-auto min-h-0">
+              <EvidencePanel
+                rawUrls={evidenceBlock.rawUrls}
+                rawTitles={evidenceBlock.rawTitles}
+                urls={evidenceBlock.urls}
+                titles={evidenceBlock.titles}
+                summary={evidenceBlock.summary}
+                startTime={evidenceBlock.startTime}
+                endTime={evidenceBlock.endTime}
+                meetings={evidenceBlock.overlappingMeetings}
+                commits={evidenceBlock.commits ?? []}
+                linearIssues={evidenceBlock.linearIssues ?? []}
+              />
+            </div>
           </div>
+        ) : (
+          /* Enkele kolom (geen evidenceBlock) */
+          <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+            {/* Tijden */}
+            <div className="flex gap-3">
+              <TimeSelect label="Van" value={booking.startTime} onChange={(time) => {
+                booking.setStartTime(time)
+                if (booking.endTime <= time) {
+                  const [h, m] = time.split(':').map(Number)
+                  const next = h! * 60 + m! + 30
+                  booking.setEndTime(
+                    `${Math.floor(next / 60).toString().padStart(2, '0')}:${(next % 60).toString().padStart(2, '0')}`
+                  )
+                }
+              }} />
+              <TimeSelect label="Tot" value={booking.endTime} onChange={booking.setEndTime} />
+            </div>
 
-          {booking.status === 'error' && (
-            <div className="text-red-400 text-sm">{booking.errorMessage}</div>
-          )}
+            {/* Project / dienst / urensoort */}
+            <FieldSelector
+              label="Project"
+              value={booking.projectId}
+              options={booking.projects.map((p) => ({ id: p.id, label: `${p.organizationName} — ${p.name}` }))}
+              onChange={booking.setProjectId}
+              highlight={!booking.projectId}
+              renderSuffix={(opt) => (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); void booking.toggleStar(opt.id) }}
+                  className="p-1 text-[#a07848] hover:text-[#c09858] transition-colors"
+                  aria-label={booking.starredIds.has(opt.id) ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
+                >
+                  {booking.starredIds.has(opt.id) ? '★' : '☆'}
+                </button>
+              )}
+              {...(booking.lastStarredId !== undefined && { groupSeparatorAfter: booking.lastStarredId })}
+            />
+            {booking.projectId && (
+              <FieldSelector
+                label="Dienst"
+                value={booking.serviceId}
+                options={booking.services.map((s) => ({ id: s.id, label: s.name }))}
+                onChange={booking.setServiceId}
+                highlight={!booking.serviceId}
+              />
+            )}
+            {booking.serviceId && (
+              <FieldSelector
+                label="Urensoort"
+                value={booking.hourTypeId}
+                options={booking.hourTypes.map((ht) => ({ id: ht.id, label: ht.label }))}
+                onChange={booking.setHourTypeId}
+              />
+            )}
 
-          <button
-            onClick={booking.book}
-            disabled={!booking.canBook || booking.status === 'loading'}
-            className="bg-[#e8e2d9] text-[#1c1917] py-2 rounded-lg text-sm font-medium hover:bg-[#d5cfc6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
-          </button>
+            {/* Toelichting */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs uppercase tracking-widest text-[#7a7268]">Toelichting</label>
+              <input
+                value={booking.note}
+                onChange={(e) => booking.setNote(e.target.value)}
+                placeholder="Optioneel"
+                className="bg-[#171512] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none"
+              />
+            </div>
 
-        </div>
+            {booking.status === 'error' && (
+              <div className="text-red-400 text-sm">{booking.errorMessage}</div>
+            )}
+
+            <button
+              onClick={booking.book}
+              disabled={!booking.canBook || booking.status === 'loading'}
+              className="bg-[#e8e2d9] text-[#1c1917] py-2 rounded-lg text-sm font-medium hover:bg-[#d5cfc6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
