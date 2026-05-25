@@ -3,6 +3,7 @@ import { useWeek } from '../hooks/useWeek'
 import { useSuggestions } from '../hooks/useSuggestions'
 import { useImport } from '../hooks/useImport'
 import { useHistoryStore } from '../hooks/useHistoryStore'
+import { useClearDayBlocks } from '../hooks/useClearDayBlocks'
 import { WeekDayList } from '../components/WeekDayList'
 import type { DayProcessingState } from '../components/WeekDayList'
 import { DayTimeline } from '../components/DayTimeline'
@@ -92,6 +93,17 @@ export function WeekPage() {
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
   }
+
+  function llmBlockCountForDate(date: string): number {
+    if (date !== week.selectedDate) return 0
+    return historyStore.blocksForDate.filter(
+      b => b.origin === 'llm' || b.origin === 'llm-pattern'
+    ).length
+  }
+
+  const { clearDay, isClearing, clearError } = useClearDayBlocks((clearedDate) => {
+    void reloadForDate(clearedDate)
+  })
 
   function processingStateForDate(date: string): DayProcessingState {
     return dayProcessingStates.get(date) ?? 'idle'
@@ -387,6 +399,10 @@ export function WeekPage() {
         {...(canProcessWeek ? { onUploadCsv: () => csvInputRef.current?.click() } : {})}
         processingStateForDate={processingStateForDate}
         isProcessingWeek={isProcessingWeek}
+        llmBlockCountForDate={llmBlockCountForDate}
+        onClearDayBlocks={clearDay}
+        isClearingDay={isClearing}
+        clearError={clearError}
       />
 
       {week.isLoading ? (
