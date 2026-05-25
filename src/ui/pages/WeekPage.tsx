@@ -418,7 +418,7 @@ export function WeekPage() {
   const canProcessWeek = !!(githubToken && linearToken && copilotToken)
 
   return (
-    <div className="h-full flex bg-[#1c1917] text-[#e8e2d9]">
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
       <WeekDayList
         weekDays={week.weekDays}
         selectedDate={week.selectedDate}

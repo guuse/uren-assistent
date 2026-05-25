@@ -6,17 +6,17 @@ interface Props {
 
 export function SettingsPage({ onBack }: Props) {
   return (
-    <div className="h-full bg-[#1c1917] text-[#e8e2d9] flex flex-col">
-      <div className="px-6 py-4 flex items-center gap-4 border-b border-[#2e2a26]">
+    <div style={{ background: 'var(--bg-app)', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid var(--border)' }}>
         <button
           onClick={onBack}
-          className="text-[#7a7268] hover:text-[#e8e2d9] text-[12px] transition-colors cursor-pointer"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12 }}
         >
           ← Terug
         </button>
-        <div className="text-[#e8e2d9] font-bold text-[14px]">Instellingen</div>
+        <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Instellingen</h1>
       </div>
-      <div className="px-6 py-4 flex-1 overflow-y-auto">
+      <div style={{ padding: '16px 24px', flex: 1, overflowY: 'auto' }}>
         <AccountSettings />
       </div>
     </div>

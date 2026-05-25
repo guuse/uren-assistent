@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { keychainRepo, createSimplicateRepository, createSetSelectedModelUseCase } from '../../../application/container'
 import { useAuth } from '../../hooks/useAuth'
 import { useAppStore } from '../../../store/appStore'
@@ -193,303 +193,356 @@ export function AccountSettings() {
   const starredProjects = filteredProjects.filter((p) => starredIds.has(p.id))
   const unstarredProjects = filteredProjects.filter((p) => !starredIds.has(p.id))
 
+  const sectionCard: React.CSSProperties = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 14,
+  }
+  const sectionHeader: React.CSSProperties = {
+    padding: '8px 14px',
+    fontSize: 9,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    color: 'var(--text-muted)',
+    background: 'var(--bg)',
+    borderBottom: '1px solid var(--border)',
+  }
+  const row: React.CSSProperties = {
+    padding: '12px 14px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  }
+  const rowLast: React.CSSProperties = { ...row, borderBottom: 'none' }
+  const rowTitle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }
+  const rowSubtitle: React.CSSProperties = { fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }
+  const ghostBtn: React.CSSProperties = {
+    background: 'transparent',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: 6,
+    padding: '5px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  }
+  const primaryBtn: React.CSSProperties = {
+    background: 'var(--accent)',
+    color: 'white',
+    border: 'none',
+    borderRadius: 6,
+    padding: '5px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  }
+  const dangerBtn: React.CSSProperties = {
+    background: 'transparent',
+    color: 'var(--danger)',
+    border: '1px solid #fecaca',
+    borderRadius: 6,
+    padding: '5px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  }
+  const dotConnected: React.CSSProperties = { width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }
+  const dotDisconnected: React.CSSProperties = { width: 7, height: 7, borderRadius: '50%', background: 'var(--text-faint)', flexShrink: 0 }
+  const labelConnected: React.CSSProperties = { fontSize: 10, fontWeight: 500, color: 'var(--success)' }
+  const labelDisconnected: React.CSSProperties = { fontSize: 10, fontWeight: 500, color: 'var(--text-faint)' }
+
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--surface)',
+    color: 'var(--text-primary)',
+    fontSize: 12,
+    borderRadius: 6,
+    padding: '6px 10px',
+    border: '1px solid var(--border)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* AI Model */}
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">AI Model</div>
-        {modelsLoading && (
-          <p className="text-xs text-[#4a4540]">Modellen ophalen...</p>
-        )}
-        {modelsError && !modelsLoading && (
-          <p className="text-xs text-[#b85a3a]">{modelsError}</p>
-        )}
-        {!modelsLoading && !modelsError && models.length > 0 && (
-          <select
-            value={selectedCopilotModel}
-            onChange={(e) => { void handleModelChange(e.target.value) }}
-            className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-          >
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}{m.category !== 'default' ? ` — ${m.category}` : ''}
-              </option>
-            ))}
-          </select>
-        )}
-        {!modelsLoading && !modelsError && models.length === 0 && (
-          <p className="text-xs text-[#4a4540]">Geen modellen beschikbaar</p>
-        )}
-        {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
-          <p className="text-xs text-[#a07848] mt-1">
-            Huidig model ({selectedCopilotModel}) staat niet in de lijst — mogelijk verouderd.
-          </p>
-        )}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>AI Model</div>
+        <div style={rowLast}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={rowTitle}>Copilot model</div>
+            {modelsLoading && <div style={rowSubtitle}>Modellen ophalen...</div>}
+            {modelsError && !modelsLoading && <div style={{ ...rowSubtitle, color: 'var(--danger)' }}>{modelsError}</div>}
+            {!modelsLoading && !modelsError && models.length === 0 && <div style={rowSubtitle}>Geen modellen beschikbaar</div>}
+            {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
+              <div style={{ ...rowSubtitle, color: 'var(--warning, #a07848)' }}>
+                Huidig model ({selectedCopilotModel}) staat niet in de lijst — mogelijk verouderd.
+              </div>
+            )}
+          </div>
+          {!modelsLoading && !modelsError && models.length > 0 && (
+            <select
+              value={selectedCopilotModel}
+              onChange={(e) => { void handleModelChange(e.target.value) }}
+              style={{ ...inputStyle, width: 'auto', minWidth: 160 }}
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}{m.category !== 'default' ? ` — ${m.category}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Ingelogd als</div>
-        <div className="text-[#e8e2d9] text-sm">{user?.name} ({user?.email})</div>
+      {/* Account */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>Account</div>
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={rowTitle}>Ingelogd als</div>
+            <div style={rowSubtitle}>{user?.name} ({user?.email})</div>
+          </div>
+        </div>
+        <div style={rowLast}>
+          <div style={{ flex: 1 }} />
+          <button onClick={logout} style={dangerBtn}>Uitloggen</button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Simplicate API</div>
-
-        {hasExisting && apiKey === '' && (
-          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
-            Credentials zijn opgeslagen. Vul nieuwe in om te overschrijven.
+      {/* Simplicate API */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>Simplicate API</div>
+        <div style={row}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {hasExisting && apiKey === '' && (
+              <div style={rowSubtitle}>Credentials zijn opgeslagen. Vul nieuwe in om te overschrijven.</div>
+            )}
+            <input
+              type="text"
+              value={apiKey}
+              onChange={(e) => { setApiKey(e.target.value); setTestState('idle') }}
+              placeholder={hasExisting ? 'API Key (laat leeg om huidig te bewaren)' : 'API Key'}
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              value={apiSecret}
+              onChange={(e) => { setApiSecret(e.target.value); setTestState('idle') }}
+              placeholder={hasExisting ? 'API Secret (laat leeg om huidig te bewaren)' : 'API Secret'}
+              style={inputStyle}
+            />
           </div>
-        )}
-
-        <input
-          type="text"
-          value={apiKey}
-          onChange={(e) => { setApiKey(e.target.value); setTestState('idle') }}
-          placeholder={hasExisting ? 'API Key (laat leeg om huidig te bewaren)' : 'API Key'}
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-        <input
-          type="password"
-          value={apiSecret}
-          onChange={(e) => { setApiSecret(e.target.value); setTestState('idle') }}
-          placeholder={hasExisting ? 'API Secret (laat leeg om huidig te bewaren)' : 'API Secret'}
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={testConnection}
-            disabled={!canTest || testState === 'testing'}
-            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
-          >
-            {testState === 'testing' ? 'Testen...' : 'Test verbinding'}
-          </button>
-          <button
-            onClick={save}
-            disabled={!canSave}
-            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-          >
-            {saved ? '✓ Opgeslagen' : 'Opslaan'}
-          </button>
         </div>
-
-        {testState === 'ok' && (
-          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">
-            ✓ Verbinding geslaagd
+        <div style={rowLast}>
+          <div style={{ flex: 1 }}>
+            {testState === 'ok' && <span style={labelConnected}>✓ Verbinding geslaagd</span>}
+            {testState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{testError ?? 'Verbinding mislukt'}</span>}
+            {!hasExisting && testState === 'idle' && (
+              <><span style={dotDisconnected} />&nbsp;<span style={labelDisconnected}>Niet geconfigureerd</span></>
+            )}
+            {hasExisting && testState === 'idle' && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></span>
+            )}
           </div>
-        )}
-        {testState === 'fail' && (
-          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">
-            {testError ?? 'Verbinding mislukt'}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={testConnection} disabled={!canTest || testState === 'testing'} style={{ ...ghostBtn, opacity: (!canTest || testState === 'testing') ? 0.4 : 1 }}>
+              {testState === 'testing' ? 'Testen...' : 'Test'}
+            </button>
+            <button onClick={save} disabled={!canSave} style={{ ...primaryBtn, opacity: !canSave ? 0.4 : 1 }}>
+              {saved ? '✓ Opgeslagen' : 'Opslaan'}
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">GitHub Copilot token</div>
-        <div className="text-xs text-[#4a4540]">
-          Verkrijg via: <code className="bg-[#1e1b18] px-1 rounded">gh auth token</code> in een terminal.
-        </div>
-
-        {hasCopilotToken && copilotTokenInput === '' && (
-          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
-            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+      {/* GitHub Copilot token */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>GitHub Copilot token</div>
+        <div style={row}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={rowSubtitle}>
+              Verkrijg via: <code>gh auth token</code> in een terminal.
+            </div>
+            {hasCopilotToken && copilotTokenInput === '' && (
+              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
+            )}
+            <input
+              type="password"
+              value={copilotTokenInput}
+              onChange={e => setCopilotTokenInput(e.target.value)}
+              placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
+              style={inputStyle}
+            />
           </div>
-        )}
-
-        <input
-          type="password"
-          value={copilotTokenInput}
-          onChange={e => setCopilotTokenInput(e.target.value)}
-          placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void testCopilot()}
-            disabled={!hasCopilotToken && copilotTokenInput.length === 0}
-            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
-          >
-            {copilotTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
-          </button>
-          <button
-            onClick={saveCopilotToken}
-            disabled={copilotTokenInput.length === 0}
-            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-          >
-            {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
-          </button>
         </div>
-        {copilotTestState === 'ok' && (
-          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {copilotTestLabel}</div>
-        )}
-        {copilotTestState === 'fail' && (
-          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{copilotTestLabel}</div>
-        )}
+        <div style={rowLast}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+            {copilotTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {copilotTestLabel}</span></>}
+            {copilotTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{copilotTestLabel}</span>}
+            {copilotTestState === 'idle' && hasCopilotToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
+            {copilotTestState === 'idle' && !hasCopilotToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => void testCopilot()} disabled={!hasCopilotToken && copilotTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasCopilotToken && copilotTokenInput.length === 0) ? 0.4 : 1 }}>
+              {copilotTestState === 'testing' ? 'Testen...' : 'Test'}
+            </button>
+            <button onClick={saveCopilotToken} disabled={copilotTokenInput.length === 0} style={{ ...primaryBtn, opacity: copilotTokenInput.length === 0 ? 0.4 : 1 }}>
+              {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* GitHub token sectie */}
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">GitHub token</div>
-        <div className="text-xs text-[#4a4540]">
-          Verkrijg via: <code className="bg-[#1e1b18] px-1 rounded">gh auth token</code> — heeft <code className="bg-[#1e1b18] px-1 rounded">repo</code> scope nodig.
-        </div>
-
-        {hasGithubToken && githubTokenInput === '' && (
-          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
-            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+      {/* GitHub token */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>GitHub token</div>
+        <div style={row}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={rowSubtitle}>
+              Verkrijg via: <code>gh auth token</code> — heeft <code>repo</code> scope nodig.
+            </div>
+            {hasGithubToken && githubTokenInput === '' && (
+              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
+            )}
+            <input
+              type="password"
+              value={githubTokenInput}
+              onChange={e => setGithubTokenInput(e.target.value)}
+              placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
+              style={inputStyle}
+            />
+            <input
+              type="text"
+              value={githubUsernameInput}
+              onChange={e => setGithubUsernameInput(e.target.value)}
+              placeholder="GitHub gebruikersnaam (bijv. guuse)"
+              style={inputStyle}
+            />
           </div>
-        )}
-
-        <input
-          type="password"
-          value={githubTokenInput}
-          onChange={e => setGithubTokenInput(e.target.value)}
-          placeholder={hasGithubToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'gho_...'}
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-        <input
-          type="text"
-          value={githubUsernameInput}
-          onChange={e => setGithubUsernameInput(e.target.value)}
-          placeholder="GitHub gebruikersnaam (bijv. guuse)"
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void testGithub()}
-            disabled={!hasGithubToken && githubTokenInput.length === 0}
-            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
-          >
-            {githubTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
-          </button>
-          <button
-            onClick={saveGithubToken}
-            disabled={githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0}
-            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-          >
-            {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
-          </button>
         </div>
-        {githubTestState === 'ok' && (
-          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {githubTestLabel}</div>
-        )}
-        {githubTestState === 'fail' && (
-          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{githubTestLabel}</div>
-        )}
+        <div style={rowLast}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+            {githubTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {githubTestLabel}</span></>}
+            {githubTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{githubTestLabel}</span>}
+            {githubTestState === 'idle' && hasGithubToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
+            {githubTestState === 'idle' && !hasGithubToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => void testGithub()} disabled={!hasGithubToken && githubTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasGithubToken && githubTokenInput.length === 0) ? 0.4 : 1 }}>
+              {githubTestState === 'testing' ? 'Testen...' : 'Test'}
+            </button>
+            <button onClick={saveGithubToken} disabled={githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0} style={{ ...primaryBtn, opacity: (githubTokenInput.length === 0 && githubUsernameInput.trim().length === 0) ? 0.4 : 1 }}>
+              {githubSaved ? '✓ Opgeslagen' : 'Opslaan'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Linear API key sectie */}
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Linear API key</div>
-        <div className="text-xs text-[#4a4540]">
-          Verkrijg via: linear.me → Settings → API → Personal API keys
-        </div>
-
-        {hasLinearToken && linearTokenInput === '' && (
-          <div className="text-xs text-[#4a4540] bg-[#1e1b18] rounded-lg px-3 py-2 border border-[#2e2a26]">
-            Token is opgeslagen. Vul een nieuw token in om te overschrijven.
+      {/* Linear API key */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>Linear API key</div>
+        <div style={row}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={rowSubtitle}>
+              Verkrijg via: linear.me → Settings → API → Personal API keys
+            </div>
+            {hasLinearToken && linearTokenInput === '' && (
+              <div style={rowSubtitle}>Token is opgeslagen. Vul een nieuw token in om te overschrijven.</div>
+            )}
+            <input
+              type="password"
+              value={linearTokenInput}
+              onChange={e => setLinearTokenInput(e.target.value)}
+              placeholder={hasLinearToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'lin_api_...'}
+              style={inputStyle}
+            />
           </div>
-        )}
-
-        <input
-          type="password"
-          value={linearTokenInput}
-          onChange={e => setLinearTokenInput(e.target.value)}
-          placeholder={hasLinearToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'lin_api_...'}
-          className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void testLinear()}
-            disabled={!hasLinearToken && linearTokenInput.length === 0}
-            className="flex-1 bg-[#252220] disabled:opacity-40 text-[#e8e2d9] text-sm font-medium py-2 rounded-lg border border-[#2e2a26] hover:border-[#3e3a36] transition-colors"
-          >
-            {linearTestState === 'testing' ? 'Testen...' : 'Test verbinding'}
-          </button>
-          <button
-            onClick={saveLinearToken}
-            disabled={linearTokenInput.length === 0}
-            className="flex-1 bg-[#e8e2d9] disabled:opacity-40 text-[#1c1917] text-sm font-medium py-2 rounded-lg hover:bg-[#d5cfc6] transition-colors"
-          >
-            {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
-          </button>
         </div>
-        {linearTestState === 'ok' && (
-          <div className="bg-[#1a2b1e] text-[#5a8a6a] text-sm rounded-lg px-3 py-2">✓ {linearTestLabel}</div>
-        )}
-        {linearTestState === 'fail' && (
-          <div className="bg-[#221e1b] text-[#b85a3a] text-sm rounded-lg px-3 py-2">{linearTestLabel}</div>
-        )}
+        <div style={rowLast}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+            {linearTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {linearTestLabel}</span></>}
+            {linearTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{linearTestLabel}</span>}
+            {linearTestState === 'idle' && hasLinearToken && <><span style={dotConnected} /><span style={labelConnected}>Geconfigureerd</span></>}
+            {linearTestState === 'idle' && !hasLinearToken && <><span style={dotDisconnected} /><span style={labelDisconnected}>Niet geconfigureerd</span></>}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => void testLinear()} disabled={!hasLinearToken && linearTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasLinearToken && linearTokenInput.length === 0) ? 0.4 : 1 }}>
+              {linearTestState === 'testing' ? 'Testen...' : 'Test'}
+            </button>
+            <button onClick={saveLinearToken} disabled={linearTokenInput.length === 0} style={{ ...primaryBtn, opacity: linearTokenInput.length === 0 ? 0.4 : 1 }}>
+              {linearSaved ? '✓ Opgeslagen' : 'Opslaan'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-widest text-[#7a7268]">Favoriete projecten</div>
-        <div className="text-xs text-[#4a4540]">
-          Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.
+      {/* Favoriete projecten */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>Favoriete projecten</div>
+        <div style={row}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={rowSubtitle}>Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.</div>
+          </div>
         </div>
         {projects.length === 0 ? (
-          <div className="text-xs text-[#4a4540]">Geen projecten geladen.</div>
+          <div style={rowLast}><span style={rowSubtitle}>Geen projecten geladen.</span></div>
         ) : (
-          <>
+          <div style={{ padding: '8px 14px' }}>
             <input
               type="text"
               value={projectSearch}
               onChange={(e) => setProjectSearch(e.target.value)}
               placeholder="Zoek op projectnaam…"
               aria-label="Zoek op projectnaam"
-              className="bg-[#1e1b18] border border-[#2e2a26] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 placeholder:text-[#4a4540] focus:outline-none focus:border-[#a07848] transition-colors"
+              style={{ ...inputStyle, marginBottom: 8 }}
             />
-            <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 256, overflowY: 'auto' }}>
               {starredProjects.length === 0 && unstarredProjects.length === 0 && (
-                <div className="text-xs text-[#4a4540] px-1">Geen projecten gevonden.</div>
+                <span style={rowSubtitle}>Geen projecten gevonden.</span>
               )}
               {starredProjects.length > 0 && (
                 <>
                   {unstarredProjects.length > 0 && (
-                    <div className="text-xs uppercase tracking-widest text-[#a07848] px-1 pt-1 pb-0.5">Favorieten</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warning, #a07848)', padding: '2px 2px' }}>Favorieten</div>
                   )}
                   {starredProjects.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => void toggleStar(p.id)}
-                      className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9] hover:border-[#b08858] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a07848]"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', padding: '6px 10px', borderRadius: 6, fontSize: 12, background: 'var(--surface)', border: '1px solid var(--accent, #a07848)', color: 'var(--text-primary)', cursor: 'pointer' }}
                     >
-                      <span className="text-[#a07848]">★</span>
+                      <span style={{ color: 'var(--accent, #a07848)' }}>★</span>
                       <span>{p.organizationName} — {p.name}</span>
                     </button>
                   ))}
                 </>
               )}
               {starredProjects.length > 0 && unstarredProjects.length > 0 && (
-                <div className="text-xs uppercase tracking-widest text-[#7a7268] px-1 pt-2 pb-0.5">Overige projecten</div>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', padding: '4px 2px 2px' }}>Overige projecten</div>
               )}
               {unstarredProjects.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => void toggleStar(p.id)}
-                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a07848]"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', padding: '6px 10px', borderRadius: 6, fontSize: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                 >
-                  <span className="text-[#a07848]">☆</span>
+                  <span style={{ color: 'var(--accent, #a07848)' }}>☆</span>
                   <span>{p.organizationName} — {p.name}</span>
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
-
-      <button
-        onClick={logout}
-        className="text-[#b85a3a] hover:text-[#c86a4a] text-sm self-start transition-colors"
-      >
-        Uitloggen
-      </button>
     </div>
   )
 }
