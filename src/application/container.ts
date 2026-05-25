@@ -18,6 +18,7 @@ import { GroupAndClassifyDayUseCase } from '../domain/usecases/GroupAndClassifyD
 import { GetWeekEntriesUseCase } from '../domain/usecases/GetWeekEntriesUseCase'
 import { GenerateSuggestionsUseCase } from '../domain/usecases/GenerateSuggestionsUseCase'
 import { BookHoursUseCase } from '../domain/usecases/BookHoursUseCase'
+import { DeleteHourEntryUseCase } from '../domain/usecases/DeleteHourEntryUseCase'
 import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 import type { ICopilotRepository } from '../domain/repositories/ICopilotRepository'
 import type { Project, Service } from '../domain/repositories/ICopilotRepository'
@@ -91,6 +92,7 @@ export function createUseCases(simplicateRepo: ISimplicateRepository) {
     getWeekEntries: new GetWeekEntriesUseCase(simplicateRepo),
     generateSuggestions: new GenerateSuggestionsUseCase(),
     bookHours: new BookHoursUseCase(simplicateRepo),
+    deleteHourEntry: new DeleteHourEntryUseCase(simplicateRepo),
   }
 }
 
