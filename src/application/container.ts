@@ -25,6 +25,7 @@ import { GitHubRepository } from '../infrastructure/github/GitHubRepository'
 import { LinearRepository } from '../infrastructure/linear/LinearRepository'
 import { ProcessWeekUseCase } from '../domain/usecases/ProcessWeekUseCase'
 import { ProcessDayUseCase } from '../domain/usecases/ProcessDayUseCase'
+import { ClearDayBlocksUseCase } from '../domain/usecases/ClearDayBlocksUseCase'
 import { GetActiveProjectsForDateUseCase } from '../domain/usecases/GetActiveProjectsForDateUseCase'
 import type { IGitHubRepository } from '../domain/repositories/IGitHubRepository'
 import type { ILinearRepository } from '../domain/repositories/ILinearRepository'
@@ -154,4 +155,8 @@ export function createProcessDayUseCase(
     simplicateRepo,
     simplicateEmployeeId,
   )
+}
+
+export function createClearDayBlocksUseCase(): ClearDayBlocksUseCase {
+  return new ClearDayBlocksUseCase(historyStore)
 }
