@@ -1,14 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ClearWeekBlocksUseCase } from './ClearWeekBlocksUseCase'
 import type { IHistoryStore } from '../repositories/IHistoryStore'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 
 const makeMockStore = (blocksByDate: Record<string, { urlPattern: string; origin: string }[]>): IHistoryStore => ({
+  load: vi.fn(async () => {}),
   getBlocksForDate: vi.fn(async (date: string) =>
     (blocksByDate[date] ?? []) as ClassifiedBlock[]
   ),
+  setBlocksForDate: vi.fn(async () => {}),
   removeBlock: vi.fn(async () => {}),
-  saveBlocksForDate: vi.fn(async () => {}),
   hasDataForDate: vi.fn(async () => false),
   hasHistoryForWeek: vi.fn(async () => false),
 })
