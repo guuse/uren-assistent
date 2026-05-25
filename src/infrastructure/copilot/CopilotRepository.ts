@@ -117,6 +117,7 @@ export class CopilotRepository implements ICopilotRepository {
     availableProjects: Project[],
     availableServices: Service[],
     calendarEvents: CalendarEvent[] = [],
+    model = 'gpt-4o',
   ): Promise<ClassifiedBlock[]> {
     const projectList = availableProjects
       .map(p => `- id: "${p.id}", name: "${p.name}"`)
@@ -172,7 +173,7 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
       args: {
         token: this.copilotToken,
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
         }),
@@ -229,6 +230,7 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
     context?: DayContext,
     historicalEntries?: HourEntry[],
+    model = 'gpt-4o',
   ): Promise<DayClassificationResult[]> {
     const pad = (n: number) => String(n).padStart(2, '0')
     const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -356,7 +358,7 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
       args: {
         token: this.copilotToken,
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
         }),
@@ -406,7 +408,30 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
   }
 
   async listModels(): Promise<CopilotModel[]> {
-    // TODO: implement via Copilot API — stub returns empty until Task 5+
-    return []
+    const responseText = await invoke<string>('copilot_get', {
+      args: {
+        token: this.copilotToken,
+        endpoint: 'https://api.githubcopilot.com/models',
+      },
+    })
+
+    interface ModelsApiResponse {
+      data: Array<{
+        id: string
+        name?: string
+        policy?: {
+          state?: string
+          terms?: string
+          premium_model_multiplier?: number
+        }
+      }>
+    }
+
+    const data = JSON.parse(responseText) as ModelsApiResponse
+    return (data.data ?? []).map((m) => ({
+      id: m.id,
+      name: m.name ?? m.id,
+      tokenMultiplier: m.policy?.premium_model_multiplier ?? 1.0,
+    }))
   }
 }

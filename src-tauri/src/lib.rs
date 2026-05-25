@@ -1,7 +1,7 @@
 mod commands;
 
 use commands::auth::start_google_oauth;
-use commands::copilot::copilot_request;
+use commands::copilot::{copilot_get, copilot_request};
 use commands::keychain::{delete_secret, get_secret, set_secret};
 use commands::simplicate::simplicate_request;
 use commands::storage::ensure_app_data_dir;
@@ -19,6 +19,7 @@ pub fn run() {
             start_google_oauth,
             simplicate_request,
             copilot_request,
+            copilot_get,
             ensure_app_data_dir,
         ])
         .run(tauri::generate_context!())
