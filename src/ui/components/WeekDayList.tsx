@@ -196,39 +196,41 @@ export function WeekDayList({
       )}
 
       <div className="relative">
-        <div className="flex justify-between items-center px-1 mt-2">
+        <div className="flex items-center px-1 mt-2 gap-1">
           <button
             onClick={() => { setIsPickerOpen(false); onPrevWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
             ‹
           </button>
-          {!isCurrentWeek && onGoToCurrentWeek ? (
-            <button
-              onClick={onGoToCurrentWeek}
-              className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Nu
-            </button>
-          ) : (
-            <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
-          )}
+          <div className="flex-1 flex justify-center">
+            {!isCurrentWeek && onGoToCurrentWeek ? (
+              <button
+                onClick={onGoToCurrentWeek}
+                className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Nu
+              </button>
+            ) : (
+              <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+            )}
+          </div>
           <button
             onClick={() => { setIsPickerOpen(false); onNextWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
             ›
           </button>
+          {onGoToDate && (
+            <button
+              onClick={() => setIsPickerOpen((v) => !v)}
+              className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer"
+              title="Kies een dag"
+            >
+              <CalendarDays size={11} />
+            </button>
+          )}
         </div>
-        {onGoToDate && (
-          <button
-            onClick={() => setIsPickerOpen((v) => !v)}
-            className="absolute -top-0.5 right-1 text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer"
-            title="Kies een dag"
-          >
-            <CalendarDays size={12} />
-          </button>
-        )}
         {isPickerOpen && onGoToDate && weekDays.length > 0 && (
           <MonthPickerPopup
             initialMonth={weekDays[0]!}
