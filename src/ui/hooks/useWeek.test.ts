@@ -45,24 +45,24 @@ describe('useWeek', () => {
     const expectedMonday = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
     expect(result.current.selectedDate).toBe(expectedMonday)
   })
-})
 
-describe('goToDate', () => {
-  it('zet selectedDate op de opgegeven datum', () => {
-    const { result } = renderHook(() => useWeek())
-    act(() => { result.current.goToDate('2024-05-08') })
-    expect(result.current.selectedDate).toBe('2024-05-08')
-  })
+  describe('goToDate', () => {
+    it('zet selectedDate op de opgegeven datum', () => {
+      const { result } = renderHook(() => useWeek())
+      act(() => { result.current.goToDate('2024-05-08') })
+      expect(result.current.selectedDate).toBe('2024-05-08')
+    })
 
-  it('zet selectedWeekStart op de maandag van de opgegeven datum', () => {
-    const { result } = renderHook(() => useWeek())
-    act(() => { result.current.goToDate('2024-05-08') }) // woensdag
-    expect(result.current.selectedWeekStart).toBe('2024-05-06') // maandag
-  })
+    it('zet selectedWeekStart op de maandag van de opgegeven datum', () => {
+      const { result } = renderHook(() => useWeek())
+      act(() => { result.current.goToDate('2024-05-08') }) // woensdag
+      expect(result.current.selectedWeekStart).toBe('2024-05-06') // maandag
+    })
 
-  it('zet selectedWeekStart correct voor een maandag', () => {
-    const { result } = renderHook(() => useWeek())
-    act(() => { result.current.goToDate('2024-05-06') }) // maandag
-    expect(result.current.selectedWeekStart).toBe('2024-05-06')
+    it('zet selectedWeekStart correct voor een maandag', () => {
+      const { result } = renderHook(() => useWeek())
+      act(() => { result.current.goToDate('2024-05-06') }) // maandag
+      expect(result.current.selectedWeekStart).toBe('2024-05-06')
+    })
   })
 })
