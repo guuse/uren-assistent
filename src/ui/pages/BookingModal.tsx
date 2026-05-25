@@ -6,22 +6,6 @@ import EvidencePanel from '../components/EvidencePanel'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 
-const CONFIDENCE_BG: Record<1 | 2 | 3 | 4 | 5, string> = {
-  5: '#1a3a1a',
-  4: '#203018',
-  3: '#332e10',
-  2: '#332210',
-  1: '#3a1010',
-}
-
-const CONFIDENCE_TEXT: Record<1 | 2 | 3 | 4 | 5, string> = {
-  5: '#5a8a6a',
-  4: '#6a8a50',
-  3: '#8a7a40',
-  2: '#a06030',
-  1: '#8a3a3a',
-}
-
 function BookingFormFields({ booking }: { booking: ReturnType<typeof useBooking> }) {
   return (
     <>
@@ -78,13 +62,13 @@ function BookingFormFields({ booking }: { booking: ReturnType<typeof useBooking>
       )}
 
       {/* Toelichting */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs uppercase tracking-widest text-[#7a7268]">Toelichting</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 3 }}>Toelichting</label>
         <input
           value={booking.note}
           onChange={(e) => booking.setNote(e.target.value)}
           placeholder="Optioneel"
-          className="bg-[#171512] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none"
+          style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }}
         />
       </div>
 
@@ -95,7 +79,7 @@ function BookingFormFields({ booking }: { booking: ReturnType<typeof useBooking>
       <button
         onClick={booking.book}
         disabled={!booking.canBook || booking.status === 'loading'}
-        className="bg-[#e8e2d9] text-[#1c1917] py-2 rounded-lg text-sm font-medium hover:bg-[#d5cfc6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: booking.canBook ? 'pointer' : 'not-allowed', opacity: booking.canBook ? 1 : 0.4 }}
       >
         {booking.status === 'loading' ? 'Bezig...' : 'Boeken →'}
       </button>
@@ -129,8 +113,6 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
         label: evidenceBlock.origin === 'cache'
           ? 'Cache'
           : `${evidenceBlock.confidence}/5`,
-        bg: evidenceBlock.origin === 'cache' ? '#1a3a1a' : CONFIDENCE_BG[evidenceBlock.confidence],
-        color: evidenceBlock.origin === 'cache' ? '#5a8a6a' : CONFIDENCE_TEXT[evidenceBlock.confidence],
       }
     : null
 
@@ -143,13 +125,13 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   if (booking.status === 'success') {
     onBooked?.()
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-[#252220] rounded-xl p-6 w-80 text-center flex flex-col gap-4">
-          <div className="text-[#5a8a6a] text-4xl">✓</div>
-          <div className="text-[#e8e2d9] font-semibold">Uren geboekt!</div>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', padding: 24, width: 320, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ color: 'var(--success)', fontSize: 36 }}>✓</div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Uren geboekt!</div>
           <button
             onClick={onClose}
-            className="bg-[#e8e2d9] text-[#1c1917] py-2 rounded-lg text-sm font-medium hover:bg-[#d5cfc6] transition-colors"
+            style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
           >
             Sluiten
           </button>
@@ -159,28 +141,34 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
       <div
-        className={`bg-[#252220] rounded-xl flex flex-col overflow-hidden ${
-          evidenceBlock ? 'w-[720px]' : 'w-[420px]'
-        }`}
-        style={{ maxHeight: '90vh' }}
+        style={{
+          background: 'var(--surface)',
+          borderRadius: 12,
+          border: '1px solid var(--border)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          width: evidenceBlock ? 660 : 420,
+          maxHeight: 520,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
       >
 
         {/* Header */}
-        <div className="px-5 pt-[18px] pb-[14px] border-b border-[#2e2a26] flex justify-between items-start">
+        <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="text-[#e8e2d9] font-bold text-base mb-[3px]">{modalTitle}</div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0, marginBottom: 3 }}>{modalTitle}</h3>
             {evidenceBlock && (
-              <div className="text-[#7a7268] text-[0.6875rem] flex items-center gap-2 flex-wrap">
-                {dateLabel && <><span>{dateLabel}</span><span className="text-[#4a4540]">·</span></>}
-                <span className="text-[#e8e2d9]">{evidenceBlock.startTime}–{evidenceBlock.endTime}</span>
-                <span className="text-[#4a4540]">·</span>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {dateLabel && <><span>{dateLabel}</span><span>·</span></>}
+                <span style={{ color: 'var(--text-primary)' }}>{evidenceBlock.startTime}–{evidenceBlock.endTime}</span>
+                <span>·</span>
                 <span>{evidenceBlock.hours}u</span>
                 {confidenceBadge && (
                   <span
-                    className="text-[0.5625rem] px-[7px] py-[2px] rounded-full font-semibold"
-                    style={{ background: confidenceBadge.bg, color: confidenceBadge.color }}
+                    style={{ background: 'var(--success-light)', color: 'var(--success)', borderRadius: 100, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}
                   >
                     {confidenceBadge.label}
                   </span>
@@ -188,20 +176,20 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
               </div>
             )}
           </div>
-          <button onClick={onClose} className="text-[#4a4540] hover:text-[#e8e2d9] text-lg mt-[2px]">✕</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', marginTop: 2, padding: 0 }}>✕</button>
         </div>
 
         {/* Body */}
         {evidenceBlock ? (
           /* Twee-kolommen layout */
-          <div className="flex flex-1 overflow-hidden min-h-0" style={{ minHeight: '420px' }}>
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
             {/* Linkerkolom: formulier */}
-            <div className="flex-1 px-5 py-4 flex flex-col gap-4 overflow-y-auto border-r border-[#2e2a26]">
+            <div style={{ width: 264, padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', borderRight: '1px solid var(--border)' }}>
               <BookingFormFields booking={booking} />
             </div>
 
             {/* Rechterkolom: bewijs */}
-            <div className="flex-1 px-5 py-4 overflow-y-auto min-h-0">
+            <div style={{ flex: 1, background: 'var(--bg)', overflowY: 'auto', minHeight: 0 }}>
               <EvidencePanel
                 rawUrls={evidenceBlock.rawUrls}
                 rawTitles={evidenceBlock.rawTitles}
@@ -218,10 +206,27 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
           </div>
         ) : (
           /* Enkele kolom (geen evidenceBlock) */
-          <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto" style={{ minHeight: '360px' }}>
+          <div style={{ padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', minHeight: 360 }}>
             <BookingFormFields booking={booking} />
           </div>
         )}
+
+        {/* Footer */}
+        <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={booking.book}
+            disabled={!booking.canBook || booking.status === 'loading'}
+            style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: booking.canBook ? 'pointer' : 'not-allowed', opacity: booking.canBook ? 1 : 0.4 }}
+          >
+            {booking.status === 'loading' ? 'Bezig...' : 'Opslaan'}
+          </button>
+        </div>
       </div>
     </div>
   )
