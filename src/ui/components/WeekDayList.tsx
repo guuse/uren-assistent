@@ -89,66 +89,67 @@ export function WeekDayList({
           const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
-            <div
-              key={date}
-              onClick={() => onSelectDate(date)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDate(date) } }}
-              role="button"
-              tabIndex={0}
-              className={`text-left px-2 py-2 rounded-lg transition-colors cursor-pointer ${
-                isSelected
-                  ? 'bg-[#252220] border border-[#6366f1]'
-                  : 'hover:bg-[#252220] border border-transparent'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <span
-                  className={`text-[0.625rem] font-semibold ${
-                    isSelected ? 'text-[#a5b4fc]' : isFull ? 'text-[#94a3b8]' : 'text-[#64748b]'
-                  }`}
-                >
-                  {label} {dayOfMonth}
-                </span>
-                <div className="flex items-center gap-1">
-                  {processingState === 'classifying' && (
-                    <span className="text-[#a07848] text-[0.5625rem]">···</span>
-                  )}
-                  {processingState === 'done' && (
-                    <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
-                  )}
-                  {processingState === 'error' && (
-                    <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
-                  )}
-                  {processingState === 'idle' && isFull && (
-                    <span className="text-green-500 text-[0.5625rem]">✓</span>
-                  )}
-                  {processingState === 'idle' && !isFull && hours > 0 && (
-                    <span className="text-amber-500 text-[0.5625rem]">●</span>
-                  )}
-                  {canClear && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setConfirmDate(date)
-                      }}
-                      title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
-                      className="p-0.5 rounded transition-colors text-red-500/60 hover:text-red-400 cursor-pointer"
-                    >
-                      <Trash2 size={9} />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <ProgressBar hours={hours} />
-              <div className="text-[0.5rem] text-[#475569] mt-1">
-                {hours > 0 ? `${hours} / ${TARGET_HOURS}u` : `0 / ${TARGET_HOURS}u`}
-              </div>
-              {conceptCount > 0 && !isFull && processingState === 'idle' && (
-                <div className="mt-1">
-                  <span className="bg-[#2a2010] text-[#a07848] text-[0.5rem] px-[5px] py-[1px] rounded">
-                    {conceptCount} concept{conceptCount !== 1 ? 'en' : ''}
+            <div key={date} className="flex items-center gap-0.5">
+              <div
+                onClick={() => onSelectDate(date)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDate(date) } }}
+                role="button"
+                tabIndex={0}
+                className={`flex-1 text-left px-2 py-2 rounded-lg transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#252220] border border-[#6366f1]'
+                    : 'hover:bg-[#252220] border border-transparent'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span
+                    className={`text-[0.625rem] font-semibold ${
+                      isSelected ? 'text-[#a5b4fc]' : isFull ? 'text-[#94a3b8]' : 'text-[#64748b]'
+                    }`}
+                  >
+                    {label} {dayOfMonth}
                   </span>
+                  <div className="flex items-center gap-1">
+                    {processingState === 'classifying' && (
+                      <span className="text-[#a07848] text-[0.5625rem]">···</span>
+                    )}
+                    {processingState === 'done' && (
+                      <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
+                    )}
+                    {processingState === 'error' && (
+                      <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
+                    )}
+                    {processingState === 'idle' && isFull && (
+                      <span className="text-green-500 text-[0.5625rem]">✓</span>
+                    )}
+                    {processingState === 'idle' && !isFull && hours > 0 && (
+                      <span className="text-amber-500 text-[0.5625rem]">●</span>
+                    )}
+                  </div>
                 </div>
+                <ProgressBar hours={hours} />
+                <div className="text-[0.5rem] text-[#475569] mt-1">
+                  {hours > 0 ? `${hours} / ${TARGET_HOURS}u` : `0 / ${TARGET_HOURS}u`}
+                </div>
+                {conceptCount > 0 && !isFull && processingState === 'idle' && (
+                  <div className="mt-1">
+                    <span className="bg-[#2a2010] text-[#a07848] text-[0.5rem] px-[5px] py-[1px] rounded">
+                      {conceptCount} concept{conceptCount !== 1 ? 'en' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {canClear && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setConfirmDate(date)
+                  }}
+                  title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
+                  className="flex-shrink-0 p-1 rounded transition-colors text-red-500/60 hover:text-red-400 cursor-pointer"
+                >
+                  <Trash2 size={10} />
+                </button>
               )}
             </div>
           )
@@ -209,8 +210,11 @@ export function WeekDayList({
           description={`${llmBlockCountForDate?.(confirmDate) ?? 0} ongebookte LLM-concept${(llmBlockCountForDate?.(confirmDate) ?? 0) !== 1 ? 'en' : ''} van deze dag worden verwijderd. Geschreven uren blijven staan.`}
           isLoading={isClearingDay}
           onConfirm={async () => {
-            await onClearDayBlocks(confirmDate)
-            setConfirmDate(null)
+            try {
+              await onClearDayBlocks(confirmDate)
+            } finally {
+              setConfirmDate(null)
+            }
           }}
           onCancel={() => setConfirmDate(null)}
         />
@@ -222,8 +226,11 @@ export function WeekDayList({
           description={`${totalLlmBlockCount} ongebookte LLM-concept${totalLlmBlockCount !== 1 ? 'en' : ''} van deze week worden verwijderd. Geschreven uren blijven staan.`}
           isLoading={isClearingWeek}
           onConfirm={async () => {
-            await onClearWeekBlocks()
-            setConfirmWeek(false)
+            try {
+              await onClearWeekBlocks()
+            } finally {
+              setConfirmWeek(false)
+            }
           }}
           onCancel={() => setConfirmWeek(false)}
         />
