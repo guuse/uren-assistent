@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import React from 'react'
+import ReactDOM from 'react-dom'
 
 interface Option {
   id: string
@@ -23,7 +24,9 @@ export function SearchableSelect({ label, options, value, onChange, required, di
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
 
   const selected = options.find((o) => o.id === value)
   const filtered = query.length > 0
@@ -49,6 +52,16 @@ export function SearchableSelect({ label, options, value, onChange, required, di
 
   function handleOpen() {
     if (disabled) return
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
     setOpen(true)
     setQuery('')
     setTimeout(() => inputRef.current?.focus(), 0)
@@ -76,6 +89,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
 
       <div className="relative">
         <button
+          ref={triggerRef}
           type="button"
           onClick={handleOpen}
           disabled={disabled}
@@ -98,8 +112,8 @@ export function SearchableSelect({ label, options, value, onChange, required, di
           </div>
         </button>
 
-        {open && (
-          <div className="absolute z-50 top-full mt-1 w-full bg-[#1e1b18] border border-[#2e2a26] rounded-lg shadow-xl overflow-hidden">
+        {open && ReactDOM.createPortal(
+          <div style={dropdownStyle} className="bg-[#1e1b18] border border-[#2e2a26] rounded-lg shadow-xl overflow-hidden">
             <div className="p-2 border-b border-[#2e2a26]">
               <input
                 ref={inputRef}
@@ -139,7 +153,8 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                 ))
               )}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
