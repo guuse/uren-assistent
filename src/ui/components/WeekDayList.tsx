@@ -203,27 +203,25 @@ export function WeekDayList({
           >
             ‹
           </button>
-          <div className="flex items-center gap-1">
-            {!isCurrentWeek && onGoToCurrentWeek ? (
-              <button
-                onClick={onGoToCurrentWeek}
-                className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-              >
-                Nu
-              </button>
-            ) : (
-              <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
-            )}
-            {onGoToDate && (
-              <button
-                onClick={() => setIsPickerOpen((v) => !v)}
-                className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer leading-none"
-                title="Kies een dag"
-              >
-                <CalendarDays size={10} />
-              </button>
-            )}
-          </div>
+          {!isCurrentWeek && onGoToCurrentWeek ? (
+            <button
+              onClick={onGoToCurrentWeek}
+              className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+            >
+              Nu
+            </button>
+          ) : (
+            <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+          )}
+          {onGoToDate && (
+            <button
+              onClick={() => setIsPickerOpen((v) => !v)}
+              className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer leading-none"
+              title="Kies een dag"
+            >
+              <CalendarDays size={10} />
+            </button>
+          )}
           <button
             onClick={() => { setIsPickerOpen(false); onNextWeek() }}
             className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
