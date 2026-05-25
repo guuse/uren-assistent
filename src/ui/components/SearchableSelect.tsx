@@ -124,7 +124,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                 className="w-full bg-[#252220] text-[#e8e2d9] text-sm rounded px-2 py-1.5 border border-[#3e3a36] focus:border-[#5a5248] focus:outline-none placeholder-[#4a4540]"
               />
             </div>
-            <div className="max-h-52 overflow-y-auto">
+            <div className="max-h-[272px] overflow-y-auto">
               {filtered.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-[#4a4540]">Geen resultaten</div>
               ) : (
