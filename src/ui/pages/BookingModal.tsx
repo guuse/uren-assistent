@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useBooking } from '../hooks/useBooking'
 import { FieldSelector } from '../components/FieldSelector'
 import { TimeSelect } from '../components/TimeSelect'
@@ -93,10 +93,32 @@ interface Props {
   evidenceBlock?: ClassifiedBlock
   onClose: () => void
   onBooked?: () => void
+  onDeleted?: () => void
 }
 
-export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenceBlock, onClose, onBooked }: Props) {
+export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenceBlock, onClose, onBooked, onDeleted }: Props) {
   const booking = useBooking(initialEntry)
+
+  type DeleteState = 'idle' | 'confirm'
+  const [deleteState, setDeleteState] = useState<DeleteState>('idle')
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleDeleteClick() {
+    if (deleteState === 'idle') {
+      setDeleteState('confirm')
+      deleteTimeoutRef.current = setTimeout(() => setDeleteState('idle'), 3000)
+    } else {
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current)
+      void booking.deleteEntry(initialEntry.id!)
+    }
+  }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -123,12 +145,18 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
     : null
 
   if (booking.status === 'success') {
-    onBooked?.()
+    if (initialEntry.id) {
+      onDeleted?.()
+    } else {
+      onBooked?.()
+    }
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
         <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', padding: 24, width: 320, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ color: 'var(--success)', fontSize: 36 }}>✓</div>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Uren geboekt!</div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+            {initialEntry.id ? 'Boeking verwijderd!' : 'Uren geboekt!'}
+          </div>
           <button
             onClick={onClose}
             style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
@@ -213,12 +241,38 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
 
         {/* Footer */}
         <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button
-            onClick={onClose}
-            style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-          >
-            Annuleren
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={onClose}
+              style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Annuleren
+            </button>
+            {initialEntry.id && (
+              <button
+                onClick={handleDeleteClick}
+                disabled={booking.status === 'loading'}
+                style={{
+                  background: deleteState === 'confirm' ? '#b45309' : 'transparent',
+                  color: deleteState === 'confirm' ? 'white' : '#ef4444',
+                  border: `1px solid ${deleteState === 'confirm' ? '#b45309' : '#ef4444'}`,
+                  borderRadius: 6,
+                  padding: '5px 10px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: booking.status === 'loading' ? 'not-allowed' : 'pointer',
+                  opacity: booking.status === 'loading' ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {booking.status === 'loading' && deleteState === 'confirm'
+                  ? 'Bezig...'
+                  : deleteState === 'confirm'
+                    ? 'Zeker weten?'
+                    : 'Verwijderen'}
+              </button>
+            )}
+          </div>
           <button
             onClick={booking.book}
             disabled={!booking.canBook || booking.status === 'loading'}
