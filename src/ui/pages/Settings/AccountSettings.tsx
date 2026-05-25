@@ -52,6 +52,8 @@ export function AccountSettings() {
   const [linearTestState, setLinearTestState] = useState<TestState>('idle')
   const [linearTestLabel, setLinearTestLabel] = useState<string | null>(null)
 
+  const [projectSearch, setProjectSearch] = useState('')
+
   useEffect(() => {
     async function loadExisting() {
       const key = await keychainRepo.get('simplicate-api-key')
@@ -180,6 +182,24 @@ export function AccountSettings() {
     }
   }
 
+  const label = (p: { organizationName: string; name: string }) =>
+    `${p.organizationName} — ${p.name}`
+
+  const filteredProjects = [...projects]
+    .filter((p) =>
+      projectSearch.trim() === '' ||
+      p.name.toLowerCase().includes(projectSearch.trim().toLowerCase())
+    )
+    .sort((a, b) => label(a).localeCompare(label(b)))
+
+  const starredProjects = filteredProjects.filter((p) => starredIds.has(p.id))
+  const unstarredProjects = filteredProjects.filter((p) => !starredIds.has(p.id))
+  // TODO(Task 2): projectSearch, starredProjects, unstarredProjects used in JSX
+  void projectSearch
+  void setProjectSearch
+  void starredProjects
+  void unstarredProjects
+
   return (
     <div className="flex flex-col gap-6">
       {/* AI Model */}
@@ -199,7 +219,7 @@ export function AccountSettings() {
           >
             {models.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} — {m.tokenMultiplier}×
+                {m.name}{m.category !== 'default' ? ` — ${m.category}` : ''}
               </option>
             ))}
           </select>
