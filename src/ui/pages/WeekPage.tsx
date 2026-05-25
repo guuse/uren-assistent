@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useWeek } from '../hooks/useWeek'
 import { useSuggestions } from '../hooks/useSuggestions'
 import { useImport } from '../hooks/useImport'
 import { useHistoryStore } from '../hooks/useHistoryStore'
 import { useClearDayBlocks } from '../hooks/useClearDayBlocks'
+import { useClearWeekBlocks } from '../hooks/useClearWeekBlocks'
 import { WeekDayList } from '../components/WeekDayList'
 import type { DayProcessingState } from '../components/WeekDayList'
 import { DayTimeline } from '../components/DayTimeline'
@@ -77,6 +78,8 @@ export function WeekPage() {
   const [processWeekError, setProcessWeekError] = useState<string | null>(null)
   const abortRef = useRef(false)
 
+  const [weekLlmCounts, setWeekLlmCounts] = useState<Map<string, number>>(new Map())
+
   // Dag-verwerking state
   const [isProcessingDay, setIsProcessingDay] = useState(false)
 
@@ -94,16 +97,46 @@ export function WeekPage() {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
   }
 
+  async function loadWeekLlmCounts() {
+    const counts = new Map<string, number>()
+    for (const date of week.weekDays) {
+      const blocks = await domainHistoryStore.getBlocksForDate(date)
+      const llmCount = blocks.filter(
+        (b) => b.origin === 'llm' || b.origin === 'llm-pattern'
+      ).length
+      counts.set(date, llmCount)
+    }
+    setWeekLlmCounts(counts)
+  }
+
+  useEffect(() => {
+    void loadWeekLlmCounts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [week.selectedWeekStart])
+
   function llmBlockCountForDate(date: string): number {
-    if (date !== week.selectedDate) return 0
-    return historyStore.blocksForDate.filter(
-      b => b.origin === 'llm' || b.origin === 'llm-pattern'
-    ).length
+    if (date === week.selectedDate) {
+      return historyStore.blocksForDate.filter(
+        (b) => b.origin === 'llm' || b.origin === 'llm-pattern'
+      ).length
+    }
+    return weekLlmCounts.get(date) ?? 0
   }
 
   const { clearDay, isClearing, clearError } = useClearDayBlocks((clearedDate) => {
     void reloadForDate(clearedDate)
   })
+
+  const { clearWeek, isClearingWeek, clearWeekError: clearWeekErr } = useClearWeekBlocks(
+    async (clearedDays) => {
+      for (const date of clearedDays) {
+        await reloadForDate(date)
+      }
+      void loadWeekLlmCounts()
+    }
+  )
+
+  const totalLlmBlockCount = week.weekDays.reduce((sum, date) => sum + llmBlockCountForDate(date), 0)
 
   function processingStateForDate(date: string): DayProcessingState {
     return dayProcessingStates.get(date) ?? 'idle'
@@ -403,6 +436,10 @@ export function WeekPage() {
         onClearDayBlocks={clearDay}
         isClearingDay={isClearing}
         clearError={clearError}
+        onClearWeekBlocks={() => clearWeek(week.weekDays)}
+        isClearingWeek={isClearingWeek}
+        clearWeekError={clearWeekErr}
+        totalLlmBlockCount={totalLlmBlockCount}
       />
 
       {week.isLoading ? (
