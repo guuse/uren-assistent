@@ -58,6 +58,20 @@ export class SimplicateRepository implements ISimplicateRepository {
     })
   }
 
+  private async put<T>(path: string, body: unknown): Promise<T> {
+    const url = `${this.baseUrl}${path}`
+    const json = await invoke<string>('simplicate_request', {
+      args: {
+        method: 'PUT',
+        url,
+        api_key: this.apiKey,
+        api_secret: this.apiSecret,
+        body: JSON.stringify(body),
+      },
+    })
+    return JSON.parse(json) as T
+  }
+
   private async getPaginated<T>(path: string): Promise<T[]> {
     const limit = 100
     const results: T[] = []
@@ -153,5 +167,20 @@ export class SimplicateRepository implements ISimplicateRepository {
 
   async deleteHourEntry(id: string): Promise<void> {
     await this.delete(`/hours/hours/${encodeURIComponent(id)}`)
+  }
+
+  async updateHourEntry(entry: HourEntry): Promise<void> {
+    await this.put(`/hours/hours/${encodeURIComponent(entry.id!)}`, {
+      employee_id: entry.employeeId,
+      project_id: entry.projectId,
+      projectservice_id: entry.projectServiceId,
+      type_id: entry.hourTypeId,
+      hours: entry.hours,
+      start_date: `${entry.startDate} ${entry.startTime}:00`,
+      end_date: `${entry.startDate} ${entry.endTime}:00`,
+      note: entry.note,
+      is_time_defined: true,
+      is_recurring: false,
+    })
   }
 }
