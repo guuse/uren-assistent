@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { keychainRepo, createSimplicateRepository, createUseCases } from '../../application/container'
 import type { HourEntry } from '../../domain/entities/HourEntry'
@@ -49,20 +49,29 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
     !hourTypeId && 'urensoort',
   ].filter(Boolean)
 
-  async function loadServices(pid: string) {
+  async function loadServices(pid: string, forDate: string) {
     const apiKey = await keychainRepo.get('simplicate-api-key')
     const apiSecret = await keychainRepo.get('simplicate-api-secret')
     if (!apiKey || !apiSecret) return
     const repo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
-    const svc = await repo.getServices(pid)
+    const svc = await repo.getServices(pid, forDate)
     setServices(svc)
   }
+
+  // Load services whenever projectId or date changes
+  useEffect(() => {
+    if (projectId) {
+      loadServices(projectId, date)
+    } else {
+      setServices([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, date])
 
   async function handleProjectChange(pid: string) {
     setProjectId(pid)
     setServiceId('')
     setHourTypeId('')
-    await loadServices(pid)
   }
 
   function handleServiceChange(id: string) {
@@ -109,6 +118,25 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
     }
   }
 
+  async function deleteEntry(id: string) {
+    setStatus('loading')
+    setErrorMessage(null)
+    try {
+      const apiKey = await keychainRepo.get('simplicate-api-key')
+      const apiSecret = await keychainRepo.get('simplicate-api-secret')
+      if (!apiKey || !apiSecret) throw new Error('Simplicate API key niet ingesteld')
+
+      const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
+      const { deleteHourEntry } = createUseCases(simplicateRepo)
+
+      await deleteHourEntry.execute(id)
+      setStatus('success')
+    } catch (err) {
+      setStatus('error')
+      setErrorMessage(err instanceof Error ? err.message : 'Verwijderen mislukt')
+    }
+  }
+
   return {
     projectId, setProjectId: handleProjectChange,
     serviceId, setServiceId: handleServiceChange,
@@ -128,5 +156,6 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
     lastStarredId,
     hourTypes,
     book,
+    deleteEntry,
   }
 }
