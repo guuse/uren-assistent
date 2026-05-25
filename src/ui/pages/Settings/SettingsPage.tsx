@@ -16,7 +16,7 @@ export function SettingsPage({ onBack }: Props) {
         </button>
         <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Instellingen</h1>
       </div>
-      <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
+      <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
         <div style={{ maxWidth: 520, margin: '0 auto' }}>
           <AccountSettings />
         </div>

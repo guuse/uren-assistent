@@ -197,12 +197,12 @@ export function AccountSettings() {
   const sectionCard: React.CSSProperties = {
     background: 'var(--surface)',
     border: '1px solid var(--border)',
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: 8,
   }
   const sectionHeader: React.CSSProperties = {
-    padding: '8px 14px',
+    padding: '5px 12px',
     fontSize: 9,
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -212,7 +212,7 @@ export function AccountSettings() {
     borderBottom: '1px solid var(--border)',
   }
   const row: React.CSSProperties = {
-    padding: '12px 14px',
+    padding: '8px 12px',
     borderBottom: '1px solid var(--border)',
     display: 'flex',
     alignItems: 'center',
@@ -288,7 +288,7 @@ export function AccountSettings() {
   }) {
     return (
       <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-        <div style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{
               width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
@@ -315,7 +315,7 @@ export function AccountSettings() {
           </button>
         </div>
         {expanded && (
-          <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {children}
           </div>
         )}
@@ -510,15 +510,13 @@ export function AccountSettings() {
       {/* Kaart 3: Favoriete projecten */}
       <div style={sectionCard}>
         <div style={sectionHeader}>Favoriete projecten</div>
-        <div style={{ ...row, borderBottom: 'none' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={rowSubtitle}>Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.</div>
-          </div>
+        <div style={{ padding: '5px 12px 6px', borderBottom: '1px solid var(--border)' }}>
+          <div style={rowSubtitle}>Gemarkeerde projecten verschijnen bovenaan de dropdown bij het boeken.</div>
         </div>
         {projects.length === 0 ? (
-          <div style={{ padding: '0 14px 12px' }}><span style={rowSubtitle}>Geen projecten geladen.</span></div>
+          <div style={{ padding: '0 12px 10px' }}><span style={rowSubtitle}>Geen projecten geladen.</span></div>
         ) : (
-          <div style={{ padding: '0 14px 12px' }}>
+          <div style={{ padding: '0 12px 10px' }}>
             <input
               type="text"
               value={projectSearch}
