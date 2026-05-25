@@ -89,19 +89,20 @@ export function WeekDayList({
           const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
-            <div key={date} className="flex items-center gap-0.5">
-              <div
+            <div
+              key={date}
+              className={`relative px-2 py-2 rounded-lg transition-colors ${
+                isSelected
+                  ? 'bg-[#252220] border border-[#6366f1]'
+                  : 'hover:bg-[#252220] border border-transparent'
+              }`}
+            >
+              {/* Klikbaar gebied voor dagelectie */}
+              <button
                 onClick={() => onSelectDate(date)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDate(date) } }}
-                role="button"
-                tabIndex={0}
-                className={`flex-1 text-left px-2 py-2 rounded-lg transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#252220] border border-[#6366f1]'
-                    : 'hover:bg-[#252220] border border-transparent'
-                }`}
+                className="w-full text-left cursor-pointer"
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center pr-4">
                   <span
                     className={`text-[0.625rem] font-semibold ${
                       isSelected ? 'text-[#a5b4fc]' : isFull ? 'text-[#94a3b8]' : 'text-[#64748b]'
@@ -138,17 +139,15 @@ export function WeekDayList({
                     </span>
                   </div>
                 )}
-              </div>
+              </button>
+              {/* Prullenbak absoluut rechts bovenin de kaart */}
               {canClear && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setConfirmDate(date)
-                  }}
+                  onClick={() => setConfirmDate(date)}
                   title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
-                  className="flex-shrink-0 p-1 rounded transition-colors text-red-500/60 hover:text-red-400 cursor-pointer"
+                  className="absolute top-1.5 right-1.5 p-0.5 rounded transition-colors text-red-500/50 hover:text-red-400 cursor-pointer"
                 >
-                  <Trash2 size={10} />
+                  <Trash2 size={9} />
                 </button>
               )}
             </div>
