@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import { ConfirmDialog } from './ConfirmDialog'
+
 const DAY_LABELS: Record<string, string> = {
   '1': 'MA', '2': 'DI', '3': 'WO', '4': 'DO', '5': 'VR',
 }
@@ -17,6 +21,9 @@ interface Props {
   onUploadCsv?: () => void
   processingStateForDate?: (date: string) => DayProcessingState
   isProcessingWeek?: boolean
+  llmBlockCountForDate?: (date: string) => number
+  onClearDayBlocks?: (date: string) => Promise<void>
+  isClearingDay?: boolean
 }
 
 const TARGET_HOURS = 8
@@ -44,7 +51,12 @@ export function WeekDayList({
   onUploadCsv,
   processingStateForDate,
   isProcessingWeek = false,
+  llmBlockCountForDate,
+  onClearDayBlocks,
+  isClearingDay = false,
 }: Props) {
+  const [confirmDate, setConfirmDate] = useState<string | null>(null)
+
   return (
     <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
       <div className="text-[#4a4540] text-[0.5625rem] uppercase tracking-widest mb-2 px-1">{weekLabel}</div>
@@ -62,6 +74,8 @@ export function WeekDayList({
           const isFull = hours >= TARGET_HOURS
           const conceptCount = conceptCountForDate?.(date) ?? 0
           const processingState = processingStateForDate?.(date) ?? 'idle'
+          const llmCount = llmBlockCountForDate?.(date) ?? 0
+          const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
             <button
@@ -108,6 +122,25 @@ export function WeekDayList({
                   </span>
                 </div>
               )}
+              {onClearDayBlocks && (
+                <div className="mt-1 flex justify-end">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (canClear) setConfirmDate(date)
+                    }}
+                    disabled={!canClear}
+                    title={canClear ? `${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen` : 'Geen LLM-blokken'}
+                    className={`p-0.5 rounded transition-colors ${
+                      canClear
+                        ? 'text-red-500 hover:text-red-400 cursor-pointer'
+                        : 'text-[#2e2a26] cursor-default'
+                    }`}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              )}
             </button>
           )
         })}
@@ -150,6 +183,19 @@ export function WeekDayList({
           ›
         </button>
       </div>
+
+      {confirmDate && onClearDayBlocks && (
+        <ConfirmDialog
+          title="LLM-blokken verwijderen?"
+          description={`${llmBlockCountForDate?.(confirmDate) ?? 0} ongebookte LLM-concept${(llmBlockCountForDate?.(confirmDate) ?? 0) !== 1 ? 'en' : ''} van deze dag worden verwijderd. Geschreven uren blijven staan.`}
+          isLoading={isClearingDay}
+          onConfirm={async () => {
+            await onClearDayBlocks(confirmDate)
+            setConfirmDate(null)
+          }}
+          onCancel={() => setConfirmDate(null)}
+        />
+      )}
     </div>
   )
 }

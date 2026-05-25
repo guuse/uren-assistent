@@ -22,13 +22,14 @@ export function ConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
     >
       <div
         className="absolute inset-0 bg-black/60"
         onClick={onCancel}
       />
       <div className="relative z-10 bg-[#1e1b18] border border-[#2e2a26] rounded-xl p-6 w-80 shadow-xl">
-        <h2 className="text-[#e8e2d9] font-semibold text-sm mb-2">{title}</h2>
+        <h2 id="confirm-dialog-title" className="text-[#e8e2d9] font-semibold text-sm mb-2">{title}</h2>
         <p className="text-[#7a7268] text-xs mb-5">{description}</p>
         <div className="flex gap-2 justify-end">
           <button
