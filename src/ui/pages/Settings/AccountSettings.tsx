@@ -170,26 +170,32 @@ export function AccountSettings() {
   }
 
   async function handleModelChange(modelId: string) {
+    const previous = selectedCopilotModel
     setSelectedCopilotModel(modelId)
-    await createSetSelectedModelUseCase().execute(modelId)
+    try {
+      await createSetSelectedModelUseCase().execute(modelId)
+    } catch (err) {
+      setSelectedCopilotModel(previous)
+      console.error('[Settings] Model opslaan mislukt:', err)
+    }
   }
 
   return (
     <div className="flex flex-col gap-6">
       {/* AI Model */}
-      <section className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-2">AI Model</h2>
+      <div className="flex flex-col gap-3">
+        <div className="text-xs uppercase tracking-widest text-[#7a7268]">AI Model</div>
         {modelsLoading && (
-          <p className="text-xs text-gray-400">Modellen ophalen...</p>
+          <p className="text-xs text-[#4a4540]">Modellen ophalen...</p>
         )}
         {modelsError && !modelsLoading && (
-          <p className="text-xs text-red-500">{modelsError}</p>
+          <p className="text-xs text-[#b85a3a]">{modelsError}</p>
         )}
         {!modelsLoading && !modelsError && models.length > 0 && (
           <select
             value={selectedCopilotModel}
             onChange={(e) => { void handleModelChange(e.target.value) }}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            className="bg-[#1e1b18] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 border border-[#2e2a26] focus:border-[#5a5248] focus:outline-none"
           >
             {models.map((m) => (
               <option key={m.id} value={m.id}>
@@ -199,14 +205,14 @@ export function AccountSettings() {
           </select>
         )}
         {!modelsLoading && !modelsError && models.length === 0 && (
-          <p className="text-xs text-gray-400">Geen modellen beschikbaar</p>
+          <p className="text-xs text-[#4a4540]">Geen modellen beschikbaar</p>
         )}
         {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
-          <p className="text-xs text-yellow-600 mt-1">
+          <p className="text-xs text-[#a07848] mt-1">
             Huidig model ({selectedCopilotModel}) staat niet in de lijst — mogelijk verouderd.
           </p>
         )}
-      </section>
+      </div>
 
       <div className="flex flex-col gap-1">
         <div className="text-xs uppercase tracking-widest text-[#7a7268]">Ingelogd als</div>

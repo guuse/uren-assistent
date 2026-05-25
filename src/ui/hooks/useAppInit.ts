@@ -37,11 +37,14 @@ export function useAppInit(): void {
           testLinearToken(lt).then(r => setTokenStatus('linear', r.ok ? 'ok' : 'fail')).catch(() => setTokenStatus('linear', 'fail'))
         }
 
-        const selectedModel = await createGetSelectedModelUseCase().execute()
-        if (selectedModel) {
-          setSelectedCopilotModel(selectedModel)
+        try {
+          const selectedModel = await createGetSelectedModelUseCase().execute()
+          if (selectedModel) {
+            setSelectedCopilotModel(selectedModel)
+          }
+        } catch {
+          console.warn('[AppInit] Could not load saved model, using default')
         }
-        // If null, the store default 'gpt-4o' already set in initialState is used
       } catch (err) {
         console.error('[AppInit] Failed to load tokens from keychain:', err)
       }

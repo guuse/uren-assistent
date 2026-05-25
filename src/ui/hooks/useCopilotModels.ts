@@ -16,6 +16,7 @@ export function useCopilotModels(): { models: CopilotModel[]; loading: boolean; 
       return
     }
 
+    let cancelled = false
     setLoading(true)
     setError(null)
 
@@ -25,13 +26,21 @@ export function useCopilotModels(): { models: CopilotModel[]; loading: boolean; 
     useCase
       .execute()
       .then((result) => {
-        setModels(result)
-        setLoading(false)
+        if (!cancelled) {
+          setModels(result)
+          setLoading(false)
+        }
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Ophalen modellen mislukt')
-        setLoading(false)
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Ophalen modellen mislukt')
+          setLoading(false)
+        }
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [copilotToken])
 
   return { models, loading, error }
