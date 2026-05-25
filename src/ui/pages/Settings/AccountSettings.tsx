@@ -199,7 +199,6 @@ export function AccountSettings() {
     border: '1px solid var(--border)',
     borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 8,
   }
   const sectionHeader: React.CSSProperties = {
     padding: '5px 12px',
@@ -324,7 +323,7 @@ export function AccountSettings() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
 
       {/* Kaart 1: Profiel & toegang */}
       <div style={sectionCard}>
@@ -364,13 +363,12 @@ export function AccountSettings() {
         </div>
       </div>
 
-      {/* Kaart 2: API-sleutels */}
+      {/* Kaart 2: Simplicate API */}
       <div style={sectionCard}>
-        <div style={sectionHeader}>API-sleutels</div>
+        <div style={sectionHeader}>Simplicate API</div>
 
-        {/* Simplicate — altijd inline */}
         <div style={row}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
             {hasExisting && apiKey === '' && (
               <div style={rowSubtitle}>Credentials zijn opgeslagen. Vul nieuwe in om te overschrijven.</div>
             )}
@@ -390,7 +388,7 @@ export function AccountSettings() {
             />
           </div>
         </div>
-        <div style={row}>
+        <div style={rowLast}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1 }}>
             {testState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ Verbinding geslaagd</span></>}
             {testState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{testError ?? 'Verbinding mislukt'}</span>}
@@ -406,8 +404,12 @@ export function AccountSettings() {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* GitHub Copilot token */}
+      {/* Kaart 3: Tokens */}
+      <div style={sectionCard}>
+        <div style={sectionHeader}>Tokens</div>
+
         <TokenRow
           id="copilot"
           label="GitHub Copilot token"
@@ -437,7 +439,6 @@ export function AccountSettings() {
           </div>
         </TokenRow>
 
-        {/* GitHub token */}
         <TokenRow
           id="github"
           label="GitHub token"
@@ -474,7 +475,6 @@ export function AccountSettings() {
           </div>
         </TokenRow>
 
-        {/* Linear API key */}
         <TokenRow
           id="linear"
           label="Linear API key"
