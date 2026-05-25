@@ -6,6 +6,7 @@ import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 import type { DayContext } from '../../domain/entities/DayContext'
 import type { HourEntry } from '../../domain/entities/HourEntry'
+import type { CopilotModel } from '../../domain/entities/CopilotModel'
 
 interface CopilotChoice {
   message: { content: string }
@@ -404,7 +405,7 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
     return [...parsed.blocks, ...patternResults]
   }
 
-  async listModels(): Promise<import('../../domain/entities/CopilotModel').CopilotModel[]> {
+  async listModels(): Promise<CopilotModel[]> {
     // TODO: implement via Copilot API — stub returns empty until Task 5+
     return []
   }
