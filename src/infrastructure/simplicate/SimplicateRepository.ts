@@ -45,6 +45,19 @@ export class SimplicateRepository implements ISimplicateRepository {
     return JSON.parse(json) as T
   }
 
+  private async delete(path: string): Promise<void> {
+    const url = `${this.baseUrl}${path}`
+    await invoke<string>('simplicate_request', {
+      args: {
+        method: 'DELETE',
+        url,
+        api_key: this.apiKey,
+        api_secret: this.apiSecret,
+        body: null,
+      },
+    })
+  }
+
   private async getPaginated<T>(path: string): Promise<T[]> {
     const limit = 100
     const results: T[] = []
@@ -72,13 +85,13 @@ export class SimplicateRepository implements ISimplicateRepository {
       }))
   }
 
-  async getServices(projectId: string): Promise<SimplicateService[]> {
-    const today = new Date().toISOString().split('T')[0]!
+  async getServices(projectId: string, date: string): Promise<SimplicateService[]> {
     const res = await this.get<SimplicateApiListResponse<SimplicateServiceResponse>>(
       `/projects/service?q%5Bproject_id%5D=${encodeURIComponent(projectId)}`,
     )
     return res.data
-      .filter((s) => !s.write_hours_end_date || s.write_hours_end_date >= today)
+      .filter((s) => (!s.write_hours_start_date || s.write_hours_start_date <= date)
+                  && (!s.write_hours_end_date   || s.write_hours_end_date   >= date))
       .map((s) => ({
         id: s.id,
         name: s.name,
@@ -136,5 +149,9 @@ export class SimplicateRepository implements ISimplicateRepository {
       endTime: h.end_date.slice(11, 16),
       note: h.note,
     }))
+  }
+
+  async deleteHourEntry(id: string): Promise<void> {
+    await this.delete(`/hours/hours/${encodeURIComponent(id)}`)
   }
 }
