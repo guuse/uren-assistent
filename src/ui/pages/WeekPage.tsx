@@ -427,6 +427,8 @@ export function WeekPage() {
         onSelectDate={week.selectDate}
         onPrevWeek={week.prevWeek}
         onNextWeek={week.nextWeek}
+        isCurrentWeek={week.isCurrentWeek}
+        onGoToCurrentWeek={week.goToCurrentWeek}
         weekLabel={weekLabel(week.selectedWeekStart)}
         {...(canProcessWeek ? { onProcessWeek: handleProcessWeekWithCheck } : {})}
         {...(canProcessWeek ? { onUploadCsv: () => csvInputRef.current?.click() } : {})}
