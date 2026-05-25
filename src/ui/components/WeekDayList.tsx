@@ -201,7 +201,7 @@ export function WeekDayList({
         {!isCurrentWeek && onGoToCurrentWeek ? (
           <button
             onClick={onGoToCurrentWeek}
-            className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer"
+            className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
           >
             Nu
           </button>
