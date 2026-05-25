@@ -25,6 +25,10 @@ interface Props {
   onClearDayBlocks?: (date: string) => Promise<void>
   isClearingDay?: boolean
   clearError?: string | null
+  onClearWeekBlocks?: () => Promise<void>
+  isClearingWeek?: boolean
+  clearWeekError?: string | null
+  totalLlmBlockCount?: number
 }
 
 const TARGET_HOURS = 8
@@ -56,8 +60,13 @@ export function WeekDayList({
   onClearDayBlocks,
   isClearingDay = false,
   clearError,
+  onClearWeekBlocks,
+  isClearingWeek = false,
+  clearWeekError,
+  totalLlmBlockCount = 0,
 }: Props) {
   const [confirmDate, setConfirmDate] = useState<string | null>(null)
+  const [confirmWeek, setConfirmWeek] = useState(false)
 
   return (
     <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
@@ -77,7 +86,7 @@ export function WeekDayList({
           const conceptCount = conceptCountForDate?.(date) ?? 0
           const processingState = processingStateForDate?.(date) ?? 'idle'
           const llmCount = llmBlockCountForDate?.(date) ?? 0
-          const canClear = llmCount > 0 && !!onClearDayBlocks && isSelected
+          const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
             <div
@@ -100,21 +109,35 @@ export function WeekDayList({
                 >
                   {label} {dayOfMonth}
                 </span>
-                {processingState === 'classifying' && (
-                  <span className="text-[#a07848] text-[0.5625rem]">···</span>
-                )}
-                {processingState === 'done' && (
-                  <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
-                )}
-                {processingState === 'error' && (
-                  <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
-                )}
-                {processingState === 'idle' && isFull && (
-                  <span className="text-green-500 text-[0.5625rem]">✓</span>
-                )}
-                {processingState === 'idle' && !isFull && hours > 0 && (
-                  <span className="text-amber-500 text-[0.5625rem]">●</span>
-                )}
+                <div className="flex items-center gap-1">
+                  {processingState === 'classifying' && (
+                    <span className="text-[#a07848] text-[0.5625rem]">···</span>
+                  )}
+                  {processingState === 'done' && (
+                    <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
+                  )}
+                  {processingState === 'error' && (
+                    <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
+                  )}
+                  {processingState === 'idle' && isFull && (
+                    <span className="text-green-500 text-[0.5625rem]">✓</span>
+                  )}
+                  {processingState === 'idle' && !isFull && hours > 0 && (
+                    <span className="text-amber-500 text-[0.5625rem]">●</span>
+                  )}
+                  {canClear && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setConfirmDate(date)
+                      }}
+                      title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
+                      className="p-0.5 rounded transition-colors text-red-500/60 hover:text-red-400 cursor-pointer"
+                    >
+                      <Trash2 size={9} />
+                    </button>
+                  )}
+                </div>
               </div>
               <ProgressBar hours={hours} />
               <div className="text-[0.5rem] text-[#475569] mt-1">
@@ -127,32 +150,23 @@ export function WeekDayList({
                   </span>
                 </div>
               )}
-              {canClear && (
-                <div className="mt-1 flex justify-end">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (canClear) setConfirmDate(date)
-                    }}
-                    disabled={!canClear}
-                    title={canClear ? `${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen` : 'Geen LLM-blokken'}
-                    className={`p-0.5 rounded transition-colors ${
-                      canClear
-                        ? 'text-red-500 hover:text-red-400 cursor-pointer'
-                        : 'text-[#2e2a26] cursor-default'
-                    }`}
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              )}
             </div>
           )
         })}
       </div>
 
-      {(onProcessWeek || onUploadCsv) && (
+      {(onProcessWeek || onUploadCsv || (onClearWeekBlocks && totalLlmBlockCount > 0)) && (
         <div className="mt-2 px-1 flex flex-col gap-1.5">
+          {onClearWeekBlocks && totalLlmBlockCount > 0 && (
+            <button
+              onClick={() => setConfirmWeek(true)}
+              disabled={isClearingWeek}
+              className="w-full bg-transparent border border-red-900/50 hover:border-red-800/70 disabled:opacity-40 text-red-500/70 hover:text-red-400 text-[0.5625rem] py-[5px] rounded-lg transition-colors cursor-pointer disabled:cursor-default flex items-center justify-center gap-1"
+            >
+              <Trash2 size={9} />
+              {isClearingWeek ? 'Bezig...' : `Week opruimen (${totalLlmBlockCount})`}
+            </button>
+          )}
           {onProcessWeek && (
             <button
               onClick={onProcessWeek}
@@ -202,9 +216,28 @@ export function WeekDayList({
         />
       )}
 
+      {confirmWeek && onClearWeekBlocks && (
+        <ConfirmDialog
+          title="Hele week opruimen?"
+          description={`${totalLlmBlockCount} ongebookte LLM-concept${totalLlmBlockCount !== 1 ? 'en' : ''} van deze week worden verwijderd. Geschreven uren blijven staan.`}
+          isLoading={isClearingWeek}
+          onConfirm={async () => {
+            await onClearWeekBlocks()
+            setConfirmWeek(false)
+          }}
+          onCancel={() => setConfirmWeek(false)}
+        />
+      )}
+
       {clearError && (
         <div className="fixed bottom-4 right-4 z-50 bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg">
           {clearError}
+        </div>
+      )}
+
+      {clearWeekError && (
+        <div className="fixed bottom-4 right-4 z-50 bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg">
+          {clearWeekError}
         </div>
       )}
     </div>
