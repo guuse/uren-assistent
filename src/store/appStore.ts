@@ -38,6 +38,8 @@ interface AppState {
   // Copilot
   copilotToken: string | null
   setCopilotToken: (token: string) => void
+  selectedCopilotModel: string
+  setSelectedCopilotModel: (model: string) => void
 
   // GitHub
   githubToken: string | null
@@ -71,6 +73,7 @@ const initialState = {
   services: [],
   hourTypes: [],
   copilotToken: null,
+  selectedCopilotModel: 'gpt-4o',
   githubToken: null,
   githubUsername: null,
   linearToken: null,
@@ -91,6 +94,7 @@ export const useAppStore = create<AppState>()((set) => ({
   setSimplicateData: (data) => set(data),
 
   setCopilotToken: (copilotToken) => set({ copilotToken }),
+  setSelectedCopilotModel: (selectedCopilotModel) => set({ selectedCopilotModel }),
 
   setGithubToken: (githubToken) => set({ githubToken }),
   setGithubUsername: (githubUsername) => set({ githubUsername }),
