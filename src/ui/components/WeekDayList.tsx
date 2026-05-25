@@ -161,7 +161,7 @@ export function WeekDayList({
             <button
               onClick={() => setConfirmWeek(true)}
               disabled={isClearingWeek}
-              className="w-full bg-transparent border border-red-900/50 hover:border-red-800/70 disabled:opacity-40 text-red-500/70 hover:text-red-400 text-[0.5625rem] py-[5px] rounded-lg transition-colors cursor-pointer disabled:cursor-default flex items-center justify-center gap-1"
+              className="w-full bg-transparent border border-red-900/50 hover:border-red-800/70 disabled:opacity-40 text-red-500/70 hover:text-red-400 text-[0.5625rem] py-[7px] px-2 rounded-lg transition-colors cursor-pointer disabled:cursor-default flex items-center justify-center gap-1.5"
             >
               <Trash2 size={9} />
               {isClearingWeek ? 'Bezig...' : `Week opruimen (${totalLlmBlockCount})`}
