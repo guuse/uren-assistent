@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, CalendarDays } from 'lucide-react'
 import { ConfirmDialog } from './ConfirmDialog'
+import { MonthPickerPopup } from './MonthPickerPopup'
 
 const DAY_LABELS: Record<string, string> = {
   '1': 'MA', '2': 'DI', '3': 'WO', '4': 'DO', '5': 'VR',
@@ -31,6 +32,7 @@ interface Props {
   totalLlmBlockCount?: number
   isCurrentWeek?: boolean
   onGoToCurrentWeek?: () => void
+  onGoToDate?: (date: string) => void
 }
 
 const TARGET_HOURS = 8
@@ -68,9 +70,11 @@ export function WeekDayList({
   totalLlmBlockCount = 0,
   isCurrentWeek = true,
   onGoToCurrentWeek,
+  onGoToDate,
 }: Props) {
   const [confirmDate, setConfirmDate] = useState<string | null>(null)
   const [confirmWeek, setConfirmWeek] = useState(false)
+  const [isPickerOpen, setIsPickerOpen] = useState(false)
 
   return (
     <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
@@ -191,29 +195,50 @@ export function WeekDayList({
         </div>
       )}
 
-      <div className="flex justify-between items-center px-1 mt-2">
-        <button
-          onClick={onPrevWeek}
-          className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
-        >
-          ‹
-        </button>
-        {!isCurrentWeek && onGoToCurrentWeek ? (
+      <div className="relative">
+        <div className="flex justify-between items-center px-1 mt-2">
           <button
-            onClick={onGoToCurrentWeek}
-            className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+            onClick={onPrevWeek}
+            className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
           >
-            Nu
+            ‹
           </button>
-        ) : (
-          <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+          {!isCurrentWeek && onGoToCurrentWeek ? (
+            <button
+              onClick={onGoToCurrentWeek}
+              className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+            >
+              Nu
+            </button>
+          ) : (
+            <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
+          )}
+          <button
+            onClick={onNextWeek}
+            className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
+          >
+            ›
+          </button>
+        </div>
+        {onGoToDate && (
+          <button
+            onClick={() => setIsPickerOpen((v) => !v)}
+            className="absolute -top-0.5 right-1 text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer"
+            title="Kies een dag"
+          >
+            <CalendarDays size={12} />
+          </button>
         )}
-        <button
-          onClick={onNextWeek}
-          className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
-        >
-          ›
-        </button>
+        {isPickerOpen && onGoToDate && (
+          <MonthPickerPopup
+            initialMonth={weekDays[0]!}
+            onSelectDate={(date) => {
+              onGoToDate(date)
+              setIsPickerOpen(false)
+            }}
+            onClose={() => setIsPickerOpen(false)}
+          />
+        )}
       </div>
 
       {confirmDate && onClearDayBlocks && (
