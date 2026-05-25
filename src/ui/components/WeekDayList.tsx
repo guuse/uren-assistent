@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, CalendarDays } from 'lucide-react'
+import { TrashIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MonthPickerPopup } from './MonthPickerPopup'
 
@@ -39,13 +39,24 @@ const TARGET_HOURS = 8
 
 function ProgressBar({ hours }: { hours: number }) {
   const pct = Math.min(100, (hours / TARGET_HOURS) * 100)
-  const color = hours >= TARGET_HOURS ? 'bg-green-500' : hours > 0 ? 'bg-amber-500' : 'bg-transparent'
+  const color = hours >= TARGET_HOURS
+    ? 'var(--success)'
+    : hours > 0
+      ? 'var(--warning)'
+      : 'transparent'
   return (
-    <div className="h-[3px] bg-[#2e2a26] rounded-full overflow-hidden mt-1">
-      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    <div style={{ height: 4, background: 'var(--border)', borderRadius: 100, overflow: 'hidden', marginTop: 4 }}>
+      <div style={{ height: '100%', borderRadius: 100, transition: 'width 0.3s', width: `${pct}%`, background: color }} />
     </div>
   )
 }
+
+const iconBtn = (extra?: React.CSSProperties): React.CSSProperties => ({
+  width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
+  flexShrink: 0, padding: 0, fontFamily: 'inherit', ...extra,
+})
 
 export function WeekDayList({
   weekDays,
@@ -55,234 +66,239 @@ export function WeekDayList({
   onPrevWeek,
   onNextWeek,
   weekLabel,
-  conceptCountForDate,
   onProcessWeek,
   onUploadCsv,
   processingStateForDate,
-  isProcessingWeek = false,
+  isProcessingWeek,
   llmBlockCountForDate,
   onClearDayBlocks,
-  isClearingDay = false,
+  isClearingDay,
   clearError,
   onClearWeekBlocks,
-  isClearingWeek = false,
+  isClearingWeek,
   clearWeekError,
-  totalLlmBlockCount = 0,
-  isCurrentWeek = true,
+  totalLlmBlockCount,
+  isCurrentWeek,
   onGoToCurrentWeek,
   onGoToDate,
 }: Props) {
-  const [confirmDate, setConfirmDate] = useState<string | null>(null)
-  const [confirmWeek, setConfirmWeek] = useState(false)
-  const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [confirmClearDate, setConfirmClearDate] = useState<string | null>(null)
+  const [confirmClearWeek, setConfirmClearWeek] = useState(false)
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+
+  const rangeLabel = weekDays.length >= 2
+    ? (() => {
+        const fmt = (d: string) => {
+          const dt = new Date(d)
+          return `${dt.getDate()} ${dt.toLocaleString('nl-NL', { month: 'short' })}`
+        }
+        return `${fmt(weekDays[0]!)}–${fmt(weekDays[weekDays.length - 1]!)}`
+      })()
+    : ''
+
+  const totalHours = weekDays.reduce((s, d) => s + hoursForDate(d), 0)
+  const weekPct = Math.min(100, (totalHours / 40) * 100)
 
   return (
-    <div className="w-[130px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col py-3 px-2">
-      <div className="text-[#4a4540] text-[0.5625rem] uppercase tracking-widest mb-2 px-1">{weekLabel}</div>
+    <div
+      style={{
+        width: 214, background: 'var(--surface)', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative',
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        {/* Week title row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{weekLabel}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{rangeLabel}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 3 }}>
+            <button style={iconBtn()} onClick={onPrevWeek} title="Vorige week">‹</button>
+            <button style={iconBtn()} onClick={onNextWeek} title="Volgende week">›</button>
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-1 flex-1">
+        {/* Nu-knop + maandkiezer */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 7 }}>
+          {!isCurrentWeek && (
+            <button
+              onClick={onGoToCurrentWeek}
+              style={{
+                background: 'var(--accent-light)', color: 'var(--accent)',
+                border: '1px solid var(--accent-border)', fontSize: 11, fontWeight: 700,
+                padding: '4px 9px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Nu
+            </button>
+          )}
+          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          <div style={{ position: 'relative' }}>
+            <button
+              style={{ ...iconBtn(), border: '1px solid transparent' }}
+              onClick={() => setShowMonthPicker((v) => !v)}
+              title="Kies datum"
+            >
+              <CalendarDaysIcon style={{ width: 13, height: 13 }} strokeWidth={2} />
+            </button>
+            {showMonthPicker && (
+              <div style={{ position: 'absolute', top: 30, right: 0, zIndex: 50 }}>
+                <MonthPickerPopup
+                  initialMonth={selectedDate}
+                  onSelectDate={(d) => { onGoToDate?.(d); setShowMonthPicker(false) }}
+                  onClose={() => setShowMonthPicker(false)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Week progress */}
+        <div style={{ marginTop: 7 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+              Weekvoortgang
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 600 }}>
+              {totalHours.toFixed(1).replace('.', ',')}/40u
+            </span>
+          </div>
+          <div style={{ height: 4, background: '#f0ede8', borderRadius: 100, overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 100, width: `${weekPct}%`, background: 'var(--accent)', transition: 'width 0.3s' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Day list */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
         {weekDays.map((date) => {
-          // Parse YYYY-MM-DD as local date to avoid UTC timezone shift
-          const [year, month, day] = date.split('-').map(Number)
-          const localDate = new Date(year!, month! - 1, day!)
-          const dayNum = localDate.getDay().toString()
-          const label = DAY_LABELS[dayNum] ?? ''
-          const dayOfMonth = localDate.getDate()
-          const hours = hoursForDate(date)
           const isSelected = date === selectedDate
-          const isFull = hours >= TARGET_HOURS
-          const conceptCount = conceptCountForDate?.(date) ?? 0
+          const hours = hoursForDate(date)
+          const dayOfWeek = new Date(date).getDay().toString()
+          const label = DAY_LABELS[dayOfWeek] ?? '??'
+          const dt = new Date(date)
+          const dateLabel = `${dt.getDate()} ${dt.toLocaleString('nl-NL', { month: 'short' })}`
           const processingState = processingStateForDate?.(date) ?? 'idle'
           const llmCount = llmBlockCountForDate?.(date) ?? 0
-          const canClear = llmCount > 0 && !!onClearDayBlocks
 
           return (
             <div
               key={date}
-              className={`relative px-2 py-2 rounded-lg transition-colors ${
-                isSelected
-                  ? 'bg-[#252220] border border-[#6366f1]'
-                  : 'hover:bg-[#252220] border border-transparent'
-              }`}
+              onClick={() => onSelectDate(date)}
+              style={{
+                padding: isSelected ? '9px 14px 9px 11px' : '9px 14px',
+                borderBottom: '1px solid var(--border)',
+                borderLeft: isSelected ? '3px solid var(--accent)' : '3px solid transparent',
+                background: isSelected ? 'var(--accent-light)' : 'transparent',
+                cursor: 'pointer',
+              }}
             >
-              {/* Klikbaar gebied voor dagelectie */}
-              <button
-                onClick={() => onSelectDate(date)}
-                className="w-full text-left cursor-pointer"
-              >
-                <div className="flex justify-between items-center pr-4">
-                  <span
-                    className={`text-[0.625rem] font-semibold ${
-                      isSelected ? 'text-[#a5b4fc]' : isFull ? 'text-[#94a3b8]' : 'text-[#64748b]'
-                    }`}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{dateLabel}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ flex: 1 }}>
+                  <ProgressBar hours={hours} />
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                  {hours > 0 ? `${hours.toFixed(1).replace('.', ',')}u` : '–'}
+                  {hours >= TARGET_HOURS ? ' ✓' : ''}
+                </span>
+                {llmCount > 0 && onClearDayBlocks && (
+                  <button
+                    title={`Wis ${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setConfirmClearDate(date) }}
+                    style={{ ...iconBtn(), color: 'var(--danger)', borderColor: '#fecaca' }}
                   >
-                    {label} {dayOfMonth}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {processingState === 'classifying' && (
-                      <span className="text-[#a07848] text-[0.5625rem]">···</span>
-                    )}
-                    {processingState === 'done' && (
-                      <span className="text-[#5a8a6a] text-[0.5625rem]">✓</span>
-                    )}
-                    {processingState === 'error' && (
-                      <span className="text-[#b85a3a] text-[0.5625rem]">!</span>
-                    )}
-                    {processingState === 'idle' && isFull && (
-                      <span className="text-green-500 text-[0.5625rem]">✓</span>
-                    )}
-                    {processingState === 'idle' && !isFull && hours > 0 && (
-                      <span className="text-amber-500 text-[0.5625rem]">●</span>
-                    )}
-                  </div>
-                </div>
-                <ProgressBar hours={hours} />
-                <div className="text-[0.5rem] text-[#475569] mt-1">
-                  {hours > 0 ? `${hours} / ${TARGET_HOURS}u` : `0 / ${TARGET_HOURS}u`}
-                </div>
-                {conceptCount > 0 && !isFull && processingState === 'idle' && (
-                  <div className="mt-1">
-                    <span className="bg-[#2a2010] text-[#a07848] text-[0.5rem] px-[5px] py-[1px] rounded">
-                      {conceptCount} concept{conceptCount !== 1 ? 'en' : ''}
-                    </span>
-                  </div>
+                    <TrashIcon style={{ width: 11, height: 11 }} strokeWidth={2} />
+                  </button>
                 )}
-              </button>
-              {/* Prullenbak absoluut rechts bovenin de kaart */}
-              {canClear && (
-                <button
-                  onClick={() => setConfirmDate(date)}
-                  title={`${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''} verwijderen`}
-                  className="absolute top-2 right-1.5 p-0.5 rounded transition-colors text-red-500/50 hover:text-red-400 cursor-pointer"
-                >
-                  <Trash2 size={9} />
-                </button>
+              </div>
+              {processingState === 'classifying' && (
+                <div style={{ fontSize: 9, color: 'var(--accent)', marginTop: 3 }}>Verwerken…</div>
+              )}
+              {processingState === 'error' && (
+                <div style={{ fontSize: 9, color: 'var(--danger)', marginTop: 3 }}>Fout bij verwerken</div>
               )}
             </div>
           )
         })}
       </div>
 
-      {(onProcessWeek || onUploadCsv || (onClearWeekBlocks && totalLlmBlockCount > 0)) && (
-        <div className="mt-2 px-1 flex flex-col gap-1.5">
-          {onClearWeekBlocks && totalLlmBlockCount > 0 && (
-            <button
-              onClick={() => setConfirmWeek(true)}
-              disabled={isClearingWeek}
-              className="w-full bg-transparent border border-red-900/50 hover:border-red-800/70 disabled:opacity-40 text-red-500/70 hover:text-red-400 text-[0.5625rem] py-[7px] px-2 rounded-lg transition-colors cursor-pointer disabled:cursor-default flex items-center justify-center gap-1.5"
-            >
-              <Trash2 size={9} />
-              {isClearingWeek ? 'Bezig...' : `Opruimen (${totalLlmBlockCount})`}
-            </button>
-          )}
-          {onProcessWeek && (
-            <button
-              onClick={onProcessWeek}
-              disabled={isProcessingWeek}
-              className="w-full bg-[#6366f1] hover:bg-[#5558dd] disabled:opacity-40 text-white text-[0.6875rem] font-bold py-[8px] rounded-lg transition-colors cursor-pointer disabled:cursor-default"
-            >
-              {isProcessingWeek ? 'Bezig...' : '▶ Verwerk week'}
-            </button>
-          )}
-          {onUploadCsv && (
-            <button
-              onClick={onUploadCsv}
-              className="w-full bg-transparent border border-[#2e2a26] hover:border-[#3e3a36] text-[#4a4540] hover:text-[#7a7268] text-[0.5625rem] py-[5px] rounded-lg transition-colors cursor-pointer"
-            >
-              📂 Upload geschiedenis
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="relative">
-        <div className="flex justify-between items-center px-1 mt-2">
+      {/* Footer */}
+      <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+        {(clearError || clearWeekError) && (
+          <div style={{ fontSize: 10, color: 'var(--danger)' }}>{clearError ?? clearWeekError}</div>
+        )}
+        {totalLlmBlockCount != null && totalLlmBlockCount > 0 && onClearWeekBlocks && (
           <button
-            onClick={() => { setIsPickerOpen(false); onPrevWeek() }}
-            className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
-          >
-            ‹
-          </button>
-          {!isCurrentWeek && onGoToCurrentWeek ? (
-            <button
-              onClick={onGoToCurrentWeek}
-              className="bg-[#3a6b5a] hover:bg-[#4a7a6a] text-white text-[0.6rem] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Nu
-            </button>
-          ) : (
-            <span className="text-[#4a4540] text-[0.5rem]">{weekLabel}</span>
-          )}
-          {onGoToDate && (
-            <button
-              onClick={() => setIsPickerOpen((v) => !v)}
-              className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer leading-none"
-              title="Kies een dag"
-            >
-              <CalendarDays size={10} />
-            </button>
-          )}
-          <button
-            onClick={() => { setIsPickerOpen(false); onNextWeek() }}
-            className="text-[#4a4540] hover:text-[#e8e2d9] text-sm transition-colors cursor-pointer"
-          >
-            ›
-          </button>
-        </div>
-        {isPickerOpen && onGoToDate && weekDays.length > 0 && (
-          <MonthPickerPopup
-            initialMonth={weekDays[0]!}
-            onSelectDate={(date) => {
-              onGoToDate(date)
-              setIsPickerOpen(false)
+            onClick={() => setConfirmClearWeek(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 5, border: '1px solid #fecaca', borderRadius: 7, padding: '5px 10px',
+              fontSize: 11, fontWeight: 600, color: 'var(--danger)', background: '#fff1f2',
+              cursor: 'pointer', fontFamily: 'inherit',
             }}
-            onClose={() => setIsPickerOpen(false)}
-          />
+          >
+            <TrashIcon style={{ width: 12, height: 12 }} strokeWidth={2} />
+            Wis week ({totalLlmBlockCount})
+          </button>
+        )}
+        {onProcessWeek && (
+          <button
+            onClick={onProcessWeek}
+            disabled={isProcessingWeek}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 5, background: 'var(--accent)', color: 'white', border: 'none',
+              borderRadius: 7, padding: '7px 12px', fontSize: 11, fontWeight: 600,
+              cursor: isProcessingWeek ? 'not-allowed' : 'pointer', opacity: isProcessingWeek ? 0.7 : 1,
+              fontFamily: 'inherit',
+            }}
+          >
+            {isProcessingWeek ? 'Bezig…' : 'Verwerk week'}
+          </button>
+        )}
+        {onUploadCsv && (
+          <button
+            onClick={onUploadCsv}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 5, background: 'transparent', color: 'var(--text-secondary)',
+              border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            CSV uploaden
+          </button>
         )}
       </div>
 
-      {confirmDate && onClearDayBlocks && (
+      {/* Confirm: clear day */}
+      {confirmClearDate && (
         <ConfirmDialog
-          title="LLM-blokken verwijderen?"
-          description={`${llmBlockCountForDate?.(confirmDate) ?? 0} ongebookte LLM-concept${(llmBlockCountForDate?.(confirmDate) ?? 0) !== 1 ? 'en' : ''} van deze dag worden verwijderd. Geschreven uren blijven staan.`}
-          isLoading={isClearingDay}
-          onConfirm={async () => {
-            try {
-              await onClearDayBlocks(confirmDate)
-            } finally {
-              setConfirmDate(null)
-            }
-          }}
-          onCancel={() => setConfirmDate(null)}
+          title="LLM-blokken wissen"
+          description={`Wis alle LLM-blokken voor ${confirmClearDate}?`}
+          confirmLabel="Wissen"
+          onConfirm={async () => { await onClearDayBlocks?.(confirmClearDate); setConfirmClearDate(null) }}
+          onCancel={() => setConfirmClearDate(null)}
+          isLoading={isClearingDay ?? false}
         />
       )}
 
-      {confirmWeek && onClearWeekBlocks && (
+      {/* Confirm: clear week */}
+      {confirmClearWeek && (
         <ConfirmDialog
-          title="Hele week opruimen?"
-          description={`${totalLlmBlockCount} ongebookte LLM-concept${totalLlmBlockCount !== 1 ? 'en' : ''} van deze week worden verwijderd. Geschreven uren blijven staan.`}
-          isLoading={isClearingWeek}
-          onConfirm={async () => {
-            try {
-              await onClearWeekBlocks()
-            } finally {
-              setConfirmWeek(false)
-            }
-          }}
-          onCancel={() => setConfirmWeek(false)}
+          title="Week wissen"
+          description="Wis alle LLM-blokken voor deze week?"
+          confirmLabel="Wissen"
+          onConfirm={async () => { await onClearWeekBlocks?.(); setConfirmClearWeek(false) }}
+          onCancel={() => setConfirmClearWeek(false)}
+          isLoading={isClearingWeek ?? false}
         />
-      )}
-
-      {clearError && (
-        <div className="fixed bottom-4 right-4 z-50 bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg">
-          {clearError}
-        </div>
-      )}
-
-      {clearWeekError && (
-        <div className="fixed bottom-4 right-4 z-50 bg-red-900/80 text-red-200 text-xs px-3 py-2 rounded-lg">
-          {clearWeekError}
-        </div>
       )}
     </div>
   )
