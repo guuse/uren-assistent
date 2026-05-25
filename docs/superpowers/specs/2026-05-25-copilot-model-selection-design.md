@@ -19,7 +19,7 @@ Location: `src/domain/entities/CopilotModel.ts`
 export type CopilotModel = {
   id: string             // e.g. "gpt-4o"
   name: string           // display name
-  tokenMultiplier: number // relative token cost, e.g. 1.0 or 2.0
+  tokenMultiplier: number // relative token cost, e.g. 1.0 or 2.0 — defaults to 1.0 if not present in API response
 }
 ```
 
