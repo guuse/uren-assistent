@@ -25,10 +25,10 @@ function displayUrl(url: string): { host: string; path: string } {
 }
 
 function domainStyle(hostname: string): { bg: string; color: string } {
-  if (/harborn/i.test(hostname)) return { bg: '#1a3a1a', color: '#5a8a6a' }
+  if (/harborn/i.test(hostname)) return { bg: 'var(--accent-light)', color: 'var(--accent)' }
   if (/^accounts\.|^auth\.|^login\.|^sso\./i.test(hostname))
-    return { bg: '#3a2e10', color: '#a07848' }
-  return { bg: '#252220', color: '#7a7268' }
+    return { bg: 'var(--accent-light)', color: 'var(--accent)' }
+  return { bg: 'var(--bg)', color: 'var(--text-muted)' }
 }
 
 /** Extract first name from email: "jan.de.vries@company.com" → "Jan" */
@@ -71,13 +71,13 @@ export default function EvidencePanel({
   const timeLabel = startTime && endTime ? `${startTime}–${endTime}` : ''
 
   return (
-    <div className="bg-[#1c1917] border border-[#2e2a26] rounded-lg overflow-hidden overflow-y-auto max-h-full min-h-0">
+    <div style={{ background: 'var(--bg)', borderLeft: '1px solid var(--border)' }} className="rounded-lg overflow-hidden overflow-y-auto max-h-full min-h-0">
       {/* Kopregel */}
-      <div className="px-3 py-[7px] border-b border-[#2e2a26] flex justify-between items-center">
-        <span className="text-[#4a4540] text-[0.5625rem] uppercase tracking-[.08em] font-semibold">
+      <div className="px-3 py-[7px] flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+        <span style={{ color: 'var(--text-faint)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           {hasMeetings ? 'Context' : "Bezochte pagina's"}
         </span>
-        <span className="text-[#4a4540] text-[0.5625rem]">
+        <span style={{ color: 'var(--text-faint)', fontSize: 9 }}>
           {hasMeetings
             ? timeLabel
             : `${urlList.length}${timeLabel ? ` · ${timeLabel}` : ''}`}
@@ -87,7 +87,7 @@ export default function EvidencePanel({
       {/* Browsing sub-label (alleen als meetings aanwezig) */}
       {hasMeetings && urlList.length > 0 && (
         <div className="px-3 pt-2 pb-1">
-          <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+          <span style={{ color: 'var(--text-faint)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 7 }}>
             Browsing ({urlList.length})
           </span>
         </div>
@@ -102,19 +102,19 @@ export default function EvidencePanel({
             const initial = host.replace(/^www\./, '')[0]?.toUpperCase() ?? '?'
             const pageTitle = titleList[i]
             return (
-              <div key={i} className="flex gap-[10px] items-start">
+              <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 6 }}>
                 <div
-                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
+                  className="flex-shrink-0 w-[22px] h-[22px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px]"
                   style={{ background: style.bg, color: style.color }}
                 >
                   {initial}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                  <div style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
                     {host}{path}
                   </div>
                   {pageTitle && (
-                    <div className="text-[#7a7268] text-[0.625rem] mt-[1px] truncate">
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>
                       {pageTitle}
                     </div>
                   )}
@@ -128,39 +128,39 @@ export default function EvidencePanel({
       {/* Scheidingslijn + Agenda-sectie */}
       {hasMeetings && (
         <>
-          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="mx-3" style={{ borderBottom: '1px solid var(--border)' }} />
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-faint)', marginBottom: 7 }}>
               Agenda ({meetingList.length})
             </span>
           </div>
           <div className="px-3 pb-2 flex flex-col gap-[7px]">
             {meetingList.map((meeting) => {
               const statusConfig: Record<CalendarEvent['status'], { color: string; label: string }> = {
-                accepted: { color: '#5a8a6a', label: '✓ accepted' },
-                tentative: { color: '#a07848', label: '? tentative' },
+                accepted: { color: 'var(--success)', label: '✓ accepted' },
+                tentative: { color: 'var(--text-muted)', label: '? tentative' },
               }
               const { color: statusColor, label: statusLabel } = statusConfig[meeting.status]
               const timeRange = `${formatTime(meeting.start)}–${formatTime(meeting.end)}`
               const attendees = attendeeLabel(meeting.attendees)
               return (
-                <div key={meeting.id} className="flex gap-[10px] items-start">
+                <div key={meeting.id} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 6 }}>
                   <div
-                    className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] mt-[1px] border border-[#2e2a26]"
-                    style={{ background: '#1a2a3a' }}
+                    className="flex-shrink-0 w-[22px] h-[22px] rounded-[5px] flex items-center justify-center text-[0.5625rem] mt-[1px]"
+                    style={{ background: '#f0fdf4', color: '#16a34a' }}
                   >
                     📅
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-[5px]">
-                      <span className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                      <span style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
                         {meeting.title}
                       </span>
-                      <span className="text-[0.5625rem] flex-shrink-0" style={{ color: statusColor }}>
+                      <span className="flex-shrink-0" style={{ fontSize: 9, color: statusColor }}>
                         {statusLabel}
                       </span>
                     </div>
-                    <div className="text-[#7a7268] text-[0.625rem] mt-[1px]">
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>
                       {timeRange}{attendees ? ` · ${attendees}` : ''}
                     </div>
                   </div>
@@ -174,26 +174,26 @@ export default function EvidencePanel({
       {/* GitHub commits sectie */}
       {commits && commits.length > 0 && (
         <>
-          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="mx-3" style={{ borderBottom: '1px solid var(--border)' }} />
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-faint)', marginBottom: 7 }}>
               GitHub commits ({commits.length})
             </span>
           </div>
           <div className="px-3 pb-2 flex flex-col gap-[7px] overflow-y-auto" style={{ maxHeight: '160px' }}>
             {commits.map((commit) => (
-              <div key={commit.sha} className="flex gap-[10px] items-start">
+              <div key={commit.sha} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 6 }}>
                 <div
-                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
-                  style={{ background: '#2a1e12', color: '#f48024' }}
+                  className="flex-shrink-0 w-[22px] h-[22px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px]"
+                  style={{ background: '#fff7ed', color: '#ea580c' }}
                 >
                   GH
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                  <div style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
                     {commit.message}
                   </div>
-                  <div className="text-[#7a7268] text-[0.625rem] mt-[1px] truncate">
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>
                     {commit.repo} · {commit.time}
                   </div>
                 </div>
@@ -206,27 +206,27 @@ export default function EvidencePanel({
       {/* Linear issues sectie */}
       {linearIssues && linearIssues.length > 0 && (
         <>
-          <div className="border-t border-[#2e2a26] mx-3" />
+          <div className="mx-3" style={{ borderBottom: '1px solid var(--border)' }} />
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em]">
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-faint)', marginBottom: 7 }}>
               Linear (deze week, afgerond)
             </span>
           </div>
           <div className="px-3 pb-2 flex flex-col gap-[7px]">
             {linearIssues.map((issue) => (
-              <div key={issue.identifier} className="flex gap-[10px] items-start">
+              <div key={issue.identifier} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 6 }}>
                 <div
-                  className="flex-shrink-0 w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px] border border-[#2e2a26]"
-                  style={{ background: '#1a1a2e', color: '#8b5cf6' }}
+                  className="flex-shrink-0 w-[22px] h-[22px] rounded-[5px] flex items-center justify-center text-[0.5625rem] font-bold mt-[1px]"
+                  style={{ background: '#f5f3ff', color: '#7c3aed' }}
                 >
                   LN
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[#e8e2d9] text-[0.6875rem] font-medium truncate">
+                  <div style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
                     {issue.identifier} · {issue.title}
                   </div>
                 </div>
-                <div className="text-[0.5625rem] flex-shrink-0" style={{ color: '#5a8a6a' }}>
+                <div className="flex-shrink-0" style={{ fontSize: 9, color: 'var(--success)' }}>
                   ✓ done
                 </div>
               </div>
@@ -237,15 +237,12 @@ export default function EvidencePanel({
 
       {/* LLM-samenvatting */}
       {summary && (
-        <div className="border-t border-[#2e2a26] px-3 py-[9px] bg-[#1c1917] flex gap-2 items-start">
-          <div className="w-[2px] flex-shrink-0 bg-[#5a8a6a] rounded-sm self-stretch" />
-          <div>
-            <div className="text-[#4a4540] text-[0.5rem] uppercase tracking-[.06em] mb-[3px]">
-              LLM samenvatting
-            </div>
-            <div className="text-[#94a3b8] text-[0.6875rem] leading-[1.5] italic">
-              "{summary}"
-            </div>
+        <div style={{ margin: 7, padding: '8px 10px', background: 'var(--surface)', borderRadius: 7, border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-faint)', marginBottom: 4 }}>
+            LLM samenvatting
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>
+            "{summary}"
           </div>
         </div>
       )}
