@@ -26,9 +26,10 @@ export interface SimplicateEmployee {
 
 export interface ISimplicateRepository {
   getProjects(): Promise<SimplicateProject[]>
-  getServices(projectId: string): Promise<SimplicateService[]>
+  getServices(projectId: string, date: string): Promise<SimplicateService[]>
   getHourTypes(): Promise<SimplicateHourType[]>
   getEmployee(email: string): Promise<SimplicateEmployee>
   bookHours(entries: HourEntry[]): Promise<void>
   getHourEntries(employeeId: string, from: string, to: string): Promise<HourEntry[]>
+  deleteHourEntry(id: string): Promise<void>
 }
