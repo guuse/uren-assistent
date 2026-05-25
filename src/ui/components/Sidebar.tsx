@@ -1,33 +1,63 @@
-import { Cog6ToothIcon } from '@heroicons/react/24/outline'
-import { useAppStore } from '../../store/appStore'
+import { CalendarDaysIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 
 interface Props {
   onSettings: () => void
+  activeTab?: 'week' | 'settings'
 }
 
-export function Sidebar({ onSettings }: Props) {
-  const user = useAppStore((s) => s.user)
-  const initials = user?.name?.charAt(0).toUpperCase() ?? '?'
-
+export function Sidebar({ onSettings, activeTab = 'week' }: Props) {
   return (
-    <div className="w-[52px] flex-shrink-0 bg-[#171512] border-r border-[#2e2a26] flex flex-col items-center py-3 gap-[6px]">
-      {/* Logo mark */}
-      <div className="w-[30px] h-[30px] bg-[#e8e2d9] rounded-lg mb-[10px]" />
+    <div
+      className="flex-shrink-0 flex flex-col items-center py-3 gap-1"
+      style={{
+        width: 'var(--sidebar-w)',
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border)',
+      }}
+    >
+      {/* Wordmark */}
+      <div className="flex flex-col items-center mb-2" style={{ lineHeight: 1 }}>
+        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+          U<span style={{ color: 'var(--accent)' }}>.</span>
+        </span>
+        <span style={{ fontSize: 7, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--accent)', marginTop: 2 }}>
+          A
+        </span>
+      </div>
+
+      {/* Week nav icon */}
+      <button
+        title="Week"
+        onClick={() => {/* week is always active for now */}}
+        className="flex items-center justify-center rounded-lg transition-colors"
+        style={{
+          width: 34, height: 34,
+          background: activeTab === 'week' ? 'var(--accent-light)' : 'transparent',
+          color: activeTab === 'week' ? 'var(--accent)' : 'var(--text-muted)',
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        <CalendarDaysIcon style={{ width: 17, height: 17 }} strokeWidth={2} />
+      </button>
 
       <div className="flex-1" />
 
+      {/* Settings icon */}
       <button
         title="Instellingen"
         onClick={onSettings}
-        className="w-[34px] h-[34px] rounded-lg flex items-center justify-center hover:bg-[#252220] transition-colors cursor-pointer"
+        className="flex items-center justify-center rounded-lg transition-colors"
+        style={{
+          width: 34, height: 34,
+          background: activeTab === 'settings' ? 'var(--accent-light)' : 'transparent',
+          color: activeTab === 'settings' ? 'var(--accent)' : 'var(--text-muted)',
+          border: 'none',
+          cursor: 'pointer',
+        }}
       >
-        <Cog6ToothIcon className="w-[15px] h-[15px] stroke-[#4a4540]" strokeWidth={1.5} />
+        <Cog6ToothIcon style={{ width: 17, height: 17 }} strokeWidth={2} />
       </button>
-
-      {/* Avatar */}
-      <div className="w-[26px] h-[26px] bg-[#2e2a26] rounded-full flex items-center justify-center mt-1">
-        <span className="text-[#e8e2d9] text-[10px] font-semibold">{initials}</span>
-      </div>
     </div>
   )
 }
