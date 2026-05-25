@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 interface Props {
   initialMonth: string  // YYYY-MM-DD van de eerste dag van de startmaand
@@ -58,6 +58,8 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
   const maandNaam = MAAND_NAMEN[month! - 1]
   const days = buildCalendarDays(viewMonth)
 
+  const today = new Date().toISOString().split('T')[0]!
+
   return (
     <>
       {/* Overlay */}
@@ -66,55 +68,130 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
         onClick={onClose}
       />
       {/* Popup */}
-      <div className="absolute bottom-8 left-0 z-50 bg-[#1e1b18] border border-[#3a3530] rounded-lg shadow-xl p-3 w-52">
+      <div
+        className="absolute bottom-8 left-0 z-50"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 9,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.09)',
+          padding: 12,
+          width: 210,
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <button
             onClick={() => setViewMonth(prevMonth(viewMonth))}
-            className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer p-0.5"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              padding: 2,
+              display: 'flex',
+              alignItems: 'center',
+              color: 'var(--text-muted)',
+            }}
           >
-            <ChevronLeft size={14} />
+            <ChevronLeftIcon style={{ width: 14, height: 14 }} />
           </button>
-          <span className="text-[#e8e2d9] text-xs font-medium">
+          <span style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 500 }}>
             {maandNaam} {year}
           </span>
           <button
             onClick={() => setViewMonth(nextMonth(viewMonth))}
-            className="text-[#4a4540] hover:text-[#e8e2d9] transition-colors cursor-pointer p-0.5"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              padding: 2,
+              display: 'flex',
+              alignItems: 'center',
+              color: 'var(--text-muted)',
+            }}
           >
-            <ChevronRight size={14} />
+            <ChevronRightIcon style={{ width: 14, height: 14 }} />
           </button>
         </div>
 
         {/* Dagheaders */}
-        <div className="grid grid-cols-7 mb-1">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
           {DAG_HEADERS.map((h) => (
-            <div key={h} className="text-center text-[0.5rem] text-[#4a4540] uppercase">
+            <div
+              key={h}
+              style={{
+                textAlign: 'center',
+                fontSize: 8,
+                fontWeight: 600,
+                color: 'var(--text-faint)',
+                textTransform: 'uppercase',
+              }}
+            >
               {h}
             </div>
           ))}
         </div>
 
         {/* Dagen */}
-        <div className="grid grid-cols-7 gap-y-0.5">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: 2 }}>
           {days.map((cell, i) => {
             if (!cell) return <div key={`empty-${i}`} />
+            const isToday = cell.date === today
             return (
               <button
                 key={cell.date}
                 disabled={cell.isWeekend}
                 onClick={() => onSelectDate(cell.date)}
-                className={[
-                  'text-center text-[0.6rem] py-0.5 rounded transition-colors',
-                  cell.isWeekend
-                    ? 'text-[#3a3530] cursor-default'
-                    : 'text-[#c8c2b9] hover:bg-[#3a6b5a] hover:text-white cursor-pointer',
-                ].join(' ')}
+                style={{
+                  textAlign: 'center',
+                  fontSize: '0.6rem',
+                  paddingTop: 2,
+                  paddingBottom: 2,
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: cell.isWeekend ? 'default' : 'pointer',
+                  ...(cell.isWeekend
+                    ? { color: 'var(--text-faint)', background: 'transparent' }
+                    : isToday
+                      ? { background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 700 }
+                      : { color: 'var(--text-primary)', background: 'transparent' }
+                  ),
+                }}
+                onMouseEnter={(e) => {
+                  if (!cell.isWeekend && !isToday) {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!cell.isWeekend && !isToday) {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                  }
+                }}
               >
                 {Number(cell.date.split('-')[2])}
               </button>
             )
           })}
+        </div>
+
+        {/* Ga naar vandaag */}
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <button
+            onClick={() => onSelectDate(today)}
+            style={{
+              color: 'var(--accent)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 600,
+              fontFamily: 'inherit',
+            }}
+          >
+            Ga naar vandaag
+          </button>
         </div>
       </div>
     </>
