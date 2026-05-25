@@ -71,7 +71,7 @@ export default function EvidencePanel({
   const timeLabel = startTime && endTime ? `${startTime}–${endTime}` : ''
 
   return (
-    <div className="bg-[#1c1917] border border-[#2e2a26] rounded-lg overflow-hidden">
+    <div className="bg-[#1c1917] border border-[#2e2a26] rounded-lg overflow-hidden overflow-y-auto max-h-full min-h-0">
       {/* Kopregel */}
       <div className="px-3 py-[7px] border-b border-[#2e2a26] flex justify-between items-center">
         <span className="text-[#4a4540] text-[0.5625rem] uppercase tracking-[.08em] font-semibold">
