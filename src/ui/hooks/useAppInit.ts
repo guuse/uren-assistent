@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { keychainRepo } from '../../application/container'
+import { keychainRepo, createGetSelectedModelUseCase } from '../../application/container'
 import { useAppStore } from '../../store/appStore'
 import { testCopilotToken, testGitHubToken, testLinearToken } from '../../infrastructure/tokenTest'
 
@@ -10,6 +10,7 @@ export function useAppInit(): void {
   const setGithubUsername = useAppStore(s => s.setGithubUsername)
   const setLinearToken = useAppStore(s => s.setLinearToken)
   const setTokenStatus = useAppStore(s => s.setTokenStatus)
+  const setSelectedCopilotModel = useAppStore(s => s.setSelectedCopilotModel)
 
   useEffect(() => {
     async function init() {
@@ -35,10 +36,16 @@ export function useAppInit(): void {
           setLinearToken(lt)
           testLinearToken(lt).then(r => setTokenStatus('linear', r.ok ? 'ok' : 'fail')).catch(() => setTokenStatus('linear', 'fail'))
         }
+
+        const selectedModel = await createGetSelectedModelUseCase().execute()
+        if (selectedModel) {
+          setSelectedCopilotModel(selectedModel)
+        }
+        // If null, the store default 'gpt-4o' already set in initialState is used
       } catch (err) {
         console.error('[AppInit] Failed to load tokens from keychain:', err)
       }
     }
     void init()
-  }, [setCopilotToken, setGithubToken, setGithubUsername, setLinearToken, setTokenStatus])
+  }, [setCopilotToken, setGithubToken, setGithubUsername, setLinearToken, setTokenStatus, setSelectedCopilotModel])
 }
