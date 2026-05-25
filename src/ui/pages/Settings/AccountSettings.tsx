@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { keychainRepo, createSimplicateRepository } from '../../../application/container'
+import { keychainRepo, createSimplicateRepository, createSetSelectedModelUseCase } from '../../../application/container'
 import { useAuth } from '../../hooks/useAuth'
 import { useAppStore } from '../../../store/appStore'
 import { useStarredProjects } from '../../hooks/useStarredProjects'
 import { testCopilotToken, testGitHubToken, testLinearToken } from '../../../infrastructure/tokenTest'
+import { useCopilotModels } from '../../hooks/useCopilotModels'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
@@ -19,8 +20,11 @@ export function AccountSettings() {
   const setLinearToken = useAppStore((s) => s.setLinearToken)
   const setTokenStatus = useAppStore((s) => s.setTokenStatus)
   const projects = useAppStore((s) => s.projects)
+  const selectedCopilotModel = useAppStore((s) => s.selectedCopilotModel)
+  const setSelectedCopilotModel = useAppStore((s) => s.setSelectedCopilotModel)
   const { logout } = useAuth()
   const { starredIds, toggle: toggleStar } = useStarredProjects()
+  const { models, loading: modelsLoading, error: modelsError } = useCopilotModels()
 
   const [apiKey, setApiKey] = useState('')
   const [apiSecret, setApiSecret] = useState('')
@@ -165,8 +169,45 @@ export function AccountSettings() {
     setTokenStatus('linear', result.ok ? 'ok' : 'fail')
   }
 
+  async function handleModelChange(modelId: string) {
+    setSelectedCopilotModel(modelId)
+    await createSetSelectedModelUseCase().execute(modelId)
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {/* AI Model */}
+      <section className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">AI Model</h2>
+        {modelsLoading && (
+          <p className="text-xs text-gray-400">Modellen ophalen...</p>
+        )}
+        {modelsError && !modelsLoading && (
+          <p className="text-xs text-red-500">{modelsError}</p>
+        )}
+        {!modelsLoading && !modelsError && models.length > 0 && (
+          <select
+            value={selectedCopilotModel}
+            onChange={(e) => { void handleModelChange(e.target.value) }}
+            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} — {m.tokenMultiplier}×
+              </option>
+            ))}
+          </select>
+        )}
+        {!modelsLoading && !modelsError && models.length === 0 && (
+          <p className="text-xs text-gray-400">Geen modellen beschikbaar</p>
+        )}
+        {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
+          <p className="text-xs text-yellow-600 mt-1">
+            Huidig model ({selectedCopilotModel}) staat niet in de lijst — mogelijk verouderd.
+          </p>
+        )}
+      </section>
+
       <div className="flex flex-col gap-1">
         <div className="text-xs uppercase tracking-widest text-[#7a7268]">Ingelogd als</div>
         <div className="text-[#e8e2d9] text-sm">{user?.name} ({user?.email})</div>
