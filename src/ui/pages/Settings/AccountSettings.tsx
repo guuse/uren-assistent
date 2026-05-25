@@ -192,11 +192,7 @@ export function AccountSettings() {
 
   const starredProjects = filteredProjects.filter((p) => starredIds.has(p.id))
   const unstarredProjects = filteredProjects.filter((p) => !starredIds.has(p.id))
-  // TODO(Task 2): projectSearch, starredProjects, unstarredProjects used in JSX
-  void projectSearch
-  void setProjectSearch
-  void starredProjects
-  void unstarredProjects
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -439,25 +435,52 @@ export function AccountSettings() {
         {projects.length === 0 ? (
           <div className="text-xs text-[#4a4540]">Geen projecten geladen.</div>
         ) : (
-          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
-            {[...projects]
-              .sort((a, b) => `${a.organizationName} — ${a.name}`.localeCompare(`${b.organizationName} — ${b.name}`))
-              .map((p) => (
+          <>
+            <input
+              type="text"
+              value={projectSearch}
+              onChange={(e) => setProjectSearch(e.target.value)}
+              placeholder="Zoek op projectnaam…"
+              className="bg-[#1e1b18] border border-[#2e2a26] text-[#e8e2d9] text-sm rounded-lg px-3 py-2 placeholder:text-[#4a4540] focus:outline-none focus:border-[#a07848] transition-colors"
+            />
+            <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+              {starredProjects.length === 0 && unstarredProjects.length === 0 && (
+                <div className="text-xs text-[#4a4540] px-1">Geen projecten gevonden.</div>
+              )}
+              {starredProjects.length > 0 && (
+                <>
+                  {unstarredProjects.length > 0 && (
+                    <div className="text-xs uppercase tracking-widest text-[#a07848] px-1 pt-1 pb-0.5">Favorieten</div>
+                  )}
+                  {starredProjects.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => void toggleStar(p.id)}
+                      className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9]"
+                    >
+                      <span className="text-[#a07848]">★</span>
+                      <span>{p.organizationName} — {p.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {starredProjects.length > 0 && unstarredProjects.length > 0 && (
+                <div className="text-xs uppercase tracking-widest text-[#7a7268] px-1 pt-2 pb-0.5">Overige projecten</div>
+              )}
+              {unstarredProjects.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => void toggleStar(p.id)}
-                  className={`flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    starredIds.has(p.id)
-                      ? 'bg-[#1e1b18] border border-[#a07848] text-[#e8e2d9]'
-                      : 'bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36]'
-                  }`}
+                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm transition-colors bg-[#1e1b18] border border-[#2e2a26] text-[#7a7268] hover:border-[#3e3a36]"
                 >
-                  <span className="text-[#a07848]">{starredIds.has(p.id) ? '★' : '☆'}</span>
+                  <span className="text-[#a07848]">☆</span>
                   <span>{p.organizationName} — {p.name}</span>
                 </button>
               ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
