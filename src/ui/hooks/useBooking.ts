@@ -92,25 +92,41 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
       if (!apiKey || !apiSecret) throw new Error('Simplicate API key niet ingesteld')
 
       const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
-      const { bookHours } = createUseCases(simplicateRepo)
+      const useCases = createUseCases(simplicateRepo)
 
       const [hStart, mStart] = startTime.split(':').map(Number)
       const [hEnd, mEnd] = endTime.split(':').map(Number)
       const hours = Math.round(((hEnd! * 60 + mEnd!) - (hStart! * 60 + mStart!)) / 60 * 2) / 2
 
-      const entry: HourEntry = {
-        employeeId: simplicateEmployeeId,
-        projectId,
-        projectServiceId: serviceId,
-        hourTypeId,
-        hours,
-        startDate: date,
-        startTime,
-        endTime,
-        note,
+      if (initial.id) {
+        const entry: HourEntry = {
+          id: initial.id,
+          employeeId: simplicateEmployeeId,
+          projectId,
+          projectServiceId: serviceId,
+          hourTypeId,
+          hours,
+          startDate: date,
+          startTime,
+          endTime,
+          note,
+        }
+        await useCases.updateHourEntry.execute(entry)
+      } else {
+        const entry: HourEntry = {
+          employeeId: simplicateEmployeeId,
+          projectId,
+          projectServiceId: serviceId,
+          hourTypeId,
+          hours,
+          startDate: date,
+          startTime,
+          endTime,
+          note,
+        }
+        await useCases.bookHours.execute(entry)
       }
 
-      await bookHours.execute(entry)
       setStatus('success')
     } catch (err) {
       setStatus('error')
