@@ -102,6 +102,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   type DeleteState = 'idle' | 'confirm'
   const [deleteState, setDeleteState] = useState<DeleteState>('idle')
   const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDeleteActionRef = useRef(false)
 
   function handleDeleteClick() {
     if (deleteState === 'idle') {
@@ -109,6 +110,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
       deleteTimeoutRef.current = setTimeout(() => setDeleteState('idle'), 3000)
     } else {
       if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current)
+      isDeleteActionRef.current = true
       void booking.deleteEntry(initialEntry.id!)
     }
   }
@@ -117,6 +119,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   useEffect(() => {
     return () => {
       if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current)
+      isDeleteActionRef.current = false
     }
   }, [])
 
@@ -145,7 +148,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
     : null
 
   if (booking.status === 'success') {
-    if (initialEntry.id) {
+    if (isDeleteActionRef.current) {
       onDeleted?.()
     } else {
       onBooked?.()
@@ -155,7 +158,11 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
         <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', padding: 24, width: 320, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ color: 'var(--success)', fontSize: 36 }}>✓</div>
           <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-            {initialEntry.id ? 'Boeking verwijderd!' : 'Uren geboekt!'}
+            {isDeleteActionRef.current
+              ? 'Boeking verwijderd!'
+              : initialEntry.id
+                ? 'Uren bijgewerkt!'
+                : 'Uren geboekt!'}
           </div>
           <button
             onClick={onClose}
