@@ -16,7 +16,8 @@ const DEFAULTS: Record<PromptTemplateName, string> = {
 }
 
 const SUBDIR = 'prompts'
-const VERSIONS_FILE = '.versions.json'
+// No leading dot: the Tauri fs scope ($APPDATA/**) does not match dotfiles.
+const VERSIONS_FILE = 'versions.json'
 
 /** Stable, dependency-free string hash (djb2) used to detect a changed bundled prompt. */
 function hashString(s: string): string {

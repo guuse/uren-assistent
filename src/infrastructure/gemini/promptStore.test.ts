@@ -16,7 +16,7 @@ const mockRead = readTextFile as ReturnType<typeof vi.fn>
 const mockWrite = writeTextFile as ReturnType<typeof vi.fn>
 const mockMkdir = mkdir as ReturnType<typeof vi.fn>
 
-const VERSIONS_PATH = '/mock/app/data/prompts/.versions.json'
+const VERSIONS_PATH = '/mock/app/data/prompts/versions.json'
 
 /** Wires readTextFile so the versions sidecar and the template file return distinct content. */
 function mockDisk(opts: { versions?: Record<string, string>; diskCopy?: string | null }) {
@@ -65,7 +65,7 @@ describe('loadPromptTemplate', () => {
     const result = await loadPromptTemplate('classify-blocks')
 
     expect(mockWrite).toHaveBeenCalledWith('/mock/app/data/prompts/classify-blocks.md', result)
-    expect(mockWrite).toHaveBeenCalledWith('/mock/app/data/prompts/.versions.json', expect.stringContaining(BUNDLED_HASHES['classify-blocks']))
+    expect(mockWrite).toHaveBeenCalledWith('/mock/app/data/prompts/versions.json', expect.stringContaining(BUNDLED_HASHES['classify-blocks']))
     expect(result).toContain('You are a time-tracking assistant')
   })
 
