@@ -68,8 +68,14 @@ describe('ProcessWeekUseCase', () => {
     expect(phases).toContain('fetching-linear')
     expect(phases.filter(p => p === 'classifying-day')).toHaveLength(5)
     expect(phases).toContain('done')
-    expect(githubRepo.getCommitsForWeek).toHaveBeenCalledTimes(6) // 1 week + 5 days (ProcessDayUseCase fetches per day)
-    expect(linearRepo.getCompletedIssuesForWeek).toHaveBeenCalledTimes(6) // 1 week + 5 days
+    // Hoisted: each of these is fetched exactly once for the whole week and sliced per day.
+    expect(githubRepo.getCommitsForWeek).toHaveBeenCalledTimes(1)
+    expect(linearRepo.getCompletedIssuesForWeek).toHaveBeenCalledTimes(1)
+    expect(simplicateRepo.getProjects).toHaveBeenCalledTimes(1)
+    expect(simplicateRepo.getHourEntries).toHaveBeenCalledTimes(1)
+    // Genuinely per-day fetches still run for each of the 5 days.
+    expect(calendarRepo.fetchEvents).toHaveBeenCalledTimes(5)
+    expect(historyStore.getBlocksForDate).toHaveBeenCalledTimes(5)
     expect(historyStore.setBlocksForDate).toHaveBeenCalledTimes(5)
   })
 })

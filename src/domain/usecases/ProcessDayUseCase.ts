@@ -5,17 +5,32 @@ import type { IGoogleCalendarRepository } from '../repositories/IGoogleCalendarR
 import type { IHistoryStore } from '../repositories/IHistoryStore'
 import type { ICopilotRepository, Project, Service } from '../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
-import type { ISimplicateRepository } from '../repositories/ISimplicateRepository'
+import type { ISimplicateRepository, SimplicateProject } from '../repositories/ISimplicateRepository'
+import type { GitHubCommit } from '../entities/GitHubCommit'
+import type { LinearIssue } from '../entities/LinearIssue'
+import type { HourEntry } from '../entities/HourEntry'
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
 import { GroupAndClassifyDayUseCase } from './GroupAndClassifyDayUseCase'
-import { GetActiveProjectsForDateUseCase } from './GetActiveProjectsForDateUseCase'
+import { GetActiveProjectsForDateUseCase, type ActiveProjectsResult } from './GetActiveProjectsForDateUseCase'
 import { groupCommitsIntoBlocks } from './GroupCommitsIntoBlocks'
+import { PackDayUseCase } from './PackDayUseCase'
 
 export interface ProcessDayProgress {
   phase: 'fetching-context' | 'classifying-day' | 'done' | 'error'
   date?: string
   error?: string
+}
+
+/**
+ * Week-level data fetched once and sliced per day, so a week run doesn't
+ * re-fetch commits, issues, projects and the 28-day history window for each day.
+ */
+export interface DayPrefetch {
+  weekCommits: GitHubCommit[]
+  weekLinearIssues: LinearIssue[]
+  historicalSuperset: HourEntry[]
+  allProjects: SimplicateProject[]
 }
 
 export class ProcessDayUseCase {
@@ -41,20 +56,42 @@ export class ProcessDayUseCase {
     this.getActiveProjects = new GetActiveProjectsForDateUseCase(simplicateRepo)
   }
 
-  async *execute(date: string): AsyncGenerator<ProcessDayProgress> {
+  async *execute(date: string, prefetch?: DayPrefetch): AsyncGenerator<ProcessDayProgress> {
     yield { phase: 'fetching-context', date }
 
     try {
       const dayStart = new Date(date + 'T00:00:00')
       const dayEnd = new Date(date + 'T23:59:59')
 
-      const [allCommits, linearIssues, calendarEvents, historyBlocks, activeProjectsResult] = await Promise.all([
-        this.fetchGitHub.execute(this.githubUsername, date, date),
-        this.fetchLinear.execute(date, date),
+      // Calendar events and browser history are genuinely per-day; commits,
+      // issues, projects and the history window are sliced from week-level data
+      // when a prefetch is supplied (week run), else fetched for this day alone.
+      const [calendarEvents, historyBlocks] = await Promise.all([
         this.calendarRepo.fetchEvents(dayStart, dayEnd),
         this.historyStore.getBlocksForDate(date),
-        this.getActiveProjects.execute(date, this.simplicateEmployeeId),
       ])
+
+      let allCommits: GitHubCommit[]
+      let linearIssues: LinearIssue[]
+      let activeProjectsResult: ActiveProjectsResult
+      if (prefetch) {
+        allCommits = prefetch.weekCommits.filter(c => c.date === date)
+        linearIssues = prefetch.weekLinearIssues.filter(i => i.completedAt.slice(0, 10) === date)
+        activeProjectsResult = GetActiveProjectsForDateUseCase.computeFromData(
+          date,
+          prefetch.historicalSuperset,
+          prefetch.allProjects,
+        )
+      } else {
+        const [commits, issues, active] = await Promise.all([
+          this.fetchGitHub.execute(this.githubUsername, date, date),
+          this.fetchLinear.execute(date, date),
+          this.getActiveProjects.execute(date, this.simplicateEmployeeId),
+        ])
+        allCommits = commits
+        linearIssues = issues
+        activeProjectsResult = active
+      }
 
       yield { phase: 'classifying-day', date }
 
@@ -74,7 +111,12 @@ export class ProcessDayUseCase {
         linearIssues,
       })
 
-      await this.historyStore.setBlocksForDate(date, classified)
+      // Already-booked hours for the target day live in the 28-day historical window
+      // (its end is inclusive of `date`). Use them to anchor and reach the 8h fill target.
+      const existingEntries = activeProjectsResult.historicalEntries.filter(e => e.startDate === date)
+      const packed = new PackDayUseCase().execute(classified, existingEntries)
+
+      await this.historyStore.setBlocksForDate(date, packed)
     } catch (err) {
       yield {
         phase: 'error',

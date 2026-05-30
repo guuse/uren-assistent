@@ -74,6 +74,38 @@ describe('ProcessDayUseCase', () => {
     expect(phases[phases.length - 1]).toBe('done')
   })
 
+  it('uses prefetched week data instead of fetching per-day Simplicate data', async () => {
+    const simplicate = makeSimplicateRepo()
+    const useCase = new ProcessDayUseCase(
+      makeGitHub(),
+      makeLinear(),
+      makeCalendar(),
+      makeHistoryStore(),
+      makeCopilot(),
+      makeCache(),
+      [] as Project[],
+      [] as Service[],
+      'testuser',
+      simplicate,
+      'employee-1',
+    )
+
+    const phases: string[] = []
+    for await (const progress of useCase.execute('2026-05-19', {
+      weekCommits: [],
+      weekLinearIssues: [],
+      historicalSuperset: [],
+      allProjects: [],
+    })) {
+      phases.push(progress.phase)
+    }
+
+    expect(phases[phases.length - 1]).toBe('done')
+    // Prefetch path must not hit Simplicate per day.
+    expect(simplicate.getHourEntries).not.toHaveBeenCalled()
+    expect(simplicate.getProjects).not.toHaveBeenCalled()
+  })
+
   it('yields error phase when calendar throws', async () => {
     const calendar = makeCalendar()
     ;(calendar.fetchEvents as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('calendar down'))

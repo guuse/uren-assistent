@@ -5,9 +5,10 @@ import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 import type { DayContext } from '../../domain/entities/DayContext'
 import type { HourEntry } from '../../domain/entities/HourEntry'
+import { loadPromptTemplate, renderPrompt } from './promptStore'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
 interface GeminiPart {
   text: string
@@ -36,7 +37,7 @@ interface LLMBlockResult {
   confidence: number
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(prompt: string, attempt = 0): Promise<string> {
   const response = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -46,8 +47,19 @@ async function callGemini(prompt: string): Promise<string> {
     }),
   })
 
+  if (response.status === 429 && attempt < 3) {
+    const text = await response.text()
+    const retryDelay = /"retryDelay":"(\d+)s"/.exec(text)?.[1]
+    const delaySecs = retryDelay ? parseInt(retryDelay, 10) : Math.pow(2, attempt + 1) * 5
+    await new Promise(resolve => setTimeout(resolve, delaySecs * 1000))
+    return callGemini(prompt, attempt + 1)
+  }
+
   if (!response.ok) {
     const text = await response.text()
+    if (response.status === 429) {
+      throw new Error(`Gemini quota uitgeput. Upgrade naar een betaald API-plan op https://ai.google.dev/ of probeer het later opnieuw.`)
+    }
     throw new Error(`Gemini API error: ${response.status} — ${text}`)
   }
 
@@ -122,15 +134,21 @@ function formatHistoricalEntries(entries: HourEntry[], projects: Project[], serv
     byDate.set(entry.startDate, list)
   }
 
-  const sortedDates = [...byDate.keys()].sort((a, b) => b.localeCompare(a))
+  // Slim de prompt: alleen de meest recente boekdagen, en korte notities.
+  // De volledige 4-weken-window blijft de actieve-projecten-detectie voeden;
+  // de LLM heeft genoeg aan de recente dagen om patronen te herkennen.
+  const MAX_DATES = 12
+  const NOTE_MAX = 50
+  const sortedDates = [...byDate.keys()].sort((a, b) => b.localeCompare(a)).slice(0, MAX_DATES)
 
-  const lines: string[] = ['## Historische boekingen (afgelopen 4 weken)\n']
+  const lines: string[] = [`## Historische boekingen (meest recente ${sortedDates.length} boekdagen)\n`]
   for (const date of sortedDates) {
     lines.push(`${date}:`)
     for (const e of byDate.get(date)!) {
       const projectName = projectById.get(e.projectId) ?? e.projectId
       const serviceName = serviceById.get(e.projectServiceId) ?? e.projectServiceId
-      const noteStr = e.note ? ` | note: "${e.note}"` : ''
+      const note = e.note.length > NOTE_MAX ? e.note.slice(0, NOTE_MAX) + '…' : e.note
+      const noteStr = note ? ` | note: "${note}"` : ''
       lines.push(`  - ${e.startTime}–${e.endTime} | Project: ${projectName} (id: ${e.projectId}) / Dienst: ${serviceName} (id: ${e.projectServiceId})${noteStr}`)
     }
     lines.push('')
@@ -161,39 +179,13 @@ export class GeminiRepository implements ICopilotRepository {
     const blockDate = blocks[0]?.date ?? ''
     const calendarContext = formatCalendarContext(calendarEvents, blockDate)
 
-    const prompt = `You are a time-tracking assistant helping a developer record their work hours.
-
-For each browser activity block, you must:
-1. Generate a human-readable name (e.g. "Eindhoven Doet — development", "Harborn hosting — beheer")
-2. Write a short summary of what was done (max 120 chars, Dutch preferred)
-3. Match to a project and service if possible
-${calendarContext}
-Available projects:
-${projectList}
-
-Available services (linked to projects by projectId):
-${serviceList}
-
-Browser activity blocks to process:
-${blockList}
-
-Return a JSON array. Each item must have:
-- urlPattern (string, exact match from input — used as identifier)
-- blockName (string, human-readable work block name, max 60 chars)
-- summary (string, short description of the work, max 120 chars, Dutch preferred)
-- projectId (string | null, must be one of the available project IDs)
-- serviceId (string | null, must be a service ID whose projectId matches the chosen project)
-- note (string, short booking note, max 80 chars)
-- confidence (integer 1–5):
-  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
-  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
-  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
-  2 = Twijfelachtig — weinig bewijs, gok op basis van context
-  1 = Onzeker — geen duidelijke match, vul in als best guess
-
-Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
-
-Return ONLY a valid JSON array, no markdown, no explanation.`
+    const template = await loadPromptTemplate('classify-blocks')
+    const prompt = renderPrompt(template, {
+      calendarContext,
+      projectList,
+      serviceList,
+      blockList,
+    })
 
     const content = await callGemini(prompt)
 
@@ -302,68 +294,14 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
       ? formatHistoricalEntries(historicalEntries, availableProjects, availableServices) + '\n'
       : ''
 
-    const prompt = `Je bent een tijdregistratie-assistent die een developer helpt zijn werkuren te registreren.
-
-Datum: ${date}
-
-Voor elk genummerd item hieronder geef je één boekingsblok terug.
-- Vergadering-items: gebruik de vergader-duur voor startTime/endTime/hours
-- Losse items: gebruik de browse-duur
-
-Analyseer ook de historische boekingen op terugkerende patronen:
-- Een patroon is een combinatie van project+dienst die op vergelijkbare intervallen voorkomt (bijv. elke week, elke 2 weken)
-- Als een patroon matcht met de doeldatum (${date}) EN er is geen browser-activiteit of calendar-event voor die combinatie, voeg dan een extra item toe in "patternBlocks"
-- Gebruik het historisch gemiddelde voor de geschatte duur (estimatedHours)
-- Geef patronen hogere confidence dan losse browser-activiteit zonder aanvullende context
-
-${meetingsSection}${standaloneSection}${hintsSection}${contextSection}${historicalSection}Beschikbare projecten:
-${projectList}
-
-Beschikbare diensten (gekoppeld aan projecten via projectId):
-${serviceList}
-
-Geef een JSON-object terug met twee velden:
-- "blocks": array van geclassificeerde items (één per genummerd blok hierboven)
-- "patternBlocks": array van extra blokken die puur op patroonherkenning zijn gebaseerd (kan leeg zijn)
-
-Elk item in "blocks" heeft:
-- index (number, exact overeenkomend met het [N]-nummer hierboven)
-- blockName (string, leesbare naam max 60 tekens, bv. "Standup — PR review")
-- summary (string, korte samenvatting wat er gedaan is, max 120 tekens, Nederlands)
-- projectId (string | null, moet een van de beschikbare project-ID's zijn)
-- serviceId (string | null, moet een dienst-ID zijn waarvan projectId overeenkomt)
-- note (string, korte boekingsnotitie max 80 tekens)
-- confidence (integer 1–5):
-  5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
-  4 = Zeker — goede match, klein detail ontbreekt of is afgeleid
-  3 = Aannemelijk — patroon klopt, maar meerdere opties waren mogelijk
-  2 = Twijfelachtig — weinig bewijs, gok op basis van context
-  1 = Onzeker — geen duidelijke match, vul in als best guess
-
-Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
-- relatedIssueIds (string[], identifiers van Linear issues die bij dit blok horen. Lege array als niets van toepassing.)
-
-Elk item in "patternBlocks" heeft:
-- blockName (string, leesbare naam max 60 tekens)
-- summary (string, korte samenvatting, max 120 tekens, Nederlands)
-- projectId (string | null)
-- serviceId (string | null)
-- note (string, max 80 tekens)
-- confidence (integer 1–5):
-  5 = Zeer zeker — patroon klopt exact en er is geen andere activiteit die het al dekt
-  4 = Zeker — sterk patroon, kleine twijfel
-  3 = Aannemelijk — patroon klopt, maar minder frequent of recent
-  2 = Twijfelachtig — zwak patroon, weinig historisch bewijs
-  1 = Onzeker — nauwelijks bewijs voor dit patroon
-
-Overweeg actief welke score van toepassing is. Geef niet standaard een hoge score.
-- estimatedHours (number, schatting in uren op basis van historisch gemiddelde)
-- origin (altijd "llm-pattern")
-
-BELANGRIJK: Voeg een item ALLEEN toe aan "patternBlocks" als het project+dienst NIET al voorkomt in "blocks". Als hetzelfde project+dienst al in "blocks" staat (via browser-activiteit of agenda), voeg het dan NIET toe aan "patternBlocks".
-
-Gebruik de cache-hints als leidraad maar overschrijf ze als de context duidelijk op een ander project wijst.
-Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
+    const sections = `${meetingsSection}${standaloneSection}${hintsSection}${contextSection}${historicalSection}`
+    const template = await loadPromptTemplate('classify-day')
+    const prompt = renderPrompt(template, {
+      date,
+      sections,
+      projectList,
+      serviceList,
+    })
 
     const content = await callGemini(prompt)
 

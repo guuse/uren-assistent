@@ -8,7 +8,8 @@ import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepos
 import type { ISimplicateRepository } from '../repositories/ISimplicateRepository'
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
-import { ProcessDayUseCase } from './ProcessDayUseCase'
+import { ProcessDayUseCase, type DayPrefetch } from './ProcessDayUseCase'
+import { subtractDays } from './GetActiveProjectsForDateUseCase'
 import type { GitHubCommit } from '../entities/GitHubCommit'
 import type { LinearIssue } from '../entities/LinearIssue'
 
@@ -49,8 +50,8 @@ export class ProcessWeekUseCase {
     availableProjects: Project[],
     availableServices: Service[],
     private readonly githubUsername: string,
-    simplicateRepo: ISimplicateRepository,
-    simplicateEmployeeId: string,
+    private readonly simplicateRepo: ISimplicateRepository,
+    private readonly simplicateEmployeeId: string,
   ) {
     this.fetchGitHub = new FetchGitHubContextUseCase(githubRepo)
     this.fetchLinear = new FetchLinearContextUseCase(linearRepo)
@@ -83,15 +84,46 @@ export class ProcessWeekUseCase {
     }
     yield { phase: 'context-ready', commitsByDay, linearIssues }
 
-    for (let i = 0; i < days.length; i++) {
-      const day = days[i]!
-      yield { phase: 'classifying-day', day, dayIndex: i }
+    // Haal de Simplicate-data die per dag identiek of afleidbaar is één keer op
+    // voor de hele week: projecten en het 28-daagse historie-venster (gemeten
+    // vanaf de vroegste dag). ProcessDay snijdt dit per dag uit.
+    const [allProjects, historicalSuperset] = await Promise.all([
+      this.simplicateRepo.getProjects(),
+      this.simplicateRepo.getHourEntries(this.simplicateEmployeeId, subtractDays(weekStart, 28), weekEnd),
+    ])
+    const prefetch: DayPrefetch = {
+      weekCommits: allCommits,
+      weekLinearIssues: linearIssues,
+      historicalSuperset,
+      allProjects,
+    }
 
-      for await (const progress of this.processDayUseCase.execute(day)) {
-        if (progress.phase === 'error') {
-          yield { phase: 'error', day, dayIndex: i, ...(progress.error !== undefined ? { error: progress.error } : {}) }
-        }
+    // Verwerk dagen in batches zodat er hooguit CONCURRENCY Gemini-calls tegelijk lopen.
+    // De per-call 429-backoff in GeminiRepository blijft de quota bewaken.
+    const CONCURRENCY = 3
+
+    const runDay = async (day: string): Promise<string | undefined> => {
+      let error: string | undefined
+      for await (const progress of this.processDayUseCase.execute(day, prefetch)) {
+        if (progress.phase === 'error') error = progress.error
         // fetching-context, classifying-day, done — geen forward nodig naar WeekPage
+      }
+      return error
+    }
+
+    for (let i = 0; i < days.length; i += CONCURRENCY) {
+      const chunk = days.slice(i, i + CONCURRENCY)
+      for (let j = 0; j < chunk.length; j++) {
+        yield { phase: 'classifying-day', day: chunk[j]!, dayIndex: i + j }
+      }
+
+      const errors = await Promise.all(chunk.map(day => runDay(day)))
+
+      for (let j = 0; j < chunk.length; j++) {
+        const error = errors[j]
+        if (error !== undefined) {
+          yield { phase: 'error', day: chunk[j]!, dayIndex: i + j, error }
+        }
       }
     }
 

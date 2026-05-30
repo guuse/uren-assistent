@@ -1,7 +1,7 @@
 import type { ISimplicateRepository, SimplicateProject } from '../repositories/ISimplicateRepository'
 import type { HourEntry } from '../entities/HourEntry'
 
-function subtractDays(dateStr: string, days: number): string {
+export function subtractDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number)
   const date = new Date(y!, m! - 1, d!)
   date.setDate(date.getDate() - days)
@@ -13,16 +13,25 @@ export interface ActiveProjectsResult {
   historicalEntries: HourEntry[]
 }
 
+/**
+ * Derives the projects a developer has booked on in the 28 days up to (and
+ * including) `targetDate`, ranked by booking frequency, plus those entries.
+ *
+ * `computeFromData` is the pure core; `execute` fetches and delegates. The pure
+ * variant lets a week run fetch the whole window once and slice it per day.
+ */
 export class GetActiveProjectsForDateUseCase {
   constructor(private readonly simplicateRepo: ISimplicateRepository) {}
 
-  async execute(targetDate: string, employeeId: string): Promise<ActiveProjectsResult> {
+  static computeFromData(
+    targetDate: string,
+    historicalSuperset: HourEntry[],
+    allProjects: SimplicateProject[],
+  ): ActiveProjectsResult {
     const windowStart = subtractDays(targetDate, 28)
-
-    const [historicalEntries, allProjects] = await Promise.all([
-      this.simplicateRepo.getHourEntries(employeeId, windowStart, targetDate),
-      this.simplicateRepo.getProjects(),
-    ])
+    const historicalEntries = historicalSuperset.filter(
+      e => e.startDate >= windowStart && e.startDate <= targetDate,
+    )
 
     const bookingCountByProject = new Map<string, number>()
     for (const entry of historicalEntries) {
@@ -39,5 +48,16 @@ export class GetActiveProjectsForDateUseCase {
       .sort((a, b) => (bookingCountByProject.get(b.id) ?? 0) - (bookingCountByProject.get(a.id) ?? 0))
 
     return { activeProjects, historicalEntries }
+  }
+
+  async execute(targetDate: string, employeeId: string): Promise<ActiveProjectsResult> {
+    const windowStart = subtractDays(targetDate, 28)
+
+    const [historicalEntries, allProjects] = await Promise.all([
+      this.simplicateRepo.getHourEntries(employeeId, windowStart, targetDate),
+      this.simplicateRepo.getProjects(),
+    ])
+
+    return GetActiveProjectsForDateUseCase.computeFromData(targetDate, historicalEntries, allProjects)
   }
 }
