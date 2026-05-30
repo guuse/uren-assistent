@@ -1,7 +1,3 @@
-// src/infrastructure/tokenTest.ts
-// Lightweight connection tests for each API token.
-// Returns { ok: boolean; label: string } — label is shown in the UI.
-
 export interface TokenTestResult {
   ok: boolean
   label: string
@@ -42,19 +38,3 @@ export async function testLinearToken(token: string): Promise<TokenTestResult> {
   }
 }
 
-export async function testCopilotToken(token: string): Promise<TokenTestResult> {
-  // Copilot tokens are GitHub OAuth tokens — validate via /user endpoint
-  try {
-    const res = await fetch('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-      },
-    })
-    if (!res.ok) return { ok: false, label: `Copilot token: HTTP ${res.status}` }
-    const data = await res.json() as { login?: string }
-    return { ok: true, label: `Copilot token: geldig (${data.login ?? '?'})` }
-  } catch {
-    return { ok: false, label: 'Copilot token: geen verbinding' }
-  }
-}

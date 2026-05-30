@@ -46,7 +46,6 @@ function makeDeps(cacheAll: Record<string, { projectId: string; serviceId: strin
   const copilotRepo: ICopilotRepository = {
     classify: vi.fn(),
     classifyDay: vi.fn().mockResolvedValue(classifyDayResults),
-    listModels: vi.fn().mockResolvedValue([]),
   }
   const cacheRepo: IMappingCacheRepository = {
     get: vi.fn(),

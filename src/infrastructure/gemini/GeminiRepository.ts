@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core'
 import { toConfidenceScore } from '../../domain/usecases/toConfidenceScore'
 import type { ICopilotRepository, Project, Service, DayItem, DayClassificationResult, PatternBlock } from '../../domain/repositories/ICopilotRepository'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
@@ -6,14 +5,25 @@ import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { CalendarEvent } from '../../domain/entities/CalendarEvent'
 import type { DayContext } from '../../domain/entities/DayContext'
 import type { HourEntry } from '../../domain/entities/HourEntry'
-import type { CopilotModel } from '../../domain/entities/CopilotModel'
 
-interface CopilotChoice {
-  message: { content: string }
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+
+interface GeminiPart {
+  text: string
 }
 
-interface CopilotResponse {
-  choices: CopilotChoice[]
+interface GeminiContent {
+  parts: GeminiPart[]
+  role?: string
+}
+
+interface GeminiCandidate {
+  content: GeminiContent
+}
+
+interface GeminiResponse {
+  candidates: GeminiCandidate[]
 }
 
 interface LLMBlockResult {
@@ -24,6 +34,26 @@ interface LLMBlockResult {
   serviceId: string | null
   note: string
   confidence: number
+}
+
+async function callGemini(prompt: string): Promise<string> {
+  const response = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1 },
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Gemini API error: ${response.status} — ${text}`)
+  }
+
+  const data = await response.json() as GeminiResponse
+  const raw = data.candidates[0]?.content.parts[0]?.text ?? '[]'
+  return raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
 }
 
 function sanitizeUrl(url: string): string {
@@ -109,15 +139,12 @@ function formatHistoricalEntries(entries: HourEntry[], projects: Project[], serv
   return lines.join('\n')
 }
 
-export class CopilotRepository implements ICopilotRepository {
-  constructor(private readonly copilotToken: string) {}
-
+export class GeminiRepository implements ICopilotRepository {
   async classify(
     blocks: (HistoryBlock & { overlappingMeetings?: CalendarEvent[] })[],
     availableProjects: Project[],
     availableServices: Service[],
     calendarEvents: CalendarEvent[] = [],
-    model = 'gpt-4o',
   ): Promise<ClassifiedBlock[]> {
     const projectList = availableProjects
       .map(p => `- id: "${p.id}", name: "${p.name}"`)
@@ -131,7 +158,6 @@ export class CopilotRepository implements ICopilotRepository {
       )
       .join('\n')
 
-    // Use the date of the first block for the calendar context header
     const blockDate = blocks[0]?.date ?? ''
     const calendarContext = formatCalendarContext(calendarEvents, blockDate)
 
@@ -169,31 +195,17 @@ Overweeg actief welke score van toepassing is. Geef niet standaard een hoge scor
 
 Return ONLY a valid JSON array, no markdown, no explanation.`
 
-    const responseText = await invoke<string>('copilot_request', {
-      args: {
-        token: this.copilotToken,
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-        }),
-      },
-    })
-
-    const data = JSON.parse(responseText) as CopilotResponse
-    const raw = data.choices[0]?.message.content ?? '[]'
-    // Strip markdown code fences if present
-    const content = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+    const content = await callGemini(prompt)
 
     let results: LLMBlockResult[]
     try {
       results = JSON.parse(content) as LLMBlockResult[]
     } catch {
-      throw new Error('Copilot returned invalid JSON')
+      throw new Error('Gemini returned invalid JSON')
     }
 
     if (!Array.isArray(results)) {
-      throw new Error('Copilot returned unexpected response format (not an array)')
+      throw new Error('Gemini returned unexpected response format (not an array)')
     }
 
     const addHours = (time: string, hours: number): string => {
@@ -230,7 +242,6 @@ Return ONLY a valid JSON array, no markdown, no explanation.`
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
     context?: DayContext,
     historicalEntries?: HourEntry[],
-    model = 'gpt-4o',
   ): Promise<DayClassificationResult[]> {
     const pad = (n: number) => String(n).padStart(2, '0')
     const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -354,20 +365,7 @@ BELANGRIJK: Voeg een item ALLEEN toe aan "patternBlocks" als het project+dienst 
 Gebruik de cache-hints als leidraad maar overschrijf ze als de context duidelijk op een ander project wijst.
 Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
 
-    const responseText = await invoke<string>('copilot_request', {
-      args: {
-        token: this.copilotToken,
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-        }),
-      },
-    })
-
-    const data = JSON.parse(responseText) as CopilotResponse
-    const raw = data.choices[0]?.message.content ?? '[]'
-    const content = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+    const content = await callGemini(prompt)
 
     interface ClassifyDayLLMResponse {
       blocks: DayClassificationResult[]
@@ -378,19 +376,17 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
     try {
       parsed = JSON.parse(content) as ClassifyDayLLMResponse | DayClassificationResult[]
     } catch {
-      throw new Error('Copilot returned invalid JSON for classifyDay')
+      throw new Error('Gemini returned invalid JSON for classifyDay')
     }
 
-    // Backward compat: als de LLM een array teruggeeft (geen patternBlocks)
     if (Array.isArray(parsed)) {
       return parsed
     }
 
     if (!Array.isArray(parsed.blocks)) {
-      throw new Error('Copilot classifyDay returned unexpected format')
+      throw new Error('Gemini classifyDay returned unexpected format')
     }
 
-    // Encodeer patternBlocks als DayClassificationResult met negatieve index en isPatternBlock: true
     const patternResults: DayClassificationResult[] = (parsed.patternBlocks ?? []).map((pb, i) => ({
       index: -1000 - i,
       blockName: pb.blockName,
@@ -405,32 +401,5 @@ Geef ALLEEN een geldig JSON-object terug, geen markdown, geen uitleg.`
     }))
 
     return [...parsed.blocks, ...patternResults]
-  }
-
-  async listModels(): Promise<CopilotModel[]> {
-    const responseText = await invoke<string>('copilot_get', {
-      args: {
-        token: this.copilotToken,
-        endpoint: 'https://api.githubcopilot.com/models',
-      },
-    })
-
-    interface ModelsApiResponse {
-      data: Array<{
-        id: string
-        name?: string
-        model_picker_category?: string
-        model_picker_enabled?: boolean
-      }>
-    }
-
-    const data = JSON.parse(responseText) as ModelsApiResponse
-    return (data.data ?? [])
-      .filter((m) => m.model_picker_enabled !== false)
-      .map((m) => ({
-        id: m.id,
-        name: m.name ?? m.id,
-        category: m.model_picker_category ?? 'default',
-      }))
   }
 }

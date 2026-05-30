@@ -3,12 +3,8 @@ import { SimplicateRepository } from '../infrastructure/simplicate/SimplicateRep
 import { MappingCacheRepository } from '../infrastructure/storage/MappingCacheRepository'
 import { HistoryStore } from '../infrastructure/storage/HistoryStore'
 import { StarredProjectsStore } from '../infrastructure/storage/StarredProjectsStore'
-import { CopilotRepository } from '../infrastructure/copilot/CopilotRepository'
+import { GeminiRepository } from '../infrastructure/gemini/GeminiRepository'
 import { GoogleCalendarRepository } from '../infrastructure/googlecalendar/GoogleCalendarRepository'
-import { TauriSettingsRepository } from '../infrastructure/storage/TauriSettingsRepository'
-import { GetCopilotModelsUseCase } from '../domain/usecases/GetCopilotModelsUseCase'
-import { GetSelectedModelUseCase } from '../domain/usecases/GetSelectedModelUseCase'
-import { SetSelectedModelUseCase } from '../domain/usecases/SetSelectedModelUseCase'
 import { FetchSimplicateDataUseCase } from '../domain/usecases/FetchSimplicateDataUseCase'
 import { ParseBrowserHistoryUseCase } from '../domain/usecases/ParseBrowserHistoryUseCase'
 import { ClassifyHistoryBlocksUseCase } from '../domain/usecases/ClassifyHistoryBlocksUseCase'
@@ -42,26 +38,12 @@ export const mappingCacheRepo = new MappingCacheRepository()
 export const historyStore = new HistoryStore()
 export const starredProjectsStore = new StarredProjectsStore()
 
-export const settingsRepo = new TauriSettingsRepository()
-
-export function createGetCopilotModelsUseCase(copilotRepo: ICopilotRepository): GetCopilotModelsUseCase {
-  return new GetCopilotModelsUseCase(copilotRepo)
-}
-
-export function createGetSelectedModelUseCase(): GetSelectedModelUseCase {
-  return new GetSelectedModelUseCase(settingsRepo)
-}
-
-export function createSetSelectedModelUseCase(): SetSelectedModelUseCase {
-  return new SetSelectedModelUseCase(settingsRepo)
-}
-
 export function createSimplicateRepository(baseUrl: string, apiKey: string, apiSecret: string) {
   return new SimplicateRepository(baseUrl, apiKey, apiSecret)
 }
 
-export function createCopilotRepository(token: string): ICopilotRepository {
-  return new CopilotRepository(token)
+export function createGeminiRepository(): ICopilotRepository {
+  return new GeminiRepository()
 }
 
 export function createCalendarRepository() {

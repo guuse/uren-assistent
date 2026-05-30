@@ -11,7 +11,6 @@ import type { LinearIssue } from '../domain/entities/LinearIssue'
 export type TokenStatus = 'unknown' | 'ok' | 'fail'
 
 export interface TokenStatuses {
-  copilot: TokenStatus
   github: TokenStatus
   linear: TokenStatus
 }
@@ -34,12 +33,6 @@ interface AppState {
   services: SimplicateService[]
   hourTypes: SimplicateHourType[]
   setSimplicateData: (data: { projects: SimplicateProject[]; services: SimplicateService[]; hourTypes: SimplicateHourType[] }) => void
-
-  // Copilot
-  copilotToken: string | null
-  setCopilotToken: (token: string) => void
-  selectedCopilotModel: string
-  setSelectedCopilotModel: (model: string) => void
 
   // GitHub
   githubToken: string | null
@@ -72,12 +65,10 @@ const initialState = {
   projects: [],
   services: [],
   hourTypes: [],
-  copilotToken: null,
-  selectedCopilotModel: 'claude-sonnet-4.6',
   githubToken: null,
   githubUsername: null,
   linearToken: null,
-  tokenStatuses: { copilot: 'unknown' as const, github: 'unknown' as const, linear: 'unknown' as const },
+  tokenStatuses: { github: 'unknown' as const, linear: 'unknown' as const },
   dayContexts: {},
   isLoading: false,
   error: null,
@@ -92,9 +83,6 @@ export const useAppStore = create<AppState>()((set) => ({
   setSimplicateEmployeeId: (simplicateEmployeeId) => set({ simplicateEmployeeId }),
 
   setSimplicateData: (data) => set(data),
-
-  setCopilotToken: (copilotToken) => set({ copilotToken }),
-  setSelectedCopilotModel: (selectedCopilotModel) => set({ selectedCopilotModel }),
 
   setGithubToken: (githubToken) => set({ githubToken }),
   setGithubUsername: (githubUsername) => set({ githubUsername }),

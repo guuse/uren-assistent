@@ -35,7 +35,6 @@ const historyStore: IHistoryStore = {
 }
 const copilotRepo: ICopilotRepository = {
   classify: vi.fn().mockResolvedValue([]),
-    listModels: vi.fn().mockResolvedValue([]),
   classifyDay: vi.fn().mockResolvedValue([]),
 }
 const cacheRepo: IMappingCacheRepository = {

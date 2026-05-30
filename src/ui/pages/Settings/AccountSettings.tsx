@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { keychainRepo, createSimplicateRepository, createSetSelectedModelUseCase } from '../../../application/container'
+import { keychainRepo, createSimplicateRepository } from '../../../application/container'
 import { useAuth } from '../../hooks/useAuth'
 import { useAppStore } from '../../../store/appStore'
 import { useStarredProjects } from '../../hooks/useStarredProjects'
-import { testCopilotToken, testGitHubToken, testLinearToken } from '../../../infrastructure/tokenTest'
-import { useCopilotModels } from '../../hooks/useCopilotModels'
+import { testGitHubToken, testLinearToken } from '../../../infrastructure/tokenTest'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
@@ -14,17 +13,13 @@ export function AccountSettings() {
   const user = useAppStore((s) => s.user)
   const setSimplicateData = useAppStore((s) => s.setSimplicateData)
   const setSimplicateEmployeeId = useAppStore((s) => s.setSimplicateEmployeeId)
-  const setCopilotToken = useAppStore((s) => s.setCopilotToken)
   const setGithubToken = useAppStore((s) => s.setGithubToken)
   const setGithubUsername = useAppStore((s) => s.setGithubUsername)
   const setLinearToken = useAppStore((s) => s.setLinearToken)
   const setTokenStatus = useAppStore((s) => s.setTokenStatus)
   const projects = useAppStore((s) => s.projects)
-  const selectedCopilotModel = useAppStore((s) => s.selectedCopilotModel)
-  const setSelectedCopilotModel = useAppStore((s) => s.setSelectedCopilotModel)
   const { logout } = useAuth()
   const { starredIds, toggle: toggleStar } = useStarredProjects()
-  const { models, loading: modelsLoading, error: modelsError } = useCopilotModels()
 
   const [apiKey, setApiKey] = useState('')
   const [apiSecret, setApiSecret] = useState('')
@@ -32,12 +27,6 @@ export function AccountSettings() {
   const [saved, setSaved] = useState(false)
   const [testState, setTestState] = useState<TestState>('idle')
   const [testError, setTestError] = useState<string | null>(null)
-
-  const [copilotTokenInput, setCopilotTokenInput] = useState('')
-  const [hasCopilotToken, setHasCopilotToken] = useState(false)
-  const [copilotSaved, setCopilotSaved] = useState(false)
-  const [copilotTestState, setCopilotTestState] = useState<TestState>('idle')
-  const [copilotTestLabel, setCopilotTestLabel] = useState<string | null>(null)
 
   const [githubTokenInput, setGithubTokenInput] = useState('')
   const [githubUsernameInput, setGithubUsernameInput] = useState('')
@@ -53,15 +42,13 @@ export function AccountSettings() {
   const [linearTestLabel, setLinearTestLabel] = useState<string | null>(null)
 
   const [projectSearch, setProjectSearch] = useState('')
-  const [expandedToken, setExpandedToken] = useState<'copilot' | 'github' | 'linear' | null>(null)
+  const [expandedToken, setExpandedToken] = useState<'github' | 'linear' | null>(null)
 
   useEffect(() => {
     async function loadExisting() {
       const key = await keychainRepo.get('simplicate-api-key')
       const secret = await keychainRepo.get('simplicate-api-secret')
       if (key && secret) setHasExisting(true)
-      const ct = await keychainRepo.get('copilot-token')
-      if (ct) { setHasCopilotToken(true); setCopilotToken(ct) }
       const gt = await keychainRepo.get('github-token')
       if (gt) { setHasGithubToken(true); setGithubToken(gt) }
       const gu = await keychainRepo.get('github-username')
@@ -70,7 +57,7 @@ export function AccountSettings() {
       if (lt) { setHasLinearToken(true); setLinearToken(lt) }
     }
     void loadExisting()
-  }, [setCopilotToken, setGithubToken, setGithubUsername, setLinearToken])
+  }, [setGithubToken, setGithubUsername, setLinearToken])
 
   async function save() {
     await keychainRepo.set('simplicate-api-key', apiKey)
@@ -114,14 +101,6 @@ export function AccountSettings() {
   const canSave = apiKey.length > 0 && apiSecret.length > 0
   const canTest = canSave || hasExisting
 
-  async function saveCopilotToken() {
-    await keychainRepo.set('copilot-token', copilotTokenInput)
-    setCopilotToken(copilotTokenInput)
-    setHasCopilotToken(true)
-    setCopilotSaved(true)
-    setTimeout(() => setCopilotSaved(false), 2000)
-  }
-
   async function saveGithubToken() {
     await keychainRepo.set('github-token', githubTokenInput)
     setGithubToken(githubTokenInput)
@@ -142,16 +121,6 @@ export function AccountSettings() {
     setTimeout(() => setLinearSaved(false), 2000)
   }
 
-  async function testCopilot() {
-    const token = copilotTokenInput || await keychainRepo.get('copilot-token')
-    if (!token) return
-    setCopilotTestState('testing')
-    const result = await testCopilotToken(token)
-    setCopilotTestState(result.ok ? 'ok' : 'fail')
-    setCopilotTestLabel(result.label)
-    setTokenStatus('copilot', result.ok ? 'ok' : 'fail')
-  }
-
   async function testGithub() {
     const token = githubTokenInput || await keychainRepo.get('github-token')
     if (!token) return
@@ -170,17 +139,6 @@ export function AccountSettings() {
     setLinearTestState(result.ok ? 'ok' : 'fail')
     setLinearTestLabel(result.label)
     setTokenStatus('linear', result.ok ? 'ok' : 'fail')
-  }
-
-  async function handleModelChange(modelId: string) {
-    const previous = selectedCopilotModel
-    setSelectedCopilotModel(modelId)
-    try {
-      await createSetSelectedModelUseCase().execute(modelId)
-    } catch (err) {
-      setSelectedCopilotModel(previous)
-      console.error('[Settings] Model opslaan mislukt:', err)
-    }
   }
 
   const label = (p: { organizationName: string; name: string }) =>
@@ -335,32 +293,6 @@ export function AccountSettings() {
           </div>
           <button onClick={logout} style={dangerBtn}>Uitloggen</button>
         </div>
-        <div style={rowLast}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={rowTitle}>Copilot model</div>
-            {modelsLoading && <div style={rowSubtitle}>Modellen ophalen...</div>}
-            {modelsError && !modelsLoading && <div style={{ ...rowSubtitle, color: 'var(--danger)' }}>{modelsError}</div>}
-            {!modelsLoading && !modelsError && models.length === 0 && <div style={rowSubtitle}>Geen modellen beschikbaar</div>}
-            {!modelsLoading && models.length > 0 && !models.find((m) => m.id === selectedCopilotModel) && (
-              <div style={{ ...rowSubtitle, color: 'var(--warning, #a07848)' }}>
-                Huidig model ({selectedCopilotModel}) staat niet in de lijst.
-              </div>
-            )}
-          </div>
-          {!modelsLoading && !modelsError && models.length > 0 && (
-            <select
-              value={selectedCopilotModel}
-              onChange={(e) => { void handleModelChange(e.target.value) }}
-              style={{ ...inputStyle, width: 'auto', minWidth: 160 }}
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}{m.category !== 'default' ? ` — ${m.category}` : ''}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
       </div>
 
       {/* Kaart 2: Simplicate API */}
@@ -409,35 +341,6 @@ export function AccountSettings() {
       {/* Kaart 3: Tokens */}
       <div style={sectionCard}>
         <div style={sectionHeader}>Tokens</div>
-
-        <TokenRow
-          id="copilot"
-          label="GitHub Copilot token"
-          hasToken={hasCopilotToken}
-          expanded={expandedToken === 'copilot'}
-          onToggle={() => setExpandedToken(expandedToken === 'copilot' ? null : 'copilot')}
-        >
-          <div style={rowSubtitle}>Verkrijg via: <code>gh auth token</code> in een terminal.</div>
-          <input
-            type="password"
-            value={copilotTokenInput}
-            onChange={(e) => setCopilotTokenInput(e.target.value)}
-            placeholder={hasCopilotToken ? 'Nieuw token (laat leeg om huidig te bewaren)' : 'ghu_...'}
-            style={inputStyle}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-              {copilotTestState === 'ok' && <><span style={dotConnected} /><span style={labelConnected}>✓ {copilotTestLabel}</span></>}
-              {copilotTestState === 'fail' && <span style={{ ...labelDisconnected, color: 'var(--danger)' }}>{copilotTestLabel}</span>}
-            </div>
-            <button onClick={() => void testCopilot()} disabled={!hasCopilotToken && copilotTokenInput.length === 0} style={{ ...ghostBtn, opacity: (!hasCopilotToken && copilotTokenInput.length === 0) ? 0.4 : 1 }}>
-              {copilotTestState === 'testing' ? 'Testen...' : 'Test'}
-            </button>
-            <button onClick={() => { void saveCopilotToken(); setExpandedToken(null) }} disabled={copilotTokenInput.length === 0} style={{ ...primaryBtn, opacity: copilotTokenInput.length === 0 ? 0.4 : 1 }}>
-              {copilotSaved ? '✓ Opgeslagen' : 'Opslaan'}
-            </button>
-          </div>
-        </TokenRow>
 
         <TokenRow
           id="github"

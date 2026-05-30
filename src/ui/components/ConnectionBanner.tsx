@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 
 const SERVICE_LABELS: Record<string, string> = {
-  copilot: 'GitHub Copilot token',
   github: 'GitHub token',
   linear: 'Linear API key',
 }

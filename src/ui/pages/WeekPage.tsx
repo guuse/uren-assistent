@@ -15,7 +15,7 @@ import {
   createProcessWeekUseCase,
   createProcessDayUseCase,
   createCalendarRepository,
-  createCopilotRepository,
+  createGeminiRepository,
   createSimplicateRepository,
   historyStore as domainHistoryStore,
 } from '../../application/container'
@@ -62,7 +62,6 @@ export function WeekPage() {
   const githubToken = useAppStore((s) => s.githubToken)
   const githubUsername = useAppStore((s) => s.githubUsername)
   const linearToken = useAppStore((s) => s.linearToken)
-  const copilotToken = useAppStore((s) => s.copilotToken)
   const projects = useAppStore((s) => s.projects)
   const setDayContext = useAppStore((s) => s.setDayContext)
   const dayContexts = useAppStore((s) => s.dayContexts)
@@ -244,7 +243,7 @@ export function WeekPage() {
   }
 
   async function handleProcessWeekWithCheck() {
-    if (!copilotToken || !githubToken || !linearToken) return
+    if (!githubToken || !linearToken) return
     const hasHistory = await domainHistoryStore.hasHistoryForWeek(week.selectedWeekStart)
     if (!hasHistory) {
       setWarningScope({ kind: 'week' })
@@ -254,8 +253,8 @@ export function WeekPage() {
   }
 
   async function handleProcessWeek() {
-    if (!copilotToken || !githubToken || !linearToken) {
-      console.warn('[ProcessWeek] tokens ontbreken:', { copilotToken: !!copilotToken, githubToken: !!githubToken, linearToken: !!linearToken })
+    if (!githubToken || !linearToken) {
+      console.warn('[ProcessWeek] tokens ontbreken:', { githubToken: !!githubToken, linearToken: !!linearToken })
       return
     }
     const username = githubUsername ?? 'guuse'
@@ -268,7 +267,7 @@ export function WeekPage() {
 
     try {
       const calendarRepo = createCalendarRepository()
-      const copilotRepo = createCopilotRepository(copilotToken)
+      const copilotRepo = createGeminiRepository()
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
       const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
 
@@ -332,7 +331,7 @@ export function WeekPage() {
   }
 
   async function handleProcessDay(date: string) {
-    if (!copilotToken || !githubToken || !linearToken) return
+    if (!githubToken || !linearToken) return
     const hasHistory = await domainHistoryStore.hasDataForDate(date)
     if (!hasHistory) {
       setWarningScope({ kind: 'day', date })
@@ -342,7 +341,7 @@ export function WeekPage() {
   }
 
   async function runProcessDay(date: string) {
-    if (!copilotToken || !githubToken || !linearToken) return
+    if (!githubToken || !linearToken) return
     const username = githubUsername ?? 'guuse'
 
     setIsProcessingDay(true)
@@ -350,7 +349,7 @@ export function WeekPage() {
 
     try {
       const calendarRepo = createCalendarRepository()
-      const copilotRepo = createCopilotRepository(copilotToken)
+      const copilotRepo = createGeminiRepository()
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
       const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
 
@@ -415,7 +414,7 @@ export function WeekPage() {
 
   const dayCommits = dayContexts[week.selectedDate]?.commits ?? historyStore.blocksForDate[0]?.commits ?? []
   const dayLinearIssues = dayContexts[week.selectedDate]?.linearIssues ?? historyStore.blocksForDate[0]?.linearIssues ?? []
-  const canProcessWeek = !!(githubToken && linearToken && copilotToken)
+  const canProcessWeek = !!(githubToken && linearToken)
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-app)', color: 'var(--text-primary)' }}>

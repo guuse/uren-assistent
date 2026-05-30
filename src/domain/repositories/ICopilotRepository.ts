@@ -1,4 +1,3 @@
-import type { CopilotModel } from '../entities/CopilotModel'
 import type { HistoryBlock } from '../entities/HistoryBlock'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { CalendarEvent } from '../entities/CalendarEvent'
@@ -61,7 +60,6 @@ export interface ICopilotRepository {
     availableProjects: Project[],
     availableServices: Service[],
     calendarEvents?: CalendarEvent[],
-    model?: string,
   ): Promise<ClassifiedBlock[]>
 
   classifyDay(
@@ -72,8 +70,5 @@ export interface ICopilotRepository {
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
     context?: DayContext,
     historicalEntries?: HourEntry[],
-    model?: string,
   ): Promise<DayClassificationResult[]>
-
-  listModels(): Promise<CopilotModel[]>
 }
