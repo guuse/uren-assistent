@@ -20,6 +20,9 @@ import {
   historyStore as domainHistoryStore,
 } from '../../application/container'
 import { NoHistoryWarningModal } from '../components/NoHistoryWarningModal'
+import { SubmitConfirmModal } from '../components/SubmitConfirmModal'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useSubmissions } from '../hooks/useSubmissions'
 import { useAppStore } from '../../store/appStore'
 
 const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
@@ -55,6 +58,7 @@ function weekLabel(weekStart: string): string {
 
 export function WeekPage() {
   const week = useWeek()
+  const submissions = useSubmissions()
   const { suggestions } = useSuggestions(week.selectedDate)
   const importState = useImport()
   const historyStore = useHistoryStore(week.selectedDate)
@@ -93,6 +97,11 @@ export function WeekPage() {
   const [uploadToast, setUploadToast] = useState<string | null>(null)
   const pendingScopeRef = useRef<{ kind: 'week' } | { kind: 'day'; date: string } | null>(null)
 
+  // Week/dag indienen + intrekken state
+  type SubmitScope = { scope: 'week' | 'day'; label: string; from: string; to: string }
+  const [submitModal, setSubmitModal] = useState<(SubmitScope & { unbookedCount: number; bookedHours: number }) | null>(null)
+  const [withdrawModal, setWithdrawModal] = useState<SubmitScope | null>(null)
+
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
   }
@@ -111,6 +120,12 @@ export function WeekPage() {
 
   useEffect(() => {
     void loadWeekLlmCounts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [week.selectedWeekStart])
+
+  // Load submission status for the selected week's month (cached per month).
+  useEffect(() => {
+    void submissions.loadMonth(week.selectedWeekStart)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [week.selectedWeekStart])
 
@@ -255,12 +270,12 @@ export function WeekPage() {
   }
 
   async function handleProcessWeek() {
-    if (!githubToken || !linearToken) {
-      console.warn('[ProcessWeek] tokens ontbreken:', { githubToken: !!githubToken, linearToken: !!linearToken })
+    if (!githubToken || !linearToken) return
+    if (!githubUsername) {
+      setProcessWeekError('Stel eerst je GitHub-gebruikersnaam in bij Instellingen.')
       return
     }
-    const username = githubUsername ?? 'guuse'
-    console.log('[ProcessWeek] start', { username, weekStart: week.selectedWeekStart, weekEnd: week.selectedWeekEnd })
+    const username = githubUsername
 
     setIsProcessingWeek(true)
     setDayProcessingStates(new Map())
@@ -296,14 +311,10 @@ export function WeekPage() {
 
       for await (const progress of useCase.execute(week.selectedWeekStart, week.selectedWeekEnd)) {
         if (abortRef.current) break
-        console.log('[ProcessWeek] progress:', progress.phase, 'day' in progress ? progress.day : '')
         if (progress.phase === 'context-ready' && progress.commitsByDay && progress.linearIssues) {
           for (const [date, commits] of Object.entries(progress.commitsByDay)) {
             setDayContext(date, { commits, linearIssues: progress.linearIssues })
           }
-          console.log('[ProcessWeek] context-ready: commits per dag:', Object.fromEntries(
-            Object.entries(progress.commitsByDay).map(([d, c]) => [d, c.length])
-          ))
         } else if (progress.phase === 'classifying-day' && progress.day) {
           // Als een nieuwe dag begint, is de vorige klaar — reload de geselecteerde dag
           void reloadForDate(week.selectedDate)
@@ -349,7 +360,11 @@ export function WeekPage() {
 
   async function runProcessDay(date: string) {
     if (!githubToken || !linearToken) return
-    const username = githubUsername ?? 'guuse'
+    if (!githubUsername) {
+      setProcessWeekError('Stel eerst je GitHub-gebruikersnaam in bij Instellingen.')
+      return
+    }
+    const username = githubUsername
 
     setIsProcessingDay(true)
     setDayProcessingStates(prev => new Map(prev).set(date, 'classifying'))
@@ -421,6 +436,56 @@ export function WeekPage() {
     csvInputRef.current?.click()
   }
 
+  // Count unbooked concept blocks (those still on the timeline = not yet booked) across dates.
+  async function countUnbooked(dates: string[]): Promise<number> {
+    let count = 0
+    for (const date of dates) {
+      const blocks = await domainHistoryStore.getBlocksForDate(date)
+      count += blocks.filter((b) => b.startTime != null).length
+    }
+    return count
+  }
+
+  function formatDay(date: string): string {
+    return new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  async function handleSubmitWeekClick() {
+    const unbookedCount = await countUnbooked(week.weekDays)
+    const bookedHours = week.weekDays.reduce((s, d) => s + week.hoursForDate(d), 0)
+    submissions.clearSubmitError()
+    setSubmitModal({ scope: 'week', label: weekLabel(week.selectedWeekStart), from: week.selectedWeekStart, to: week.selectedWeekEnd, unbookedCount, bookedHours })
+  }
+
+  async function handleSubmitDayClick(date: string) {
+    const unbookedCount = await countUnbooked([date])
+    const bookedHours = week.hoursForDate(date)
+    submissions.clearSubmitError()
+    setSubmitModal({ scope: 'day', label: formatDay(date), from: date, to: date, unbookedCount, bookedHours })
+  }
+
+  async function handleSubmitConfirm() {
+    if (!submitModal) return
+    const target = submitModal
+    setSubmitModal(null)
+    const ok = await submissions.submit(target.from, target.to)
+    if (ok) void week.refresh()
+  }
+
+  async function handleWithdrawConfirm() {
+    if (!withdrawModal) return
+    const target = withdrawModal
+    setWithdrawModal(null)
+    const ok = await submissions.withdraw(target.from, target.to)
+    if (ok) void week.refresh()
+  }
+
+  const today = toLocalDateString(new Date())
+  const daySubmitted = submissions.isDateSubmitted(week.selectedDate)
+  const allWeekSubmitted = week.weekDays.length > 0 && week.weekDays.every(submissions.isDateSubmitted)
+  const canSubmitWeek = week.selectedWeekStart <= today // future weeks can't be submitted yet
+  const canSubmitDay = week.selectedDate <= today
+
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
   const isClassifying = importState.status === 'parsing'
 
@@ -454,6 +519,14 @@ export function WeekPage() {
         isClearingWeek={isClearingWeek}
         clearWeekError={clearWeekErr}
         totalLlmBlockCount={totalLlmBlockCount}
+        isWeekSubmitted={allWeekSubmitted}
+        canSubmitWeek={canSubmitWeek}
+        onSubmitWeek={() => void handleSubmitWeekClick()}
+        onWithdrawWeek={() => { submissions.clearSubmitError(); setWithdrawModal({ scope: 'week', label: weekLabel(week.selectedWeekStart), from: week.selectedWeekStart, to: week.selectedWeekEnd }) }}
+        isSubmittingWeek={submissions.isSubmitting}
+        submitError={submissions.submitError}
+        isDateSubmitted={submissions.isDateSubmitted}
+        onPickerMonthChange={submissions.loadMonth}
       />
 
       {week.isLoading ? (
@@ -481,17 +554,21 @@ export function WeekPage() {
           <DayTimeline
             date={week.selectedDate}
             entries={selectedEntries}
-            suggestions={suggestions}
+            suggestions={daySubmitted ? [] : suggestions}
             conceptBlocks={historyStore.blocksForDate.filter(b => b.startTime != null)}
             commits={dayCommits}
             linearIssues={dayLinearIssues}
             onBookSuggestion={handleBookSuggestion}
             onEditEntry={handleEditEntry}
             onConceptClick={handleConceptClick}
-            onUploadCsv={handleUploadCsv}
             isClassifying={isClassifying || isProcessingDay}
-            onDragNew={handleDragNew}
-            {...(canProcessWeek ? { onProcessDay: () => void handleProcessDay(week.selectedDate) } : {})}
+            readOnly={daySubmitted}
+            canSubmitDay={canSubmitDay}
+            isSubmittingDay={submissions.isSubmitting}
+            onSubmitDay={() => void handleSubmitDayClick(week.selectedDate)}
+            onWithdrawDay={() => { submissions.clearSubmitError(); setWithdrawModal({ scope: 'day', label: formatDay(week.selectedDate), from: week.selectedDate, to: week.selectedDate }) }}
+            {...(daySubmitted ? {} : { onUploadCsv: handleUploadCsv, onDragNew: handleDragNew })}
+            {...(canProcessWeek && !daySubmitted ? { onProcessDay: () => void handleProcessDay(week.selectedDate) } : {})}
           />
         </>
       )}
@@ -536,6 +613,31 @@ export function WeekPage() {
           onConfirm={handleWarningConfirm}
           onUpload={handleWarningUpload}
           onCancel={() => setWarningScope(null)}
+        />
+      )}
+
+      {/* Indienen: bevestiging / waarschuwing (week of dag) */}
+      {submitModal && (
+        <SubmitConfirmModal
+          scope={submitModal.scope}
+          label={submitModal.label}
+          unbookedCount={submitModal.unbookedCount}
+          bookedHours={submitModal.bookedHours}
+          isSubmitting={submissions.isSubmitting}
+          onConfirm={() => void handleSubmitConfirm()}
+          onCancel={() => setSubmitModal(null)}
+        />
+      )}
+
+      {/* Intrekken: bevestiging (week of dag) */}
+      {withdrawModal && (
+        <ConfirmDialog
+          title="Indiening intrekken"
+          description={`${withdrawModal.label} is ingediend. Intrekken zodat je de uren weer kunt wijzigen?`}
+          confirmLabel="Intrekken"
+          isLoading={submissions.isSubmitting}
+          onConfirm={() => void handleWithdrawConfirm()}
+          onCancel={() => setWithdrawModal(null)}
         />
       )}
     </div>

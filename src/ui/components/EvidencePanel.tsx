@@ -25,7 +25,6 @@ function displayUrl(url: string): { host: string; path: string } {
 }
 
 function domainStyle(hostname: string): { bg: string; color: string } {
-  if (/harborn/i.test(hostname)) return { bg: 'var(--accent-light)', color: 'var(--accent)' }
   if (/^accounts\.|^auth\.|^login\.|^sso\./i.test(hostname))
     return { bg: 'var(--accent-light)', color: 'var(--accent)' }
   return { bg: 'var(--bg)', color: 'var(--text-muted)' }

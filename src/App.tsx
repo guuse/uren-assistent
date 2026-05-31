@@ -18,10 +18,10 @@ function App() {
 
   if (showSettings) {
     return (
-      <div className="h-screen flex flex-col overflow-hidden bg-[#1c1917]">
+      <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-app)' }}>
         <ConnectionBanner />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar onSettings={() => setShowSettings(true)} />
+          <Sidebar onSettings={() => setShowSettings(true)} activeTab="settings" />
           <div className="flex-1 overflow-hidden">
             <SettingsPage onBack={() => setShowSettings(false)} />
           </div>
@@ -31,10 +31,10 @@ function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#1c1917]">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-app)' }}>
       <ConnectionBanner />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar onSettings={() => setShowSettings(true)} />
+        <Sidebar onSettings={() => setShowSettings(true)} activeTab="week" />
         <div className="flex-1 overflow-hidden">
           <WeekPage />
         </div>

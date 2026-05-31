@@ -7,6 +7,7 @@ import type {
   SimplicateService,
 } from '../../domain/repositories/ISimplicateRepository'
 import type { HourEntry } from '../../domain/entities/HourEntry'
+import type { HourSubmission } from '../../domain/entities/HourSubmission'
 import type {
   SimplicateApiListResponse,
   SimplicateEmployeeResponse,
@@ -14,6 +15,7 @@ import type {
   SimplicateHourTypeResponse,
   SimplicateProjectResponse,
   SimplicateServiceResponse,
+  SimplicateSubmissionResponse,
 } from './simplicate.types'
 
 export class SimplicateRepository implements ISimplicateRepository {
@@ -45,7 +47,7 @@ export class SimplicateRepository implements ISimplicateRepository {
     return JSON.parse(json) as T
   }
 
-  private async delete(path: string): Promise<void> {
+  private async delete(path: string, body?: unknown): Promise<void> {
     const url = `${this.baseUrl}${path}`
     await invoke<string>('simplicate_request', {
       args: {
@@ -53,7 +55,7 @@ export class SimplicateRepository implements ISimplicateRepository {
         url,
         api_key: this.apiKey,
         api_secret: this.apiSecret,
-        body: null,
+        body: body === undefined ? null : JSON.stringify(body),
       },
     })
   }
@@ -183,5 +185,43 @@ export class SimplicateRepository implements ISimplicateRepository {
       is_time_defined: true,
       is_recurring: false,
     })
+  }
+
+  // POST /hours/submission — "Submit all the employee's hours between the start and end date."
+  // The request body schema is not published in the v2 reference; these field names follow the
+  // rest of the hours API (employee_id, start_date, end_date). Confirm against the live API
+  // and adjust here if a submission is rejected. See docs/adr/0003.
+  async submitHours(employeeId: string, startDate: string, endDate: string): Promise<void> {
+    await this.post('/hours/submission', {
+      employee_id: employeeId,
+      start_date: startDate,
+      end_date: endDate,
+    })
+  }
+
+  // Withdraw ("intrekken") a previously submitted period, unlocking those days so they can
+  // be edited again. The v2 reference does not publish a withdraw endpoint; this assumes it
+  // is the symmetric DELETE on /hours/submission with the same body as the POST. If Simplicate
+  // rejects it, adjust the path/method/body here only. See docs/adr/0003.
+  async withdrawHours(employeeId: string, startDate: string, endDate: string): Promise<void> {
+    await this.delete('/hours/submission', {
+      employee_id: employeeId,
+      start_date: startDate,
+      end_date: endDate,
+    })
+  }
+
+  // GET /hours/submission — "Fetches hours submission status, by date, for an employee."
+  // The response shape is not published; we map defensively (single-date or range records)
+  // via SimplicateSubmissionResponse. See docs/adr/0003.
+  async getSubmissions(employeeId: string, from: string, to: string): Promise<HourSubmission[]> {
+    const res = await this.get<SimplicateApiListResponse<SimplicateSubmissionResponse>>(
+      `/hours/submission?q%5Bemployee.id%5D=${encodeURIComponent(employeeId)}&q%5Bstart_date%5D%5Bge%5D=${from}&q%5Bstart_date%5D%5Ble%5D=${to}`,
+    )
+    return res.data.map((s) => {
+      const start = (s.start_date ?? s.date ?? '').slice(0, 10)
+      const end = (s.end_date ?? s.date ?? s.start_date ?? '').slice(0, 10)
+      return { startDate: start, endDate: end, ...(s.status ? { status: s.status } : {}) }
+    }).filter((s) => s.startDate !== '')
   }
 }

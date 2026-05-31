@@ -1,0 +1,6 @@
+# Coverage alias: measures only the testable command logic, excluding the
+# Tauri/OS glue layer (commands/glue.rs) and the app bootstrap (lib.rs, main.rs),
+# which can only run against the real Tauri runtime / macOS keychain / a live
+# browser-driven OAuth callback. Run with: `cargo cov` (add --html, --open, etc.).
+[alias]
+cov = "llvm-cov --ignore-filename-regex (glue\\.rs|main\\.rs|lib\\.rs)$ --summary-only"

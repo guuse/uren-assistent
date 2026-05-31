@@ -9,3 +9,6 @@ src-tauri/gen/
 src-tauri/target/
 .superpowers/
 coverage/
+
+# Local AI-assisted dev planning docs (not for publication)
+docs/superpowers/

@@ -1,10 +1,15 @@
-import { useState } from 'react'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect } from 'react'
+import { ChevronLeftIcon, ChevronRightIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 
 interface Props {
   initialMonth: string  // YYYY-MM-DD van de eerste dag van de startmaand
   onSelectDate: (date: string) => void
   onClose: () => void
+  // Calendar dropdown markings: which dates fall in a submitted ("ingediende") week.
+  isDateSubmitted?: (date: string) => boolean
+  // Fired on mount and whenever the visible month changes, so the parent can lazily
+  // fetch + cache submission status for that month.
+  onMonthChange?: (monthStartDate: string) => void
 }
 
 const MAAND_NAMEN = [
@@ -51,7 +56,7 @@ function buildCalendarDays(monthStart: string): Array<{ date: string; isWeekend:
   return cells
 }
 
-export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props) {
+export function MonthPickerPopup({ initialMonth, onSelectDate, onClose, isDateSubmitted, onMonthChange }: Props) {
   const [viewMonth, setViewMonth] = useState<string>(() => firstOfMonth(initialMonth))
 
   const [year, month] = viewMonth.split('-').map(Number)
@@ -59,6 +64,11 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
   const days = buildCalendarDays(viewMonth)
 
   const today = new Date().toISOString().split('T')[0]!
+
+  // Lazily load submission status for the visible month (on mount + on navigation).
+  useEffect(() => {
+    onMonthChange?.(viewMonth)
+  }, [viewMonth, onMonthChange])
 
   return (
     <>
@@ -69,7 +79,7 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
       />
       {/* Popup */}
       <div
-        className="absolute bottom-8 left-0 z-50"
+        className="absolute top-8 right-0 z-50"
         style={{
           background: 'var(--surface)',
           border: '1px solid var(--border)',
@@ -139,12 +149,17 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
           {days.map((cell, i) => {
             if (!cell) return <div key={`empty-${i}`} />
             const isToday = cell.date === today
+            const isSubmitted = !cell.isWeekend && (isDateSubmitted?.(cell.date) ?? false)
+            const isMonday = new Date(`${cell.date}T12:00:00`).getDay() === 1
+            const showLock = isSubmitted && isMonday
             return (
               <button
                 key={cell.date}
                 disabled={cell.isWeekend}
                 onClick={() => onSelectDate(cell.date)}
+                title={isSubmitted ? 'Ingediend' : undefined}
                 style={{
+                  position: 'relative',
                   textAlign: 'center',
                   fontSize: '0.6rem',
                   paddingTop: 2,
@@ -154,22 +169,30 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose }: Props)
                   cursor: cell.isWeekend ? 'default' : 'pointer',
                   ...(cell.isWeekend
                     ? { color: 'var(--text-faint)', background: 'transparent' }
-                    : isToday
-                      ? { background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 700 }
-                      : { color: 'var(--text-primary)', background: 'transparent' }
+                    : isSubmitted
+                      ? { background: '#f0fdf4', color: '#15803d', fontWeight: isToday ? 700 : 600 }
+                      : isToday
+                        ? { background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 700 }
+                        : { color: 'var(--text-primary)', background: 'transparent' }
                   ),
                 }}
                 onMouseEnter={(e) => {
-                  if (!cell.isWeekend && !isToday) {
+                  if (!cell.isWeekend && !isToday && !isSubmitted) {
                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg)'
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!cell.isWeekend && !isToday) {
+                  if (!cell.isWeekend && !isToday && !isSubmitted) {
                     (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
                   }
                 }}
               >
+                {showLock && (
+                  <LockClosedIcon
+                    style={{ width: 7, height: 7, position: 'absolute', top: 1, right: 1, color: '#15803d' }}
+                    strokeWidth={2.5}
+                  />
+                )}
                 {Number(cell.date.split('-')[2])}
               </button>
             )

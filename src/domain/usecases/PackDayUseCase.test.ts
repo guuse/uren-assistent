@@ -190,6 +190,27 @@ describe('PackDayUseCase', () => {
     expect(result.find(r => r.blockName === 'Dup pattern')).toBeUndefined()
   })
 
+  it('does not treat a concept without project/service as a duplicate', () => {
+    // proj/svc undefined → isTimedConceptDuplicate short-circuits to false (line 96 branch).
+    const entry = makeEntry('10:00', '11:00', 1) // proj-1 / svc-1
+    const scoped = makeBlock({ blockName: 'Unscoped', hours: 1, startTime: '10:00', endTime: '11:00' })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit project/service via rest
+    const { projectId: _pid, serviceId: _sid, ...unscoped } = scoped
+    const result = new PackDayUseCase().execute([unscoped], [entry], { targetHours: 8 })
+    expect(result.find(r => r.blockName === 'Unscoped')).toBeDefined()
+  })
+
+  it('flows a concept past a mid-morning booked entry (cursor bumped to interval end)', () => {
+    // dayStart 09:00 but a booked entry occupies 09:00-12:00, so the first concept
+    // must bump its cursor to 12:00 (nextFreeStart line 53).
+    const entry = makeEntry('09:00', '12:00', 3, { projectId: 'other', projectServiceId: 'other' })
+    const work = makeBlock({ blockName: 'After', hours: 1, startTime: '09:30', endTime: '10:30' })
+    const result = new PackDayUseCase().execute([work], [entry], { targetHours: 8 })
+    const w = result.find(r => r.blockName === 'After')!
+    expect(w.startTime).toBe('12:00')
+    expect(w.endTime).toBe('13:00')
+  })
+
   it('output is sorted by startTime ascending', () => {
     const meeting = makeMeeting('11:00', '12:00', { blockName: 'Mtg' })
     const work = makeBlock({ blockName: 'Work', hours: 1 })

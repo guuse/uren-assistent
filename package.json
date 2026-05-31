@@ -1,5 +1,5 @@
 {
-  "name": "uren-schrijven",
+  "name": "uren-assistent",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx"
   },
@@ -37,6 +38,7 @@
     "@typescript-eslint/eslint-plugin": "^8.59.3",
     "@typescript-eslint/parser": "^8.59.3",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vitest/coverage-v8": "^4.1.6",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",

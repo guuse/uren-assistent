@@ -68,8 +68,9 @@ interface RawRow {
 
 export class ParseBrowserHistoryUseCase {
   async execute(csv: string, minVisits: number): Promise<HistoryBlock[]> {
+    // trim().split('\n') always yields at least one element, so there's no
+    // empty-array case to guard here; a truly empty CSV fails header validation below.
     const lines = csv.trim().split('\n')
-    if (lines.length === 0) return []
 
     const headerCols = parseCsvLine(lines[0]!)
     for (const expected of EXPECTED_HEADERS) {
@@ -136,7 +137,8 @@ export class ParseBrowserHistoryUseCase {
           current = [row]
         }
       }
-      if (current.length > 0) windows.push(current)
+      // `current` always holds at least the first row of the day here.
+      windows.push(current)
 
       for (const windowRows of windows) {
         const totalVisits = windowRows.reduce((sum, r) => sum + r.visitCount, 0)

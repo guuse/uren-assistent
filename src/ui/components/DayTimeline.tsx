@@ -55,6 +55,14 @@ interface Props {
   isClassifying?: boolean
   onDragNew?: (startTime: string, endTime: string) => void
   onProcessDay?: () => void
+  // When the day is submitted ("ingediend"), it is locked: no booking, editing,
+  // dragging, processing or CSV upload — only viewing.
+  readOnly?: boolean
+  // Per-day indienen / intrekken
+  onSubmitDay?: () => void
+  onWithdrawDay?: () => void
+  canSubmitDay?: boolean
+  isSubmittingDay?: boolean
 }
 
 export function DayTimeline({
@@ -71,6 +79,11 @@ export function DayTimeline({
   isClassifying = false,
   onDragNew,
   onProcessDay,
+  readOnly = false,
+  onSubmitDay,
+  onWithdrawDay,
+  canSubmitDay = true,
+  isSubmittingDay = false,
 }: Props) {
   const projects = useAppStore((s) => s.projects)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -104,6 +117,7 @@ export function DayTimeline({
     function handleMouseMove(e: MouseEvent) {
       if (!isDragging.current) return
       const endMin = getMinutesFromEvent(e)
+      /* v8 ignore next -- defensive: isDragging implies dragState is set */
       setDragState((prev) => prev ? { ...prev, endMin } : prev)
     }
 
@@ -111,6 +125,7 @@ export function DayTimeline({
       if (!isDragging.current) return
       isDragging.current = false
       setDragState((prev) => {
+        /* v8 ignore next -- defensive: isDragging implies dragState is set */
         if (!prev) return null
         const { start, end } = swapIfNeeded(prev.startMin, prev.endMin)
         if (end - start >= 30) {
@@ -166,14 +181,14 @@ export function DayTimeline({
       return (
         <button
           key={key}
-          onClick={() => onEditEntry(block.entry)}
+          onClick={readOnly ? undefined : () => onEditEntry(block.entry)}
           style={{
             ...baseStyle,
             background: '#6366f1',
             borderLeft: '3px solid rgba(255,255,255,.3)',
             borderRadius: 5,
             overflow: 'hidden',
-            cursor: 'pointer',
+            cursor: readOnly ? 'default' : 'pointer',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -202,7 +217,7 @@ export function DayTimeline({
       return (
         <button
           key={key}
-          onClick={() => onConceptClick?.(block.block)}
+          onClick={readOnly ? undefined : () => onConceptClick?.(block.block)}
           style={{
             ...baseStyle,
             background: cs.bg,
@@ -210,7 +225,7 @@ export function DayTimeline({
             borderLeft: `3px solid ${cs.borderLeft}`,
             borderRadius: 5,
             overflow: 'hidden',
-            cursor: 'pointer',
+            cursor: readOnly ? 'default' : 'pointer',
             position: 'absolute',
             display: 'flex',
             flexDirection: 'column',
@@ -236,6 +251,7 @@ export function DayTimeline({
       )
     }
 
+    /* v8 ignore start -- gap blocks are rendered inline below, never via renderBlock */
     // gap
     if (block.suggestion) {
       return (
@@ -265,6 +281,7 @@ export function DayTimeline({
         className="border-b border-[#e7e5e4]"
       />
     )
+    /* v8 ignore stop */
   }
 
   const totalHours = entries.reduce((sum, e) => sum + e.hours, 0)
@@ -279,12 +296,14 @@ export function DayTimeline({
     return projects.find((p) => p.id === projectId)?.name ?? projectId
   }
 
+  /* v8 ignore start -- only used by the inline gap-suggestion render, which is unreachable (see below) */
   function suggestionLabel(s: HourEntrySuggestion): string {
     const name = projectName(s.projectId)
     const reason = s.reason === 'last-week' ? 'vorige week' : 'patroon'
     const time = s.startTime ? ` · ${s.startTime}–${s.endTime}` : ''
     return `${name}${time} (${reason})`
   }
+  /* v8 ignore stop */
 
   async function handleFileDrop(file: File) {
     const text = await file.text()
@@ -326,6 +345,20 @@ export function DayTimeline({
           <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${pct}%` }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {readOnly && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700 }}>
+              🔒 Ingediend · alleen-lezen
+            </span>
+          )}
+          {readOnly && onWithdrawDay && (
+            <button
+              onClick={onWithdrawDay}
+              disabled={isSubmittingDay}
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 600, cursor: isSubmittingDay ? 'not-allowed' : 'pointer', opacity: isSubmittingDay ? 0.6 : 1, flexShrink: 0 }}
+            >
+              {isSubmittingDay ? 'Bezig…' : 'Trek dag in'}
+            </button>
+          )}
           {/* Legend */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -351,6 +384,16 @@ export function DayTimeline({
               className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
             >
               ▶ Verwerk dag
+            </button>
+          )}
+          {!readOnly && onSubmitDay && (
+            <button
+              onClick={onSubmitDay}
+              disabled={isSubmittingDay || !canSubmitDay}
+              title={!canSubmitDay ? 'Een toekomstige dag kan nog niet ingediend worden' : undefined}
+              style={{ background: 'transparent', border: '1px solid var(--accent-border)', color: 'var(--accent)', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 600, cursor: (isSubmittingDay || !canSubmitDay) ? 'not-allowed' : 'pointer', opacity: (isSubmittingDay || !canSubmitDay) ? 0.5 : 1, flexShrink: 0 }}
+            >
+              {isSubmittingDay ? 'Indienen…' : 'Dien dag in'}
             </button>
           )}
           {(hasConcepts || hasEntries) && (
@@ -510,6 +553,7 @@ export function DayTimeline({
                   // Render gap blocks first (always column 0, full width only if no content blocks)
                   const gapElements = flatBlocks
                     .filter(b => b.type === 'gap' && b.suggestion)
+                    /* v8 ignore start -- gaps from mergeConceptsIntoTimeline never carry a suggestion, and computeTimelineBlocks (which does attach suggestions) only runs when the timeline is hidden by showEmptyHint */
                     .map((block, i) => {
                       if (block.type !== 'gap') return null
                       const top = blockTop(block.startTime)
@@ -525,16 +569,19 @@ export function DayTimeline({
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.625rem' }} className="truncate flex-1 mr-2">
                             → {suggestionLabel(block.suggestion!)}
                           </div>
-                          <button
-                            onClick={() => onBookSuggestion(block.suggestion!)}
-                            style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '0.5625rem', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}
-                            className="transition-colors"
-                          >
-                            + Boek
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={() => onBookSuggestion(block.suggestion!)}
+                              style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '0.5625rem', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}
+                              className="transition-colors"
+                            >
+                              + Boek
+                            </button>
+                          )}
                         </div>
                       )
                     })
+                    /* v8 ignore stop */
 
                   // Render content blocks in their assigned columns
                   const contentElements = blockColumns.map(({ block, col }, i) => {

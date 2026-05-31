@@ -177,12 +177,280 @@ describe('GroupAndClassifyDayUseCase', () => {
 
   it('accepts optional DayContext without crashing on empty day', async () => {
     const context: DayContext = {
-      commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'guuse/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00', date: '2026-05-20' }],
+      commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'octocat/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00', date: '2026-05-20' }],
       linearIssues: [{ identifier: 'ENG-42', title: 'Booking modal', completedAt: '2026-05-20T14:00:00Z', url: 'https://linear.app/eng/issue/ENG-42' }],
     }
     const { copilotRepo, cacheRepo } = makeDeps({}, [])
     const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
     const result = await useCase.execute('2026-05-20', [], [], context)
     expect(result).toEqual([])
+  })
+
+  it('meeting block forwards commits and filters linear issues by LLM relatedIssueIds', async () => {
+    const block = makeBlock({ urlPattern: 'zoom.us', firstVisitTime: '10:00', lastVisitTime: '10:30' })
+    const event = makeEvent({ title: 'Sync', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T11:00:00') })
+    const context: DayContext = {
+      commits: [{ sha: 'c1', message: 'feat: x', repo: 'octocat/uren', branch: 'main', timestamp: '2024-01-15T10:00:00Z', time: '10:00', date: '2024-01-15' }],
+      linearIssues: [
+        { identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u1' },
+        { identifier: 'ENG-2', title: 'B', completedAt: '2024-01-15T12:00:00Z', url: 'u2' },
+      ],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { relatedIssueIds: ['ENG-2'] })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [event], context)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.commits).toHaveLength(1)
+    expect(result[0]!.linearIssues!.map(i => i.identifier)).toEqual(['ENG-2'])
+    expect(result[0]!.hours).toBe(1)
+  })
+
+  it('meeting block keeps all linear issues when LLM gives no relatedIssueIds', async () => {
+    const block = makeBlock({ urlPattern: 'meet.google.com', firstVisitTime: '10:00', lastVisitTime: '10:30' })
+    const event = makeEvent({ title: 'Sync', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T10:30:00') })
+    const context: DayContext = {
+      commits: [],
+      linearIssues: [{ identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u1' }],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [event], context)
+    expect(result[0]!.linearIssues!.map(i => i.identifier)).toEqual(['ENG-1'])
+  })
+
+  it('commit-block (github.com) filters commits to the repo + time window', async () => {
+    const block = makeBlock({
+      urlPattern: 'github.com/octocat/uren@10:00',
+      titles: ['feat: x'],
+      firstVisitTime: '10:00',
+      lastVisitTime: '11:00',
+    })
+    const context: DayContext = {
+      commits: [
+        { sha: 'c1', message: 'in window', repo: 'octocat/uren', branch: 'main', timestamp: '', time: '10:30', date: '2024-01-15' },
+        { sha: 'c2', message: 'out of window', repo: 'octocat/uren', branch: 'main', timestamp: '', time: '12:00', date: '2024-01-15' },
+        { sha: 'c3', message: 'other repo', repo: 'octocat/other', branch: 'main', timestamp: '', time: '10:30', date: '2024-01-15' },
+      ],
+      linearIssues: [],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [], context)
+    expect(result[0]!.commits!.map(c => c.sha)).toEqual(['c1'])
+  })
+
+  it('commit-block falls back to explicit Linear refs in commit titles', async () => {
+    const block = makeBlock({
+      urlPattern: 'github.com/octocat/uren@10:00',
+      titles: ['fix: ENG-2 thing'],
+      firstVisitTime: '10:00',
+      lastVisitTime: '11:00',
+    })
+    const context: DayContext = {
+      commits: [{ sha: 'c1', message: 'fix: ENG-2 thing', repo: 'octocat/uren', branch: 'main', timestamp: '', time: '10:30', date: '2024-01-15' }],
+      linearIssues: [
+        { identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u1' },
+        { identifier: 'ENG-2', title: 'B', completedAt: '2024-01-15T12:00:00Z', url: 'u2' },
+      ],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [], context)
+    expect(result[0]!.linearIssues!.map(i => i.identifier)).toEqual(['ENG-2'])
+  })
+
+  it('commit-block with no LLM link and no explicit refs gets an empty linear list', async () => {
+    const block = makeBlock({
+      urlPattern: 'github.com/octocat/uren@10:00',
+      titles: ['chore: no refs here'],
+      firstVisitTime: '10:00',
+      lastVisitTime: '11:00',
+    })
+    const context: DayContext = {
+      commits: [{ sha: 'c1', message: 'chore', repo: 'octocat/uren', branch: 'main', timestamp: '', time: '10:30', date: '2024-01-15' }],
+      linearIssues: [{ identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u1' }],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [], context)
+    expect(result[0]!.linearIssues).toEqual([])
+  })
+
+  it('standalone block uses LLM relatedIssueIds to pick linear issues', async () => {
+    const block = makeBlock({ urlPattern: 'docs.example.com', firstVisitTime: '13:00', lastVisitTime: '13:30' })
+    const context: DayContext = {
+      commits: [],
+      linearIssues: [
+        { identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u1' },
+        { identifier: 'ENG-9', title: 'B', completedAt: '2024-01-15T12:00:00Z', url: 'u2' },
+      ],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { relatedIssueIds: ['ENG-9'] })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [], context)
+    expect(result[0]!.linearIssues!.map(i => i.identifier)).toEqual(['ENG-9'])
+  })
+
+  it('pattern block (isPatternBlock) becomes an llm-pattern block', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [
+      makeResult(0, { serviceId: 'svc-other' }),
+      makeResult(99, {
+        isPatternBlock: true,
+        blockName: 'Daily standup',
+        estimatedHours: 2,
+        projectId: 'proj-1',
+        serviceId: 'svc-1',
+        hourTypeId: null,
+      }),
+    ])
+    const svc: Service[] = [{ id: 'svc-1', name: 'S', projectId: 'proj-1', hourTypes: [{ id: 'ht-1', label: 'A' }] }]
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, svc)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    const pattern = result.find(r => r.origin === 'llm-pattern')!
+    expect(pattern).toBeDefined()
+    expect(pattern.blockName).toBe('Daily standup')
+    expect(pattern.hours).toBe(2)
+    expect(pattern.hourTypeId).toBe('ht-1')
+  })
+
+  it('dedupes a pattern block whose project+service is already covered by an llm result', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [
+      makeResult(0, { projectId: 'proj-1', serviceId: 'svc-1' }),
+      makeResult(99, {
+        isPatternBlock: true,
+        blockName: 'dup pattern',
+        estimatedHours: 1,
+        projectId: 'proj-1',
+        serviceId: 'svc-1',
+      }),
+    ])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result.find(r => r.origin === 'llm-pattern')).toBeUndefined()
+    expect(result).toHaveLength(1)
+  })
+
+  it('pattern block with null project/service falls back to defaults and is kept', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [
+      makeResult(99, {
+        isPatternBlock: true,
+        blockName: 'unscoped pattern',
+        projectId: null,
+        serviceId: null,
+      }),
+    ])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    const pattern = result.find(r => r.origin === 'llm-pattern')!
+    expect(pattern.projectId).toBeUndefined()
+    expect(pattern.hours).toBe(1)
+  })
+
+  it('drops an LLM result whose index matches no item', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0), makeResult(5)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result).toHaveLength(1)
+  })
+
+  it('meeting result sets hourTypeId from the chosen service and sanitizes invalid raw urls', async () => {
+    // Block carries a non-URL string so sanitizeUrl hits its catch branch.
+    const block = makeBlock({ urlPattern: 'meet.google.com', urls: ['::not a url::'], firstVisitTime: '10:00', lastVisitTime: '10:30' })
+    const event = makeEvent({ title: 'Sync', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T11:00:00') })
+    const svc: Service[] = [{ id: 'svc-1', name: 'S', projectId: 'proj-1', hourTypes: [{ id: 'ht-1', label: 'A' }] }]
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { hourTypeId: 'ht-1' })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, svc)
+    const result = await useCase.execute('2024-01-15', [block], [event])
+    expect(result[0]!.hourTypeId).toBe('ht-1')
+    expect(result[0]!.rawUrls).toContain('::not a url::')
+  })
+
+  it('cache hint resolves project and service names for known cache entries', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    // Cache entry for a *meeting* key won't be used directly (meetings go to LLM),
+    // but builds a cacheHint passed to classifyDay.
+    const cache = { 'Standup:example.com': { projectId: 'proj-1', serviceId: 'svc-1', note: 'n' } }
+    const event = makeEvent({ title: 'Standup', start: new Date('2024-01-15T09:00:00'), end: new Date('2024-01-15T09:30:00') })
+    const { copilotRepo, cacheRepo } = makeDeps(cache, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    await useCase.execute('2024-01-15', [block], [event])
+    const hints = (copilotRepo.classifyDay as ReturnType<typeof vi.fn>).mock.calls[0]![4] as Record<string, { projectName: string }>
+    expect(hints['Standup:example.com']!.projectName).toBe('Project One')
+  })
+
+  it('cache hint falls back to empty names when project/service are unknown', async () => {
+    const block = makeBlock({ urlPattern: 'unknown-site.com' })
+    const cache = { 'unknown-site.com': { projectId: 'missing-p', serviceId: 'missing-s', note: 'n' } }
+    const { copilotRepo, cacheRepo } = makeDeps(cache, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    // No LLM items left (the only item was a cache hit) — classifyDay not called.
+    expect(copilotRepo.classifyDay).not.toHaveBeenCalled()
+    expect(result[0]!.origin).toBe('cache')
+  })
+
+  it('cache standalone forwards commits and linear issues from the context', async () => {
+    const block = makeBlock({ urlPattern: 'docs.site.com' })
+    const cache = { 'docs.site.com': { projectId: 'proj-1', serviceId: 'svc-1', note: 'n' } }
+    const svc: Service[] = [{ id: 'svc-1', name: 'S', projectId: 'proj-1', hourTypes: [{ id: 'ht-1', label: 'A' }] }]
+    const context: DayContext = {
+      commits: [{ sha: 'c1', message: 'm', repo: 'octocat/uren', branch: 'main', timestamp: '', time: '10:00', date: '2024-01-15' }],
+      linearIssues: [{ identifier: 'ENG-1', title: 'A', completedAt: '2024-01-15T12:00:00Z', url: 'u' }],
+    }
+    const { copilotRepo, cacheRepo } = makeDeps(cache, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, svc)
+    const result = await useCase.execute('2024-01-15', [block], [], context)
+    expect(result[0]!.origin).toBe('cache')
+    expect(result[0]!.hourTypeId).toBe('ht-1')
+    expect(result[0]!.commits).toHaveLength(1)
+    expect(result[0]!.linearIssues).toHaveLength(1)
+  })
+
+  it('cache standalone without hour types and without context omits those fields', async () => {
+    const block = makeBlock({ urlPattern: 'plain.com' })
+    const cache = { 'plain.com': { projectId: 'proj-1', serviceId: 'svc-1', note: 'n' } }
+    // services has no hourTypes → resolveHourTypeId returns undefined → hourTypeId omitted
+    const { copilotRepo, cacheRepo } = makeDeps(cache, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result[0]!.hourTypeId).toBeUndefined()
+    expect(result[0]!.commits).toBeUndefined()
+    expect(result[0]!.linearIssues).toBeUndefined()
+  })
+
+  it('meeting result with null project and service leaves them unset', async () => {
+    const block = makeBlock({ urlPattern: 'meet.com', firstVisitTime: '10:00', lastVisitTime: '10:30' })
+    const event = makeEvent({ title: 'Sync', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T10:30:00') })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { projectId: null, serviceId: null })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [event])
+    expect(result[0]!.projectId).toBeUndefined()
+    expect(result[0]!.serviceId).toBeUndefined()
+    expect(result[0]!.hourTypeId).toBeUndefined()
+  })
+
+  it('standalone non-commit block with null project/service leaves them unset', async () => {
+    const block = makeBlock({ urlPattern: 'plain-llm.com' })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { projectId: null, serviceId: null })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result[0]!.projectId).toBeUndefined()
+    expect(result[0]!.serviceId).toBeUndefined()
+  })
+
+  it('reduce picks the first block when none has a higher visit count', async () => {
+    // Two blocks with equal visit counts attached to one meeting — first stays dominant.
+    const b1 = makeBlock({ urlPattern: 'first.com', visitCount: 3, firstVisitTime: '10:00', lastVisitTime: '10:10' })
+    const b2 = makeBlock({ urlPattern: 'second.com', visitCount: 3, firstVisitTime: '10:15', lastVisitTime: '10:25' })
+    const event = makeEvent({ title: 'Standup', start: new Date('2024-01-15T10:00:00'), end: new Date('2024-01-15T10:30:00') })
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0)])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    await useCase.execute('2024-01-15', [b1, b2], [event])
+    const items = (copilotRepo.classifyDay as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { cacheKey: string }[]
+    expect(items[0]!.cacheKey).toBe('Standup:first.com')
   })
 })

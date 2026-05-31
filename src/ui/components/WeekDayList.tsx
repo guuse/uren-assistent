@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TrashIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, CalendarDaysIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { ConfirmDialog } from './ConfirmDialog'
 import { MonthPickerPopup } from './MonthPickerPopup'
 
@@ -33,6 +33,17 @@ interface Props {
   isCurrentWeek?: boolean
   onGoToCurrentWeek?: () => void
   onGoToDate?: (date: string) => void
+  // Week indienen / intrekken
+  isWeekSubmitted?: boolean
+  submittedLabel?: string | null
+  canSubmitWeek?: boolean
+  onSubmitWeek?: () => void
+  onWithdrawWeek?: () => void
+  isSubmittingWeek?: boolean
+  submitError?: string | null
+  // Submission markings: used for the calendar dropdown AND the day rows. Lazy per-month load.
+  isDateSubmitted?: (date: string) => boolean
+  onPickerMonthChange?: (monthDate: string) => void
 }
 
 const TARGET_HOURS = 8
@@ -81,6 +92,15 @@ export function WeekDayList({
   isCurrentWeek,
   onGoToCurrentWeek,
   onGoToDate,
+  isWeekSubmitted,
+  submittedLabel,
+  canSubmitWeek = true,
+  onSubmitWeek,
+  onWithdrawWeek,
+  isSubmittingWeek,
+  submitError,
+  isDateSubmitted,
+  onPickerMonthChange,
 }: Props) {
   const [confirmClearDate, setConfirmClearDate] = useState<string | null>(null)
   const [confirmClearWeek, setConfirmClearWeek] = useState(false)
@@ -131,7 +151,7 @@ export function WeekDayList({
                 padding: '4px 9px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
-              Nu
+              Naar vandaag
             </button>
           )}
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
@@ -149,6 +169,8 @@ export function WeekDayList({
                   initialMonth={selectedDate}
                   onSelectDate={(d) => { onGoToDate?.(d); setShowMonthPicker(false) }}
                   onClose={() => setShowMonthPicker(false)}
+                  {...(isDateSubmitted ? { isDateSubmitted } : {})}
+                  {...(onPickerMonthChange ? { onMonthChange: onPickerMonthChange } : {})}
                 />
               </div>
             )}
@@ -182,6 +204,7 @@ export function WeekDayList({
           const dateLabel = `${dt.getDate()} ${dt.toLocaleString('nl-NL', { month: 'short' })}`
           const processingState = processingStateForDate?.(date) ?? 'idle'
           const llmCount = llmBlockCountForDate?.(date) ?? 0
+          const daySubmitted = isDateSubmitted?.(date) ?? false
 
           return (
             <div
@@ -196,7 +219,12 @@ export function WeekDayList({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {label}
+                  {daySubmitted && (
+                    <LockClosedIcon style={{ width: 10, height: 10, color: '#15803d' }} strokeWidth={2.5} />
+                  )}
+                </span>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{dateLabel}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -230,50 +258,108 @@ export function WeekDayList({
 
       {/* Footer */}
       <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-        {(clearError || clearWeekError) && (
-          <div style={{ fontSize: 10, color: 'var(--danger)' }}>{clearError ?? clearWeekError}</div>
-        )}
-        {totalLlmBlockCount != null && totalLlmBlockCount > 0 && onClearWeekBlocks && (
-          <button
-            onClick={() => setConfirmClearWeek(true)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 5, border: '1px solid #fecaca', borderRadius: 7, padding: '5px 10px',
-              fontSize: 11, fontWeight: 600, color: 'var(--danger)', background: '#fff1f2',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            <TrashIcon style={{ width: 12, height: 12 }} strokeWidth={2} />
-            Wis week ({totalLlmBlockCount})
-          </button>
-        )}
-        {onProcessWeek && (
-          <button
-            onClick={onProcessWeek}
-            disabled={isProcessingWeek}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 5, background: 'var(--accent)', color: 'white', border: 'none',
-              borderRadius: 7, padding: '7px 12px', fontSize: 11, fontWeight: 600,
-              cursor: isProcessingWeek ? 'not-allowed' : 'pointer', opacity: isProcessingWeek ? 0.7 : 1,
-              fontFamily: 'inherit',
-            }}
-          >
-            {isProcessingWeek ? 'Bezig…' : 'Verwerk week'}
-          </button>
-        )}
-        {onUploadCsv && (
-          <button
-            onClick={onUploadCsv}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 5, background: 'transparent', color: 'var(--text-secondary)',
-              border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px',
-              fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            CSV uploaden
-          </button>
+        {isWeekSubmitted ? (
+          /* Ingediende week: read-only badge + mogelijkheid om in te trekken */
+          <>
+            <div
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 6, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac',
+                borderRadius: 7, padding: '8px 12px', fontSize: 11, fontWeight: 700,
+              }}
+            >
+              <LockClosedIcon style={{ width: 13, height: 13 }} strokeWidth={2} />
+              Ingediend{submittedLabel ? ` · ${submittedLabel}` : ''} ✓
+            </div>
+            {onWithdrawWeek && (
+              <button
+                onClick={onWithdrawWeek}
+                disabled={isSubmittingWeek}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 5, background: 'transparent', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px',
+                  fontSize: 11, fontWeight: 600,
+                  cursor: isSubmittingWeek ? 'not-allowed' : 'pointer', opacity: isSubmittingWeek ? 0.6 : 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                {isSubmittingWeek ? 'Bezig…' : 'Trek week in'}
+              </button>
+            )}
+            {submitError && (
+              <div style={{ fontSize: 10, color: 'var(--danger)' }}>{submitError}</div>
+            )}
+          </>
+        ) : (
+          <>
+            {(clearError || clearWeekError) && (
+              <div style={{ fontSize: 10, color: 'var(--danger)' }}>{clearError ?? clearWeekError}</div>
+            )}
+            {totalLlmBlockCount != null && totalLlmBlockCount > 0 && onClearWeekBlocks && (
+              <button
+                onClick={() => setConfirmClearWeek(true)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 5, border: '1px solid #fecaca', borderRadius: 7, padding: '5px 10px',
+                  fontSize: 11, fontWeight: 600, color: 'var(--danger)', background: '#fff1f2',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <TrashIcon style={{ width: 12, height: 12 }} strokeWidth={2} />
+                Wis week ({totalLlmBlockCount})
+              </button>
+            )}
+            {onProcessWeek && (
+              <button
+                onClick={onProcessWeek}
+                disabled={isProcessingWeek}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 5, background: 'var(--accent)', color: 'white', border: 'none',
+                  borderRadius: 7, padding: '7px 12px', fontSize: 11, fontWeight: 600,
+                  cursor: isProcessingWeek ? 'not-allowed' : 'pointer', opacity: isProcessingWeek ? 0.7 : 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                {isProcessingWeek ? 'Bezig…' : 'Verwerk week'}
+              </button>
+            )}
+            {onSubmitWeek && (
+              <button
+                onClick={onSubmitWeek}
+                disabled={isSubmittingWeek || !canSubmitWeek}
+                title={!canSubmitWeek ? 'Een toekomstige week kan nog niet ingediend worden' : undefined}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 5, background: 'transparent', color: 'var(--accent)',
+                  border: '1px solid var(--accent-border)', borderRadius: 7, padding: '7px 12px',
+                  fontSize: 11, fontWeight: 600,
+                  cursor: (isSubmittingWeek || !canSubmitWeek) ? 'not-allowed' : 'pointer',
+                  opacity: (isSubmittingWeek || !canSubmitWeek) ? 0.5 : 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                {isSubmittingWeek ? 'Indienen…' : 'Dien week in'}
+              </button>
+            )}
+            {submitError && (
+              <div style={{ fontSize: 10, color: 'var(--danger)' }}>{submitError}</div>
+            )}
+            {onUploadCsv && (
+              <button
+                onClick={onUploadCsv}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 5, background: 'transparent', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                CSV uploaden
+              </button>
+            )}
+          </>
         )}
       </div>
 

@@ -26,6 +26,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
 
   const selected = options.find((o) => o.id === value)
@@ -41,7 +42,11 @@ export function SearchableSelect({ label, options, value, onChange, required, di
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false)
         setQuery('')
       }
@@ -51,7 +56,8 @@ export function SearchableSelect({ label, options, value, onChange, required, di
   }, [])
 
   function handleOpen() {
-    if (disabled) return
+    // The trigger button is rendered with `disabled={disabled}`, so a disabled
+    // control never invokes this handler — no explicit guard needed here.
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       setDropdownStyle({
@@ -113,7 +119,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
         </button>
 
         {open && ReactDOM.createPortal(
-          <div style={dropdownStyle} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden">
+          <div ref={dropdownRef} style={dropdownStyle} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden">
             <div className="p-2 border-b border-[var(--border)]">
               <input
                 ref={inputRef}
@@ -135,7 +141,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                         type="button"
                         onClick={() => handleSelect(opt.id)}
                         className={`flex-1 text-left px-3 py-2 text-sm hover:bg-[var(--bg)] transition-colors ${
-                          opt.id === value ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)]'
+                          opt.id === value ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-primary)]'
                         }`}
                       >
                         {opt.label}

@@ -62,7 +62,7 @@ export function useImport(): ImportState {
     const apiSecret = await keychainRepo.get('simplicate-api-secret')
     if (!apiKey || !apiSecret) return []
     const simplicateRepo = createSimplicateRepository(SIMPLICATE_BASE_URL, apiKey, apiSecret)
-    return simplicateRepo.getServices(projectId)
+    return simplicateRepo.getServices(projectId, new Date().toISOString().split('T')[0]!)
   }, [])
 
   const analyseFile = useCallback(async (csvContent: string): Promise<UploadResult | null> => {

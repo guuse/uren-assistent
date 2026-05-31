@@ -32,6 +32,27 @@ describe('TauriSettingsRepository', () => {
     expect(await repo.getSelectedModel()).toBeNull()
   })
 
+  it('treats a JSON array as empty data', async () => {
+    mockRead.mockResolvedValue(JSON.stringify(['not', 'an', 'object']))
+    const repo = new TauriSettingsRepository()
+    expect(await repo.getSelectedModel()).toBeNull()
+  })
+
+  it('treats a JSON null/primitive as empty data', async () => {
+    mockRead.mockResolvedValue(JSON.stringify(null))
+    const repo = new TauriSettingsRepository()
+    expect(await repo.getSelectedModel()).toBeNull()
+  })
+
+  it('caches the file path across calls', async () => {
+    mockRead.mockResolvedValue(JSON.stringify({ copilot_model: 'm' }))
+    const repo = new TauriSettingsRepository()
+    await repo.getSelectedModel()
+    await repo.getSelectedModel()
+    // appDataDir resolved once because the path is cached
+    expect(await repo.getSelectedModel()).toBe('m')
+  })
+
   it('returns stored model id', async () => {
     mockRead.mockResolvedValue(JSON.stringify({ copilot_model: 'claude-sonnet' }))
     const repo = new TauriSettingsRepository()

@@ -18,7 +18,8 @@ export class FetchSimplicateDataUseCase {
     return { projects, services: [], hourTypes }
   }
 
-  async fetchServicesForProject(projectId: string): Promise<SimplicateService[]> {
-    return this.simplicateRepo.getServices(projectId)
+  async fetchServicesForProject(projectId: string, date?: string): Promise<SimplicateService[]> {
+    const forDate = date ?? new Date().toISOString().split('T')[0]!
+    return this.simplicateRepo.getServices(projectId, forDate)
   }
 }

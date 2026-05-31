@@ -97,4 +97,22 @@ describe('attachHistoryToMeetings', () => {
     expect(groups[0]!.historyBlocks).toHaveLength(1)
     expect(unclaimed).toHaveLength(0)
   })
+
+  it('never attaches a github.com commit-block to a meeting — always unclaimed', () => {
+    // A commit block overlapping a meeting in time still stays standalone.
+    const blocks = [makeBlock('09:00', '09:15', 'github.com/org/repo@09:00')]
+    const events = [makeEvent('Standup', '09:00', '09:15')]
+    const { groups, unclaimed } = attachHistoryToMeetings(blocks, events)
+    expect(groups[0]!.historyBlocks).toHaveLength(0)
+    expect(unclaimed).toHaveLength(1)
+    expect(unclaimed[0]!.urlPattern).toContain('github.com')
+  })
+
+  it('falls back to firstVisitTime when lastVisitTime is empty', () => {
+    const block = { ...makeBlock('09:00', ''), lastVisitTime: '' }
+    const events = [makeEvent('Standup', '09:00', '09:15')]
+    const { groups, unclaimed } = attachHistoryToMeetings([block], events)
+    expect(groups[0]!.historyBlocks).toHaveLength(1)
+    expect(unclaimed).toHaveLength(0)
+  })
 })

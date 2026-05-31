@@ -1,9 +1,9 @@
 mod commands;
 
-use commands::auth::start_google_oauth;
-use commands::keychain::{delete_secret, get_secret, set_secret};
-use commands::simplicate::simplicate_request;
-use commands::storage::ensure_app_data_dir;
+use commands::glue::{
+    delete_secret, ensure_app_data_dir, get_secret, set_secret, simplicate_request,
+    start_google_oauth,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

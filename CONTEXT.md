@@ -1,4 +1,4 @@
-# Uren-schrijven
+# Uren-assistent
 
 A Tauri desktop app that turns a developer's day (browser history, calendar, GitHub/Linear activity, booking history) into bookable time blocks in Simplicate. An LLM (Gemini Flash) classifies the day; the app lays the result out on a timeline and books it.
 
@@ -26,3 +26,12 @@ The amount of booked time a day should reach — 8.0h total, counting existing h
 
 **Anchor**:
 A block whose time is fixed and must not move during layout: meeting blocks and existing hours. Everything else is movable and gets repacked contiguously from 09:00 around the anchors.
+
+### The week
+
+**Ingediende week** (submitted week):
+A week whose booked hours have been submitted to Simplicate for review. Submission locks the week: existing hours can no longer be changed, added, or deleted, and the week is treated as read-only. The submitted status is owned by Simplicate (the submission resource), not inferred locally. A submitted week is "afgerond" (done).
+_Avoid_: verwerkte week (that means classified, not submitted).
+
+**Verwerken** vs **indienen**:
+Two distinct week actions. _Verwerken_ runs classification (activity → concept blocks); it writes nothing to Simplicate and is reversible. _Indienen_ submits the already-booked hours to Simplicate; it locks the week and is the final step. Order: verwerken → boeken → indienen.

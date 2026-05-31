@@ -12,6 +12,28 @@ export default defineConfig(async () => ({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "text", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      // Pragmatic exclusions: entry points, DI wiring, pure type/interface files,
+      // and test/setup files. Everything else must reach the thresholds below.
+      exclude: [
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+        "src/**/*.d.ts",
+        "src/**/*.types.ts",
+        "src/application/container.ts",
+        "tests/**",
+        "**/*.test.{ts,tsx}",
+      ],
+      thresholds: {
+        statements: 95,
+        branches: 95,
+        functions: 95,
+        lines: 95,
+      },
+    },
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

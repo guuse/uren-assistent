@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    uren_schrijven_lib::run()
+    uren_assistent_lib::run()
 }

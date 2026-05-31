@@ -97,6 +97,12 @@ describe('groupCommitsIntoBlocks', () => {
     expect(blocks[0]!.lastVisitTime).toBe('23:45')
   })
 
+  it('clamt lastVisitTime op 23:59 wanneer +30 min over middernacht zou gaan', () => {
+    // 23:50 + 30 min = 24:20 → geklemd op 23:59
+    const blocks = groupCommitsIntoBlocks([makeCommit('23:50')], '2026-04-01')
+    expect(blocks[0]!.lastVisitTime).toBe('23:59')
+  })
+
   it('bevat commit-messages als titles (max 10, gededupliceerd)', () => {
     const commits = Array.from({ length: 15 }, (_, i) =>
       makeCommit(`09:${String(i).padStart(2, '0')}`, 'Org/Repo', i < 5 ? 'feat: dup' : `feat: unique ${i}`)

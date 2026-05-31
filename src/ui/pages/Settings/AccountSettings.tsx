@@ -361,7 +361,7 @@ export function AccountSettings() {
             type="text"
             value={githubUsernameInput}
             onChange={(e) => setGithubUsernameInput(e.target.value)}
-            placeholder="GitHub gebruikersnaam (bijv. guuse)"
+            placeholder="GitHub gebruikersnaam (bijv. octocat)"
             style={inputStyle}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

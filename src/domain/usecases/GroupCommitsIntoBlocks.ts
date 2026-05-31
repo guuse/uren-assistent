@@ -54,7 +54,8 @@ export function groupCommitsIntoBlocks(commits: GitHubCommit[], date: string): H
         current.push(commit)
       }
     }
-    if (current.length > 0) sessions.push(current)
+    // `current` always holds at least the first commit of the repo group here.
+    sessions.push(current)
 
     const [owner, repoName] = repo.split('/')
     const repoUrl = `github.com/${owner}/${repoName}`

@@ -49,7 +49,8 @@ export class GetActiveProjectsForDateUseCase {
 
     const activeProjects = allProjects
       .filter(p => activeProjectIds.has(p.id))
-      .sort((a, b) => (bookingCountByProject.get(b.id) ?? 0) - (bookingCountByProject.get(a.id) ?? 0))
+      // Both ids are in activeProjectIds (the filter above), so both counts exist.
+      .sort((a, b) => bookingCountByProject.get(b.id)! - bookingCountByProject.get(a.id)!)
 
     return { activeProjects, historicalEntries }
   }

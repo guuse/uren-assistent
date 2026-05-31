@@ -48,8 +48,6 @@ export class GitHubRepository implements IGitHubRepository {
       }
 
       const data = await response.json() as SearchCommitsResponse
-      console.log(`[GitHub] page ${page}: ${data.items.length} commits van ${data.total_count} totaal`)
-
 
       for (const item of data.items) {
         const iso = item.commit.author.date
@@ -57,7 +55,7 @@ export class GitHubRepository implements IGitHubRepository {
         // Extract branch is not available in search API — omit
         commits.push({
           sha: item.sha.slice(0, 7),
-          message: item.commit.message.split('\n')[0] ?? item.commit.message,
+          message: item.commit.message.split('\n')[0] || item.commit.message,
           repo: item.repository.full_name,
           branch: '',
           timestamp: iso,

@@ -107,8 +107,8 @@ De app heeft twee configuraties die naast elkaar kunnen draaien:
 
 | Omgeving | Config | App-naam | Bundle ID |
 |---|---|---|---|
-| Dev | `src-tauri/tauri.conf.json` | uren-schrijven | com.guus.uren-schrijven |
-| Prod | `src-tauri/tauri.prod.conf.json` | Uren assistent | com.guus.uren-assistent |
+| Dev | `src-tauri/tauri.conf.json` | uren-assistent | com.urenassistent.dev |
+| Prod | `src-tauri/tauri.prod.conf.json` | Uren assistent | com.urenassistent.app |
 
 ### Makefile-targets
 
@@ -120,7 +120,7 @@ De app heeft twee configuraties die naast elkaar kunnen draaien:
 
 De zichtbare app-naam komt uit `VITE_APP_TITLE`:
 - `.env.production` → `Uren assistent` (gebruikt door `tauri build --config tauri.prod.conf.json`)
-- `.env.development` → `Uren schrijven (dev)` (gebruikt door `tauri dev`)
+- `.env.development` → `Uren assistent (dev)` (gebruikt door `tauri dev`)
 
 ### Iconen
 

@@ -107,4 +107,96 @@ describe('ParseBrowserHistoryUseCase', () => {
     expect(result[0]!.firstVisitTime).toBe('23:30')
     expect(result[0]!.date).toBe('2024-05-13')
   })
+
+  it('keeps an unparseable URL verbatim (normaliseUrl catch branch)', async () => {
+    const csv = makeCsv([
+      { time: '2024-05-13T09:00:00', title: 'Weird', url: 'not a url', visits: 5 },
+    ])
+    const result = await uc.execute(csv, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.urlPattern).toBe('not a url')
+  })
+
+  it('skips blank lines and rows without a URL', async () => {
+    const header = 'Order,ID,Last Visit Time,Title,Link visited {{times}} times,URL,Typed {{times}} times in the address bar'
+    const csv = [
+      header,
+      '1,id1,2024-05-13T09:00:00,"Has URL",5,https://github.com/org/repo,0',
+      '',                                              // blank line → skipped
+      '2,id2,2024-05-13T09:05:00,"No URL",5,,0',       // empty URL → skipped
+      '   ',                                           // whitespace-only line → skipped
+    ].join('\n')
+    const result = await uc.execute(csv, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.urlPattern).toContain('github.com')
+  })
+
+  it('rounds m>=45 up to the next hour when not at 23:00', async () => {
+    const csv = makeCsv([
+      { time: '2024-05-13T09:50:00', title: 'GitHub', url: 'https://github.com/org/repo', visits: 3 },
+    ])
+    const result = await uc.execute(csv, 1)
+    expect(result[0]!.firstVisitTime).toBe('10:00')
+  })
+
+  it('defaults visit count to 1 when the visits column is absent or non-numeric', async () => {
+    // Header WITHOUT a "{{times}}" visits column → visitsIdx is -1, count falls back to 1.
+    const header = 'Order,ID,Last Visit Time,Title,URL'
+    const csv = [
+      header,
+      '1,id1,2024-05-13T09:00:00,"A",https://github.com/org/repo',
+      '2,id2,2024-05-13T09:10:00,"B",https://github.com/org/repo',
+    ].join('\n')
+    const result = await uc.execute(csv, 2)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.visitCount).toBe(2) // 1 + 1
+  })
+
+  it('skips a row whose columns are truncated before the time field', async () => {
+    const header = 'Order,ID,Last Visit Time,Title,Link visited {{times}} times,URL,Typed {{times}} times in the address bar'
+    const csv = [
+      header,
+      '1,id1', // truncated row — cols[timeIdx] is undefined → skipped
+      '2,id2,2024-05-13T09:00:00,"Good",5,https://example.com,0',
+    ].join('\n')
+    const result = await uc.execute(csv, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.urlPattern).toContain('example.com')
+  })
+
+  it('treats a non-numeric visit count as 1', async () => {
+    const header = 'Order,ID,Last Visit Time,Title,Link visited {{times}} times,URL,Typed {{times}} times in the address bar'
+    const csv = [
+      header,
+      '1,id1,2024-05-13T09:00:00,"A",abc,https://github.com/org/repo,0', // visits "abc" → NaN → 1
+      '2,id2,2024-05-13T09:10:00,"B",xyz,https://github.com/org/repo,0', // visits "xyz" → NaN → 1
+    ].join('\n')
+    const result = await uc.execute(csv, 2)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.visitCount).toBe(2) // 1 + 1
+  })
+
+  it('skips a row that has a time but is truncated before the URL column', async () => {
+    const header = 'Order,ID,Last Visit Time,Title,Link visited {{times}} times,URL,Typed {{times}} times in the address bar'
+    const csv = [
+      header,
+      '1,id1,2024-05-13T09:00:00,"Title only",5', // no URL column present → cols[urlIdx] undefined → skipped
+      '2,id2,2024-05-13T09:00:00,"Good",5,https://example.com,0',
+    ].join('\n')
+    const result = await uc.execute(csv, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.urlPattern).toContain('example.com')
+  })
+
+  it('skips rows with an unparseable visit time', async () => {
+    const header = 'Order,ID,Last Visit Time,Title,Link visited {{times}} times,URL,Typed {{times}} times in the address bar'
+    const csv = [
+      header,
+      '1,id1,not-a-date,"Bad time",5,https://github.com/org/repo,0',  // invalid time → skipped
+      '2,id2,2024-05-13T09:00:00,"Good",5,https://example.com,0',
+    ].join('\n')
+    const result = await uc.execute(csv, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.urlPattern).toContain('example.com')
+  })
 })
