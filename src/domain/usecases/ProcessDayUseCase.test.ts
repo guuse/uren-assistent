@@ -96,6 +96,7 @@ describe('ProcessDayUseCase', () => {
       weekLinearIssues: [],
       historicalSuperset: [],
       allProjects: [],
+      servicesByProjectId: {},
     })) {
       phases.push(progress.phase)
     }

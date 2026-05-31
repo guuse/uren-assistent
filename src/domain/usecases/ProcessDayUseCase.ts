@@ -31,6 +31,8 @@ export interface DayPrefetch {
   weekLinearIssues: LinearIssue[]
   historicalSuperset: HourEntry[]
   allProjects: SimplicateProject[]
+  // Services (with hour types) per project id, prefetched once for the week.
+  servicesByProjectId: Record<string, Service[]>
 }
 
 export class ProcessDayUseCase {
@@ -48,12 +50,30 @@ export class ProcessDayUseCase {
     _availableProjects: Project[], // kept for call-site compat; active projects are fetched at runtime via getActiveProjects
     private readonly availableServices: Service[],
     private readonly githubUsername: string,
-    simplicateRepo: ISimplicateRepository,
+    private readonly simplicateRepo: ISimplicateRepository,
     private readonly simplicateEmployeeId: string,
   ) {
     this.fetchGitHub = new FetchGitHubContextUseCase(githubRepo)
     this.fetchLinear = new FetchLinearContextUseCase(linearRepo)
     this.getActiveProjects = new GetActiveProjectsForDateUseCase(simplicateRepo)
+  }
+
+  /**
+   * Loads the services (with their hour types + labels) for the given projects.
+   * Services aren't in the global store (fetched lazily per project), so the
+   * classifier loads them here for the day's active projects — this is what lets
+   * the LLM pick a valid project, service AND hour type ("urensoort").
+   */
+  private async buildServicesForProjects(projectIds: string[], date: string): Promise<Service[]> {
+    const hourTypes = await this.simplicateRepo.getHourTypes()
+    const labelById = new Map(hourTypes.map(h => [h.id, h.label]))
+    const lists = await Promise.all(projectIds.map(id => this.simplicateRepo.getServices(id, date)))
+    return lists.flat().map(s => ({
+      id: s.id,
+      name: s.name,
+      projectId: s.projectId,
+      hourTypes: s.hourTypeIds.map(htId => ({ id: htId, label: labelById.get(htId) ?? htId })),
+    }))
   }
 
   async *execute(date: string, prefetch?: DayPrefetch): AsyncGenerator<ProcessDayProgress> {
@@ -98,11 +118,18 @@ export class ProcessDayUseCase {
       const commitBlocks = groupCommitsIntoBlocks(allCommits, date)
       const allBlocks = [...historyBlocks, ...commitBlocks]
 
+      // Services for the day's active projects, with their hour types — the
+      // global store keeps no services, so load (or slice from the prefetch) here.
+      const activeProjectIds = activeProjectsResult.activeProjects.map(p => p.id)
+      const availableServices: Service[] = prefetch
+        ? activeProjectIds.flatMap(id => prefetch.servicesByProjectId[id] ?? [])
+        : await this.buildServicesForProjects(activeProjectIds, date)
+
       const groupAndClassify = new GroupAndClassifyDayUseCase(
         this.copilotRepo,
         this.cacheRepo,
         activeProjectsResult.activeProjects,
-        this.availableServices,
+        availableServices.length > 0 ? availableServices : this.availableServices,
         activeProjectsResult.historicalEntries,
       )
 

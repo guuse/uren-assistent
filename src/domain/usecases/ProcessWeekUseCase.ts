@@ -87,17 +87,36 @@ export class ProcessWeekUseCase {
     // Haal de Simplicate-data die per dag identiek of afleidbaar is één keer op
     // voor de hele week: projecten en het 28-daagse historie-venster (gemeten
     // vanaf de vroegste dag). ProcessDay snijdt dit per dag uit.
-    const [allProjects, historicalSuperset] = await Promise.all([
+    const [allProjects, historicalSuperset, hourTypes] = await Promise.all([
       this.simplicateRepo.getProjects(),
       // Inclusive upper bound (next day) so the last weekday's own entries are returned,
       // not dropped by Simplicate's date-only [le] comparison.
       this.simplicateRepo.getHourEntries(this.simplicateEmployeeId, subtractDays(weekStart, 28), addDays(weekEnd, 1)),
+      this.simplicateRepo.getHourTypes(),
     ])
+
+    // Load services (with hour types) once for every project booked in the window —
+    // a superset of each day's active projects. This is what lets the LLM choose a
+    // valid project, service and hour type ("urensoort").
+    const labelById = new Map(hourTypes.map(h => [h.id, h.label]))
+    const weekProjectIds = [...new Set(historicalSuperset.map(e => e.projectId))]
+    const servicesByProjectId: Record<string, Service[]> = {}
+    await Promise.all(weekProjectIds.map(async pid => {
+      const svcs = await this.simplicateRepo.getServices(pid, weekEnd)
+      servicesByProjectId[pid] = svcs.map(s => ({
+        id: s.id,
+        name: s.name,
+        projectId: s.projectId,
+        hourTypes: s.hourTypeIds.map(htId => ({ id: htId, label: labelById.get(htId) ?? htId })),
+      }))
+    }))
+
     const prefetch: DayPrefetch = {
       weekCommits: allCommits,
       weekLinearIssues: linearIssues,
       historicalSuperset,
       allProjects,
+      servicesByProjectId,
     }
 
     // Verwerk dagen in batches zodat er hooguit CONCURRENCY Gemini-calls tegelijk lopen.
