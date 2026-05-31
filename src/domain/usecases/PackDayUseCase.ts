@@ -78,8 +78,10 @@ export class PackDayUseCase {
       Math.max(grid, Math.round((hours * 60) / grid) * grid)
 
     const candidates = blocks.filter(b => b.origin === 'llm-pattern')
-    const meetings = blocks.filter(b => b.origin !== 'llm-pattern' && (b.overlappingMeetings?.length ?? 0) > 0)
-    const movable = blocks.filter(b => b.origin !== 'llm-pattern' && (b.overlappingMeetings?.length ?? 0) === 0)
+    // Everything else — including meeting blocks — is movable. Existing booked
+    // entries are the only fixed anchors; even a meeting yields to a booked hour
+    // rather than overlapping it, so the day stays in a single, overlap-free column.
+    const concepts = blocks.filter(b => b.origin !== 'llm-pattern')
 
     // --- Dedup against already-booked entries ---
     const entriesByService = new Map<string, HourEntry[]>()
@@ -99,16 +101,14 @@ export class PackDayUseCase {
       return entries.some(e => overlaps(bs, be, timeToMinutes(e.startTime), timeToMinutes(e.endTime)))
     }
 
-    const keptMeetings = meetings.filter(b => !isTimedConceptDuplicate(b))
-    const keptMovable = movable.filter(b => !isTimedConceptDuplicate(b))
+    const keptConcepts = concepts.filter(b => !isTimedConceptDuplicate(b))
     // Fill candidates have no real time: drop if their project+service is already booked at all today.
     const keptCandidates = candidates.filter(b => !b.projectId || !b.serviceId || !entriesByService.has(`${b.projectId}__${b.serviceId}`))
 
-    // --- Occupied zones from fixed anchors ---
-    let occupied: Interval[] = mergeIntervals([
-      ...existingEntries.map(e => ({ start: timeToMinutes(e.startTime), end: timeToMinutes(e.endTime) })),
-      ...keptMeetings.map(m => ({ start: timeToMinutes(m.startTime), end: timeToMinutes(m.endTime) })),
-    ])
+    // --- Occupied zones: only the already-booked entries are fixed ---
+    let occupied: Interval[] = mergeIntervals(
+      existingEntries.map(e => ({ start: timeToMinutes(e.startTime), end: timeToMinutes(e.endTime) })),
+    )
 
     let cursor = dayStartMin
     const place = (hours: number): { startTime: string; endTime: string; minutes: number } => {
@@ -119,8 +119,8 @@ export class PackDayUseCase {
       return { startTime: minutesToTime(start), endTime: minutesToTime(start + durMin), minutes: durMin }
     }
 
-    // --- Repack movable blocks contiguously, preserving chronological order ---
-    const placedMovable = [...keptMovable]
+    // --- Repack concept blocks contiguously, preserving chronological order, around booked hours ---
+    const placedConcepts = [...keptConcepts]
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       .map(b => {
         const { startTime, endTime } = place(b.hours)
@@ -129,8 +129,7 @@ export class PackDayUseCase {
 
     let bookedHours =
       existingEntries.reduce((s, e) => s + e.hours, 0) +
-      keptMeetings.reduce((s, m) => s + m.hours, 0) +
-      placedMovable.reduce((s, b) => s + b.hours, 0)
+      placedConcepts.reduce((s, b) => s + b.hours, 0)
 
     // --- Top up to the target with fill candidates (highest confidence first) ---
     // Fill candidates are invented, not observed, so they NEVER push the day past
@@ -147,7 +146,7 @@ export class PackDayUseCase {
       bookedHours += minutes / 60
     }
 
-    return [...keptMeetings, ...placedMovable, ...placedCandidates].sort(
+    return [...placedConcepts, ...placedCandidates].sort(
       (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
     )
   }

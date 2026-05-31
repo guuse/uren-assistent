@@ -92,18 +92,26 @@ describe('PackDayUseCase', () => {
     expect(result[1]!.endTime).toBe('10:30')
   })
 
-  it('flows movable blocks around a fixed meeting anchor', () => {
-    const meeting = makeMeeting('09:30', '10:00', { blockName: 'Standup' })
+  it('repacks meeting blocks contiguously too (meetings are not fixed)', () => {
     const work = makeBlock({ blockName: 'Work', hours: 1, startTime: '08:00', endTime: '09:00' })
+    const meeting = makeMeeting('09:30', '10:00', { blockName: 'Standup', hours: 0.5 })
     const result = new PackDayUseCase().execute([work, meeting], [], { targetHours: 1.5 })
 
     const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
-    // meeting stays fixed
-    expect(byName['Standup']!.startTime).toBe('09:30')
-    expect(byName['Standup']!.endTime).toBe('10:00')
-    // 1h work cannot fit in 09:00-09:30, so it goes after the meeting
-    expect(byName['Work']!.startTime).toBe('10:00')
-    expect(byName['Work']!.endTime).toBe('11:00')
+    // Earlier original start wins order: Work (08:00) then Standup (09:30), packed from 09:00.
+    expect(byName['Work']!.startTime).toBe('09:00')
+    expect(byName['Work']!.endTime).toBe('10:00')
+    expect(byName['Standup']!.startTime).toBe('10:00')
+    expect(byName['Standup']!.endTime).toBe('10:30')
+  })
+
+  it('moves a meeting block that overlaps a booked entry to after it', () => {
+    const entry = makeEntry('09:00', '11:00', 2, { projectId: 'other', projectServiceId: 'other' })
+    const meeting = makeMeeting('09:30', '10:00', { blockName: 'Overleg', hours: 0.5 })
+    const result = new PackDayUseCase().execute([meeting], [entry], { targetHours: 8 })
+
+    const m = result.find(r => r.blockName === 'Overleg')!
+    expect(minutes(m.startTime)).toBeGreaterThanOrEqual(minutes('11:00'))
   })
 
   it('never overlaps an existing booked entry', () => {
