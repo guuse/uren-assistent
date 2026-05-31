@@ -33,6 +33,11 @@ interface GoogleEventsListResponse {
 }
 
 export class GoogleCalendarRepository implements IGoogleCalendarRepository {
+  // Single-flight token refresh: when several days are classified concurrently
+  // they share this repo, so we dedup their refreshes onto one in-flight promise
+  // to avoid racing refreshes that can invalidate each other's tokens.
+  private refreshInFlight: Promise<string | null> | null = null
+
   constructor(
     private readonly keychain: IKeychainRepository,
     private readonly clientId: string,
@@ -54,7 +59,7 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
   }
 
   async fetchEvents(startDate: Date, endDate: Date): Promise<CalendarEvent[]> {
-    const token = await this.getValidToken()
+    let token = await this.getValidToken()
     if (!token) return []
 
     const timeMin = new Date(startDate)
@@ -68,10 +73,17 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
       singleEvents: 'true',
       orderBy: 'startTime',
     })
+    const url = `${CALENDAR_API_URL}?${params.toString()}`
 
-    const res = await fetch(`${CALENDAR_API_URL}?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+
+    // A stale/revoked token still passes our expiry estimate; on 401 force a
+    // refresh and retry once before giving up.
+    if (res.status === 401) {
+      token = await this.getValidToken(true)
+      if (!token) return []
+      res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    }
 
     if (!res.ok) {
       const text = await res.text()
@@ -119,15 +131,30 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
     }
   }
 
-  private async getValidToken(): Promise<string | null> {
+  private async getValidToken(forceRefresh = false): Promise<string | null> {
     const token = await this.keychain.get('google-access-token')
     const expiryStr = await this.keychain.get('google-token-expiry')
-    if (!token) return null
 
-    const expiry = expiryStr ? Number(expiryStr) : 0
-    if (Date.now() < expiry - 60_000) return token
+    if (!forceRefresh) {
+      if (!token) return null
+      const expiry = expiryStr ? Number(expiryStr) : 0
+      if (Date.now() < expiry - 60_000) return token
+    }
 
-    // Try to refresh
+    return this.refreshToken()
+  }
+
+  /** Refreshes the access token, deduping concurrent callers onto one request. */
+  private refreshToken(): Promise<string | null> {
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.doRefresh().finally(() => {
+        this.refreshInFlight = null
+      })
+    }
+    return this.refreshInFlight
+  }
+
+  private async doRefresh(): Promise<string | null> {
     const refreshToken = await this.keychain.get('google-refresh-token')
     if (!refreshToken) return null
 
