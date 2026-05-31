@@ -44,6 +44,7 @@ export class GroupAndClassifyDayUseCase {
     historyBlocks: HistoryBlock[],
     calendarEvents: CalendarEvent[],
     context?: DayContext,
+    existingEntries: HourEntry[] = [],
   ): Promise<ClassifiedBlock[]> {
     const { groups, unclaimed } = attachHistoryToMeetings(historyBlocks, calendarEvents)
 
@@ -117,6 +118,7 @@ export class GroupAndClassifyDayUseCase {
         cacheHints,
         context,
         this.historicalEntries,
+        existingEntries,
       )
 
       // Verwerk patroonblokken (isPatternBlock: true, aangemaakt door LLM op basis van patroonherkenning)

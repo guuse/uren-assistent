@@ -30,11 +30,12 @@ function makeEntry(projectId: string, startDate: string): HourEntry {
 }
 
 describe('GetActiveProjectsForDateUseCase', () => {
-  it('fetches entries for [targetDate-28d, targetDate) window', async () => {
+  it('fetches with an inclusive (next-day) upper bound so the target day is not dropped', async () => {
     const repo = makeRepo([], [])
     const uc = new GetActiveProjectsForDateUseCase(repo)
     await uc.execute('2026-05-24', 'emp1')
-    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-04-26', '2026-05-24')
+    // Upper bound is targetDate+1 to defeat Simplicate's date-only [le] comparison.
+    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-04-26', '2026-05-25')
   })
 
   it('returns only projects that appear in the historical entries', async () => {
@@ -83,7 +84,19 @@ describe('GetActiveProjectsForDateUseCase', () => {
     const repo = makeRepo([], [])
     const uc = new GetActiveProjectsForDateUseCase(repo)
     await uc.execute('2026-03-10', 'emp1')
-    // 2026-03-10 - 28 days = 2026-02-10
-    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-02-10', '2026-03-10')
+    // 2026-03-10 - 28 days = 2026-02-10; upper bound is the next day (inclusive).
+    expect(repo.getHourEntries).toHaveBeenCalledWith('emp1', '2026-02-10', '2026-03-11')
+  })
+
+  it('computeFromData keeps the target day but excludes the extra next-day entries from the inclusive fetch', () => {
+    const projects: SimplicateProject[] = [{ id: 'P1', name: 'A', organizationName: 'Org' }] as unknown as SimplicateProject[]
+    const superset = [
+      makeEntry('P1', '2026-05-24'), // target day — kept
+      makeEntry('P1', '2026-05-25'), // next day (came back from the inclusive fetch) — dropped
+      makeEntry('P1', '2026-04-26'), // window start — kept
+      makeEntry('P1', '2026-04-25'), // before window — dropped
+    ]
+    const { historicalEntries } = GetActiveProjectsForDateUseCase.computeFromData('2026-05-24', superset, projects)
+    expect(historicalEntries.map(e => e.startDate).sort()).toEqual(['2026-04-26', '2026-05-24'])
   })
 })

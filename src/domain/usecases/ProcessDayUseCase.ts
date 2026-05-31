@@ -106,14 +106,19 @@ export class ProcessDayUseCase {
         activeProjectsResult.historicalEntries,
       )
 
-      const classified = await groupAndClassify.execute(date, allBlocks, calendarEvents, {
-        commits: allCommits,
-        linearIssues,
-      })
-
-      // Already-booked hours for the target day live in the 28-day historical window
-      // (its end is inclusive of `date`). Use them to anchor and reach the 8h fill target.
+      // Hours already booked for the target day. The fetch window now includes
+      // `date`, so these surface here; the LLM gets them (to avoid re-classifying)
+      // and the packer anchors against them and counts them toward the 8h target.
       const existingEntries = activeProjectsResult.historicalEntries.filter(e => e.startDate === date)
+
+      const classified = await groupAndClassify.execute(
+        date,
+        allBlocks,
+        calendarEvents,
+        { commits: allCommits, linearIssues },
+        existingEntries,
+      )
+
       const packed = new PackDayUseCase().execute(classified, existingEntries)
 
       await this.historyStore.setBlocksForDate(date, packed)

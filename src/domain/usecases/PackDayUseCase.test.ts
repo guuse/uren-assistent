@@ -140,7 +140,7 @@ describe('PackDayUseCase', () => {
     expect(f.hours).toBe(0.5)
   })
 
-  it('adds conf>=2 candidates regardless, but conf=1 filler only to reach target', () => {
+  it('fills with candidates highest-confidence first, trimming the last to land on target', () => {
     const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // 1h real work
     const genuine = makeCandidate(3, 2, { blockName: 'Genuine', projectId: 'p2', serviceId: 's2' })
     const filler = makeCandidate(1, 4, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
@@ -148,17 +148,21 @@ describe('PackDayUseCase', () => {
 
     const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
     expect(byName['Observed']).toBeDefined()
-    expect(byName['Genuine']!.hours).toBe(2)        // added regardless
-    // 1 + 2 = 3h booked, 1h short of 4h target → filler trimmed to 1h
+    expect(byName['Genuine']!.hours).toBe(2)   // conf 3 placed first
+    // 1 + 2 = 3h booked, 1h short of 4h target → conf 1 filler trimmed to 1h
     expect(byName['Filler']!.hours).toBe(1)
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
   })
 
-  it('does not add conf=1 filler when target is already met by real work', () => {
+  it('never adds a fill candidate once the target is met by real work, regardless of confidence', () => {
     const observed = makeBlock({ blockName: 'Observed', hours: 4 })
+    const hiConf = makeCandidate(5, 2, { blockName: 'HiConf', projectId: 'p2', serviceId: 's2' })
     const filler = makeCandidate(1, 2, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
-    const result = new PackDayUseCase().execute([observed, filler], [], { targetHours: 4 })
+    const result = new PackDayUseCase().execute([observed, hiConf, filler], [], { targetHours: 4 })
 
+    expect(result.find(r => r.blockName === 'HiConf')).toBeUndefined()
     expect(result.find(r => r.blockName === 'Filler')).toBeUndefined()
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
   })
 
   it('keeps all real work even when it exceeds the target (floor, not ceiling)', () => {

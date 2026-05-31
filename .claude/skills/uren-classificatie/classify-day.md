@@ -6,6 +6,8 @@ Voor elk genummerd item hieronder geef je één boekingsblok terug.
 - Vergadering-items: gebruik de vergader-duur voor startTime/endTime/hours
 - Losse items: gebruik de browse-duur
 
+Als er een sectie "Al geboekt vandaag" staat: dat werk is al geboekt. Maak daar GEEN blok of patternBlock voor — ook niet als een genummerd item of patroon ermee overeenkomt. Lees de omschrijvingen om te bepalen welk werk al gedekt is.
+
 Het doel is een gevulde werkdag van ~8 uur. De app plaatst de blokken zelf op de tijdlijn en vult de dag aan tot 8 uur met de "patternBlocks" hieronder — jij hoeft GEEN tijdstippen te bepalen.
 
 Bouw daarom op basis van de historische boekingen een gerangschikte vul-lijst in "patternBlocks" (hoogste confidence eerst):

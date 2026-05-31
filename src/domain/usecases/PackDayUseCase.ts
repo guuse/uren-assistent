@@ -132,18 +132,15 @@ export class PackDayUseCase {
       keptMeetings.reduce((s, m) => s + m.hours, 0) +
       placedMovable.reduce((s, b) => s + b.hours, 0)
 
-    // --- Top up with fill candidates: genuine (conf>=2) always, filler (conf 1) only to target ---
+    // --- Top up to the target with fill candidates (highest confidence first) ---
+    // Fill candidates are invented, not observed, so they NEVER push the day past
+    // the target: once observed work + anchors reach it, none are added. The last
+    // one placed is trimmed so the day lands exactly on the target.
     const placedCandidates: ClassifiedBlock[] = []
     const sortedCandidates = [...keptCandidates].sort((a, b) => b.confidence - a.confidence)
     for (const c of sortedCandidates) {
-      if (c.confidence >= 2) {
-        const { startTime, endTime } = place(c.hours)
-        placedCandidates.push({ ...c, startTime, endTime })
-        bookedHours += c.hours
-        continue
-      }
       const remaining = targetHours - bookedHours
-      if (remaining <= EPSILON) continue
+      if (remaining <= EPSILON) break
       const trimmedHours = Math.min(c.hours, remaining)
       const { startTime, endTime, minutes } = place(trimmedHours)
       placedCandidates.push({ ...c, startTime, endTime, hours: minutes / 60 })

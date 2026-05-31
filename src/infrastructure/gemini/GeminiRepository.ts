@@ -157,6 +157,25 @@ function formatHistoricalEntries(entries: HourEntry[], projects: Project[], serv
   return lines.join('\n')
 }
 
+function formatBookedEntries(entries: HourEntry[], projects: Project[], services: Service[]): string {
+  if (entries.length === 0) return ''
+
+  const projectById = new Map(projects.map(p => [p.id, p.name]))
+  const serviceById = new Map(services.map(s => [s.id, s.name]))
+
+  const lines = [...entries]
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .map(e => {
+      const projectName = projectById.get(e.projectId) ?? e.projectId
+      const serviceName = serviceById.get(e.projectServiceId) ?? e.projectServiceId
+      const noteStr = e.note ? ` | "${e.note}"` : ''
+      return `- ${e.startTime}–${e.endTime} | ${projectName} / ${serviceName}${noteStr}`
+    })
+    .join('\n')
+
+  return `## Al geboekt vandaag — NIET opnieuw classificeren\nDeze uren staan al geboekt. Maak hier GEEN blok of patternBlock voor; ze tellen al mee voor de 8 uur. Gebruik de omschrijvingen om te zien welk werk al gedekt is.\n${lines}\n\n`
+}
+
 export class GeminiRepository implements ICopilotRepository {
   async classify(
     blocks: (HistoryBlock & { overlappingMeetings?: CalendarEvent[] })[],
@@ -234,6 +253,7 @@ export class GeminiRepository implements ICopilotRepository {
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
     context?: DayContext,
     historicalEntries?: HourEntry[],
+    existingEntries?: HourEntry[],
   ): Promise<DayClassificationResult[]> {
     const pad = (n: number) => String(n).padStart(2, '0')
     const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -290,11 +310,13 @@ export class GeminiRepository implements ICopilotRepository {
 
     const contextSection = formatDayContext(context, date)
 
+    const bookedSection = formatBookedEntries(existingEntries ?? [], availableProjects, availableServices)
+
     const historicalSection = historicalEntries && historicalEntries.length > 0
       ? formatHistoricalEntries(historicalEntries, availableProjects, availableServices) + '\n'
       : ''
 
-    const sections = `${meetingsSection}${standaloneSection}${hintsSection}${contextSection}${historicalSection}`
+    const sections = `${bookedSection}${meetingsSection}${standaloneSection}${hintsSection}${contextSection}${historicalSection}`
     const template = await loadPromptTemplate('classify-day')
     const prompt = renderPrompt(template, {
       date,

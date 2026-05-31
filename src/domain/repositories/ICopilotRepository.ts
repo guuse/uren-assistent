@@ -70,5 +70,7 @@ export interface ICopilotRepository {
     cacheHints: Record<string, { projectName: string; serviceName: string }>,
     context?: DayContext,
     historicalEntries?: HourEntry[],
+    // Hours already booked for `date` — the LLM must not re-classify these.
+    existingEntries?: HourEntry[],
   ): Promise<DayClassificationResult[]>
 }

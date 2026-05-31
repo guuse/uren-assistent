@@ -9,7 +9,7 @@ import type { ISimplicateRepository } from '../repositories/ISimplicateRepositor
 import { FetchGitHubContextUseCase } from './FetchGitHubContextUseCase'
 import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
 import { ProcessDayUseCase, type DayPrefetch } from './ProcessDayUseCase'
-import { subtractDays } from './GetActiveProjectsForDateUseCase'
+import { subtractDays, addDays } from './GetActiveProjectsForDateUseCase'
 import type { GitHubCommit } from '../entities/GitHubCommit'
 import type { LinearIssue } from '../entities/LinearIssue'
 
@@ -89,7 +89,9 @@ export class ProcessWeekUseCase {
     // vanaf de vroegste dag). ProcessDay snijdt dit per dag uit.
     const [allProjects, historicalSuperset] = await Promise.all([
       this.simplicateRepo.getProjects(),
-      this.simplicateRepo.getHourEntries(this.simplicateEmployeeId, subtractDays(weekStart, 28), weekEnd),
+      // Inclusive upper bound (next day) so the last weekday's own entries are returned,
+      // not dropped by Simplicate's date-only [le] comparison.
+      this.simplicateRepo.getHourEntries(this.simplicateEmployeeId, subtractDays(weekStart, 28), addDays(weekEnd, 1)),
     ])
     const prefetch: DayPrefetch = {
       weekCommits: allCommits,

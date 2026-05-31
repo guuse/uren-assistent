@@ -8,6 +8,10 @@ export function subtractDays(dateStr: string, days: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+export function addDays(dateStr: string, days: number): string {
+  return subtractDays(dateStr, -days)
+}
+
 export interface ActiveProjectsResult {
   activeProjects: SimplicateProject[]
   historicalEntries: HourEntry[]
@@ -54,7 +58,10 @@ export class GetActiveProjectsForDateUseCase {
     const windowStart = subtractDays(targetDate, 28)
 
     const [historicalEntries, allProjects] = await Promise.all([
-      this.simplicateRepo.getHourEntries(employeeId, windowStart, targetDate),
+      // Simplicate's [le] filter compares 'YYYY-MM-DD HH:MM:SS' against the bound,
+      // so a date-only upper bound drops the target day's own entries. Use the next
+      // day as an inclusive bound; computeFromData re-windows by date afterwards.
+      this.simplicateRepo.getHourEntries(employeeId, windowStart, addDays(targetDate, 1)),
       this.simplicateRepo.getProjects(),
     ])
 
