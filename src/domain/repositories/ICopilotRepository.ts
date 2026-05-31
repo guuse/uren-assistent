@@ -13,6 +13,9 @@ export interface Service {
   id: string
   name: string
   projectId: string
+  // Hour types ("urensoorten") valid for this service. The LLM may only pick a
+  // hourTypeId from this list, since hour types are scoped to the service.
+  hourTypes?: { id: string; label: string }[]
 }
 
 export type DayItem =
@@ -35,6 +38,7 @@ export interface PatternBlock {
   summary: string
   projectId: string | null
   serviceId: string | null
+  hourTypeId?: string | null  // must be a hour type of the chosen service
   note: string
   confidence: 1 | 2 | 3 | 4 | 5
   estimatedHours: number
@@ -47,6 +51,7 @@ export interface DayClassificationResult {
   summary: string
   projectId: string | null
   serviceId: string | null
+  hourTypeId?: string | null  // must be a hour type of the chosen service
   note: string
   confidence: 1 | 2 | 3 | 4 | 5
   relatedIssueIds?: string[]  // e.g. ["GMS-4", "SCHP-41"] — LLM-determined relevant Linear issues

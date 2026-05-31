@@ -32,6 +32,7 @@ Elk item in "blocks" heeft:
 - summary (string, korte samenvatting wat er gedaan is, max 120 tekens, Nederlands)
 - projectId (string | null, moet een van de beschikbare project-ID's zijn)
 - serviceId (string | null, moet een dienst-ID zijn waarvan projectId overeenkomt)
+- hourTypeId (string | null, moet een urensoort-id zijn uit de "urensoorten" van de gekozen dienst; vul deze ALTIJD in zodra je een dienst kiest. Kies de meest voor de hand liggende urensoort en bij twijfel de eerste in de lijst)
 - note (string, korte boekingsnotitie max 80 tekens)
 - confidence (integer 1–5):
   5 = Zeer zeker — project, service en tijdstip kloppen precies met de agenda
@@ -48,6 +49,7 @@ Elk item in "patternBlocks" heeft:
 - summary (string, korte samenvatting, max 120 tekens, Nederlands)
 - projectId (string | null)
 - serviceId (string | null)
+- hourTypeId (string | null, urensoort-id uit de gekozen dienst; ALTIJD invullen zodra er een dienst is)
 - note (string, max 80 tekens)
 - confidence (integer 1–5):
   5 = Zeer zeker — patroon klopt exact en er is geen andere activiteit die het al dekt

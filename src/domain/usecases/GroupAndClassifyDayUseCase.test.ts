@@ -157,6 +157,24 @@ describe('GroupAndClassifyDayUseCase', () => {
     expect(meetingItem.cacheKey).toBe('Standup:dominant.com')
   })
 
+  it('fills hourTypeId from the LLM when it is valid for the chosen service', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const svc: Service[] = [{ id: 'svc-1', name: 'S', projectId: 'proj-1', hourTypes: [{ id: 'ht-1', label: 'A' }, { id: 'ht-2', label: 'B' }] }]
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { hourTypeId: 'ht-2' })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, svc)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result[0]!.hourTypeId).toBe('ht-2')
+  })
+
+  it('falls back to the service first hour type when the LLM omits or picks an invalid one', async () => {
+    const block = makeBlock({ urlPattern: 'example.com' })
+    const svc: Service[] = [{ id: 'svc-1', name: 'S', projectId: 'proj-1', hourTypes: [{ id: 'ht-1', label: 'A' }, { id: 'ht-2', label: 'B' }] }]
+    const { copilotRepo, cacheRepo } = makeDeps({}, [makeResult(0, { hourTypeId: 'does-not-exist' })])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, svc)
+    const result = await useCase.execute('2024-01-15', [block], [])
+    expect(result[0]!.hourTypeId).toBe('ht-1')
+  })
+
   it('accepts optional DayContext without crashing on empty day', async () => {
     const context: DayContext = {
       commits: [{ sha: 'abc', message: 'feat: ESC close', repo: 'guuse/uren', branch: 'main', timestamp: '2026-05-20T10:00:00Z', time: '10:00', date: '2026-05-20' }],

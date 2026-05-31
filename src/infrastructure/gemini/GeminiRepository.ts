@@ -262,7 +262,13 @@ export class GeminiRepository implements ICopilotRepository {
       .map(p => `- id: "${p.id}", name: "${p.name}"`)
       .join('\n')
     const serviceList = availableServices
-      .map(s => `- id: "${s.id}", name: "${s.name}", projectId: "${s.projectId}"`)
+      .map(s => {
+        const hourTypes = (s.hourTypes ?? [])
+          .map(ht => `{id: "${ht.id}", label: "${ht.label}"}`)
+          .join(', ')
+        const hourTypePart = hourTypes ? `, urensoorten: [${hourTypes}]` : ''
+        return `- id: "${s.id}", name: "${s.name}", projectId: "${s.projectId}"${hourTypePart}`
+      })
       .join('\n')
 
     const meetingItems = items.filter((i): i is DayItem & { kind: 'meeting' } => i.kind === 'meeting')
@@ -353,6 +359,7 @@ export class GeminiRepository implements ICopilotRepository {
       summary: pb.summary,
       projectId: pb.projectId,
       serviceId: pb.serviceId,
+      hourTypeId: pb.hourTypeId ?? null,
       note: pb.note,
       confidence: toConfidenceScore(pb.confidence),
       relatedIssueIds: [],

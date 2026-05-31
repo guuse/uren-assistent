@@ -9,6 +9,7 @@ export interface ClassifiedBlock extends HistoryBlock {
   endTime: string
   projectId?: string
   serviceId?: string
+  hourTypeId?: string
   note?: string
   confidence: 1 | 2 | 3 | 4 | 5
   origin: 'llm' | 'cache' | 'manual' | 'calendar' | 'llm-pattern'

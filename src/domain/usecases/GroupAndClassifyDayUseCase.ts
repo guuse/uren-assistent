@@ -39,6 +39,19 @@ export class GroupAndClassifyDayUseCase {
     private readonly historicalEntries: HourEntry[] = [],
   ) {}
 
+  /**
+   * Resolves the hour type for a chosen service. Hour types are scoped to the
+   * service, so this can only run after the project/service is known. Returns the
+   * LLM's value when it's valid for the service, otherwise falls back to the
+   * service's first hour type so a booked block always has a "urensoort".
+   */
+  private resolveHourTypeId(serviceId: string | undefined, llmHourTypeId?: string | null): string | undefined {
+    if (!serviceId) return undefined
+    const hourTypes = this.availableServices.find(s => s.id === serviceId)?.hourTypes ?? []
+    if (llmHourTypeId && hourTypes.some(h => h.id === llmHourTypeId)) return llmHourTypeId
+    return hourTypes[0]?.id
+  }
+
   async execute(
     date: string,
     historyBlocks: HistoryBlock[],
@@ -96,6 +109,7 @@ export class GroupAndClassifyDayUseCase {
           endTime: item.block.lastVisitTime,
           projectId: cached.projectId,
           serviceId: cached.serviceId,
+          ...(this.resolveHourTypeId(cached.serviceId) !== undefined ? { hourTypeId: this.resolveHourTypeId(cached.serviceId)! } : {}),
           note: cached.note,
           confidence: 1,
           origin: 'cache',
@@ -146,6 +160,8 @@ export class GroupAndClassifyDayUseCase {
           }
           if (r.projectId !== null) block.projectId = r.projectId
           if (r.serviceId !== null) block.serviceId = r.serviceId
+          const ht = this.resolveHourTypeId(block.serviceId, r.hourTypeId)
+          if (ht !== undefined) block.hourTypeId = ht
           return block
         }))
 
@@ -191,6 +207,8 @@ export class GroupAndClassifyDayUseCase {
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
+          const ht = this.resolveHourTypeId(classified.serviceId, result.hourTypeId)
+          if (ht !== undefined) classified.hourTypeId = ht
           llmResults.push(classified)
         } else {
           const block = matchedItem.block
@@ -246,6 +264,8 @@ export class GroupAndClassifyDayUseCase {
           }
           if (result.projectId !== null) classified.projectId = result.projectId
           if (result.serviceId !== null) classified.serviceId = result.serviceId
+          const ht = this.resolveHourTypeId(classified.serviceId, result.hourTypeId)
+          if (ht !== undefined) classified.hourTypeId = ht
           llmResults.push(classified)
         }
       }

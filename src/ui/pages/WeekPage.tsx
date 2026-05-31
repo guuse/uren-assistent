@@ -66,6 +66,7 @@ export function WeekPage() {
   const setDayContext = useAppStore((s) => s.setDayContext)
   const dayContexts = useAppStore((s) => s.dayContexts)
   const services = useAppStore((s) => s.services)
+  const hourTypes = useAppStore((s) => s.hourTypes)
   const simplicateEmployeeId = useAppStore((s) => s.simplicateEmployeeId)
 
   const [bookingEntry, setBookingEntry] = useState<Partial<HourEntry> | null>(null)
@@ -168,6 +169,7 @@ export function WeekPage() {
     }
     if (block.projectId) entry.projectId = block.projectId
     if (block.serviceId) entry.projectServiceId = block.serviceId
+    if (block.hourTypeId) entry.hourTypeId = block.hourTypeId
     setBookingEntry(entry)
     setBookingConcept(block)
   }
@@ -269,7 +271,12 @@ export function WeekPage() {
       const calendarRepo = createCalendarRepository()
       const copilotRepo = createGeminiRepository()
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
-      const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
+      const domainServices = services.map(s => ({
+        id: s.id,
+        name: s.name,
+        projectId: s.projectId,
+        hourTypes: s.hourTypeIds.map(id => ({ id, label: hourTypes.find(h => h.id === id)?.label ?? id })),
+      }))
 
       const apiKey = await keychainRepo.get('simplicate-api-key')
       const apiSecret = await keychainRepo.get('simplicate-api-secret')
@@ -351,7 +358,12 @@ export function WeekPage() {
       const calendarRepo = createCalendarRepository()
       const copilotRepo = createGeminiRepository()
       const domainProjects = projects.map(p => ({ id: p.id, name: `${p.organizationName} — ${p.name}` }))
-      const domainServices = services.map(s => ({ id: s.id, name: s.name, projectId: s.projectId }))
+      const domainServices = services.map(s => ({
+        id: s.id,
+        name: s.name,
+        projectId: s.projectId,
+        hourTypes: s.hourTypeIds.map(id => ({ id, label: hourTypes.find(h => h.id === id)?.label ?? id })),
+      }))
 
       const apiKey = await keychainRepo.get('simplicate-api-key')
       const apiSecret = await keychainRepo.get('simplicate-api-secret')
