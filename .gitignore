@@ -12,3 +12,6 @@ coverage/
 
 # Local AI-assisted dev planning docs (not for publication)
 docs/superpowers/
+
+# Browser-history exports imported at runtime — private user data, never commit
+*.csv
