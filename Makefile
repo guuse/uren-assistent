@@ -11,7 +11,7 @@ prepare:
 		echo ".env already exists, skipping copy."; \
 	fi
 
-run: prepare
+dev: prepare
 	npm run tauri dev
 
 clean:
