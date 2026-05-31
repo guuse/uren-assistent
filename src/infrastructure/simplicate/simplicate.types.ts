@@ -44,16 +44,12 @@ export interface SimplicateHourEntryResponse {
   note: string
 }
 
-// Hours submission ("uren indienen"). The exact response shape of GET /hours/submission
-// is not published in the v2 reference, so this type is intentionally permissive: a record
-// may describe a single submitted date (`date`) or a submitted range (`start_date`/`end_date`).
-// Confirm against the live API and tighten if needed — see docs/adr/0003.
+// Hours submission ("uren indienen"). GET /hours/submission returns one record per day
+// in the queried range. Verified against the live API. See docs/adr/0003.
 export interface SimplicateSubmissionResponse {
-  date?: string         // "YYYY-MM-DD" — single-date status variant
-  start_date?: string   // "YYYY-MM-DD[ HH:mm:ss]" — range variant
-  end_date?: string     // "YYYY-MM-DD[ HH:mm:ss]" — range variant
-  status?: string
   employee_id?: string
+  date?: string   // "YYYY-MM-DD"
+  status?: string // e.g. "submitted", "approved", "open", "no_registrations"
 }
 
 export interface SimplicateApiListResponse<T> {

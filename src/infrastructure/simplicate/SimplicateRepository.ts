@@ -212,16 +212,21 @@ export class SimplicateRepository implements ISimplicateRepository {
   }
 
   // GET /hours/submission — "Fetches hours submission status, by date, for an employee."
-  // The response shape is not published; we map defensively (single-date or range records)
-  // via SimplicateSubmissionResponse. See docs/adr/0003.
+  // Verified against the live API: it returns ONE record per day in the range —
+  // `{ employee_id, date: "YYYY-MM-DD", status }` — and requires q[employee_id],
+  // q[start_date] and q[end_date] as EXACT values (the [ge]/[le] operators are rejected).
+  // A day counts as ingediend when its status is "submitted" (or "approved"); other
+  // statuses ("open", "no_registrations", ...) are not. See docs/adr/0003.
   async getSubmissions(employeeId: string, from: string, to: string): Promise<HourSubmission[]> {
+    const qs =
+      `q%5Bemployee_id%5D=${encodeURIComponent(employeeId)}` +
+      `&q%5Bstart_date%5D=${from}&q%5Bend_date%5D=${to}`
     const res = await this.get<SimplicateApiListResponse<SimplicateSubmissionResponse>>(
-      `/hours/submission?q%5Bemployee.id%5D=${encodeURIComponent(employeeId)}&q%5Bstart_date%5D%5Bge%5D=${from}&q%5Bstart_date%5D%5Ble%5D=${to}`,
+      `/hours/submission?${qs}`,
     )
-    return res.data.map((s) => {
-      const start = (s.start_date ?? s.date ?? '').slice(0, 10)
-      const end = (s.end_date ?? s.date ?? s.start_date ?? '').slice(0, 10)
-      return { startDate: start, endDate: end, ...(s.status ? { status: s.status } : {}) }
-    }).filter((s) => s.startDate !== '')
+    const SUBMITTED = new Set(['submitted', 'approved'])
+    return res.data
+      .filter((s) => !!s.date && !!s.status && SUBMITTED.has(s.status))
+      .map((s) => ({ startDate: s.date!.slice(0, 10), endDate: s.date!.slice(0, 10), status: s.status! }))
   }
 }

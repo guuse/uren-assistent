@@ -261,22 +261,33 @@ describe('SimplicateRepository', () => {
   })
 
   describe('getSubmissions', () => {
-    it('maps range records and single-date records, dropping empty ones', async () => {
+    it('queries with exact q[employee_id]/q[start_date]/q[end_date]', async () => {
+      invokeMock.mockResolvedValueOnce(JSON.stringify({ data: [] }))
+      await repo().getSubmissions('e1', '2026-05-25', '2026-05-31')
+      const url = callArgs(0).url
+      expect(url).toContain('q%5Bemployee_id%5D=e1')
+      expect(url).toContain('q%5Bstart_date%5D=2026-05-25')
+      expect(url).toContain('q%5Bend_date%5D=2026-05-31')
+      expect(url).not.toContain('%5Bge%5D')
+      expect(url).not.toContain('%5Ble%5D')
+    })
+
+    it('keeps only submitted/approved per-day records and maps them to single dates', async () => {
       invokeMock.mockResolvedValueOnce(
         JSON.stringify({
           data: [
-            { start_date: '2026-05-19 00:00:00', end_date: '2026-05-23 00:00:00', status: 'submitted' },
-            { date: '2026-05-20' },
-            { start_date: '2026-05-21' }, // end falls back to start
-            {}, // empty -> filtered out
+            { employee_id: 'employee:e1', date: '2026-05-25', status: 'submitted' },
+            { employee_id: 'employee:e1', date: '2026-05-26', status: 'approved' },
+            { employee_id: 'employee:e1', date: '2026-05-30', status: 'no_registrations' },
+            { employee_id: 'employee:e1', date: '2026-05-31', status: 'open' },
+            { employee_id: 'employee:e1', status: 'submitted' }, // no date -> dropped
           ],
         }),
       )
-      const result = await repo().getSubmissions('e1', '2026-05-19', '2026-05-23')
+      const result = await repo().getSubmissions('e1', '2026-05-25', '2026-05-31')
       expect(result).toEqual([
-        { startDate: '2026-05-19', endDate: '2026-05-23', status: 'submitted' },
-        { startDate: '2026-05-20', endDate: '2026-05-20' },
-        { startDate: '2026-05-21', endDate: '2026-05-21' },
+        { startDate: '2026-05-25', endDate: '2026-05-25', status: 'submitted' },
+        { startDate: '2026-05-26', endDate: '2026-05-26', status: 'approved' },
       ])
     })
   })

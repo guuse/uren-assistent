@@ -62,10 +62,10 @@ export function useSubmissions() {
         const first = `${key}-01`
         const lastDay = new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0).getDate()
         const last = `${key}-${String(lastDay).padStart(2, '0')}`
+        // GET /hours/submission wants exact q[start_date]/q[end_date]; cover the month's
+        // whole weeks from the first Monday through the last Sunday.
         const from = mondayOf(first)
-        // Next Monday as an inclusive-safe upper bound: Simplicate's [le] filter compares
-        // 'YYYY-MM-DD HH:mm:ss' as a string, so a plain end date would exclude same-day records.
-        const to = addDays(mondayOf(last), 7)
+        const to = addDays(mondayOf(last), 6)
         const repo = await repoForCall()
         const { getSubmissions } = createUseCases(repo)
         const result = await getSubmissions.execute(employeeId, from, to)
