@@ -69,7 +69,8 @@ export class SimplicateRepository implements ISimplicateRepository {
         body: JSON.stringify(body),
       },
     })
-    return JSON.parse(json) as T
+    // Simplicate may answer a successful PUT with 204 No Content (empty body).
+    return (json.trim() ? JSON.parse(json) : undefined) as T
   }
 
   private async getPaginated<T>(path: string): Promise<T[]> {

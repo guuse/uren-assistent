@@ -23,6 +23,14 @@ pub async fn simplicate_request(args: SimplicateRequestArgs) -> Result<String, S
             }
             b
         }
+        "PUT" => {
+            let mut b = client.put(&args.url);
+            if let Some(body) = args.body {
+                b = b.header("Content-Type", "application/json").body(body);
+            }
+            b
+        }
+        "DELETE" => client.delete(&args.url),
         other => return Err(format!("Unsupported method: {}", other)),
     };
 
