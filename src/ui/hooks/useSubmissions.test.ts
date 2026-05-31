@@ -106,14 +106,15 @@ describe('useSubmissions', () => {
     spy.mockRestore()
   })
 
-  it('submit succeeds and reloads the range', async () => {
+  it('submit succeeds and normalises the range to Monday–Sunday', async () => {
     const { result } = renderHook(() => useSubmissions())
     let ok = false
     await act(async () => {
-      ok = await result.current.submit('2026-05-01', '2026-05-07')
+      // Mon 2026-05-04 .. Fri 2026-05-08 → must be sent as Mon .. Sun (2026-05-10)
+      ok = await result.current.submit('2026-05-04', '2026-05-08')
     })
     expect(ok).toBe(true)
-    expect(submitWeekExecute).toHaveBeenCalledWith('emp-1', '2026-05-01', '2026-05-07')
+    expect(submitWeekExecute).toHaveBeenCalledWith('emp-1', '2026-05-04', '2026-05-10')
     expect(result.current.isSubmitting).toBe(false)
   })
 
@@ -161,10 +162,10 @@ describe('useSubmissions', () => {
     const { result } = renderHook(() => useSubmissions())
     let ok = false
     await act(async () => {
-      ok = await result.current.withdraw('2026-05-01', '2026-05-07')
+      ok = await result.current.withdraw('2026-05-04', '2026-05-08')
     })
     expect(ok).toBe(true)
-    expect(withdrawExecute).toHaveBeenCalledWith('emp-1', '2026-05-01', '2026-05-07')
+    expect(withdrawExecute).toHaveBeenCalledWith('emp-1', '2026-05-04', '2026-05-10')
   })
 
   it('withdraw fails without an employee id', async () => {

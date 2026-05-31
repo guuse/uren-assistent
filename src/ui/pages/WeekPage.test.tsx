@@ -121,7 +121,6 @@ vi.mock('../components/DayTimeline', () => ({
     <div data-testid="daytimeline">
       <span data-testid="dt-readonly">{String(props.readOnly)}</span>
       <span data-testid="dt-classifying">{String(props.isClassifying)}</span>
-      <span data-testid="dt-can-submit">{String(props.canSubmitDay)}</span>
       <span data-testid="dt-suggestions-len">{(props.suggestions as unknown[]).length}</span>
       <span data-testid="dt-concept-len">{(props.conceptBlocks as unknown[]).length}</span>
       <span data-testid="dt-commits-len">{(props.commits as unknown[]).length}</span>
@@ -130,8 +129,6 @@ vi.mock('../components/DayTimeline', () => ({
       <span data-testid="dt-has-upload">{String(props.onUploadCsv !== undefined)}</span>
       <span data-testid="dt-has-dragnew">{String(props.onDragNew !== undefined)}</span>
       {props.onProcessDay ? <button data-testid="process-day" onClick={props.onProcessDay as () => void}>pd</button> : null}
-      <button data-testid="submit-day" onClick={props.onSubmitDay as () => void}>sd</button>
-      <button data-testid="withdraw-day" onClick={props.onWithdrawDay as () => void}>wd</button>
       <button
         data-testid="book-suggestion-full"
         onClick={() => (props.onBookSuggestion as (s: unknown) => void)({ projectId: 'p1', projectServiceId: 's1', hourTypeId: 'h1', startTime: '09:00', endTime: '10:00' })}
@@ -1044,19 +1041,10 @@ describe('submit and withdraw', () => {
     expect(screen.getByTestId('sm-unbooked')).toHaveTextContent('5')
   })
 
-  it('opens submit-day modal', async () => {
-    renderPage()
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('submit-day'))
-    })
-    await screen.findByTestId('submitmodal')
-    expect(screen.getByTestId('sm-scope')).toHaveTextContent('day')
-  })
-
   it('confirms submit and refreshes on success', async () => {
     renderPage()
     await act(async () => {
-      fireEvent.click(screen.getByTestId('submit-day'))
+      fireEvent.click(screen.getByTestId('submit-week'))
     })
     await screen.findByTestId('submitmodal')
     await act(async () => {
@@ -1070,7 +1058,7 @@ describe('submit and withdraw', () => {
     submissionsMock.submit = vi.fn(async () => false)
     renderPage()
     await act(async () => {
-      fireEvent.click(screen.getByTestId('submit-day'))
+      fireEvent.click(screen.getByTestId('submit-week'))
     })
     await screen.findByTestId('submitmodal')
     weekMock.refresh = vi.fn()
@@ -1084,7 +1072,7 @@ describe('submit and withdraw', () => {
   it('cancels submit modal', async () => {
     renderPage()
     await act(async () => {
-      fireEvent.click(screen.getByTestId('submit-day'))
+      fireEvent.click(screen.getByTestId('submit-week'))
     })
     await screen.findByTestId('submitmodal')
     fireEvent.click(screen.getByTestId('sm-cancel'))
@@ -1098,15 +1086,9 @@ describe('submit and withdraw', () => {
     expect(submissionsMock.clearSubmitError).toHaveBeenCalled()
   })
 
-  it('opens withdraw-day dialog', () => {
-    renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-day'))
-    expect(screen.getByTestId('confirmdialog')).toBeInTheDocument()
-  })
-
   it('confirms withdraw and refreshes', async () => {
     renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-day'))
+    fireEvent.click(screen.getByTestId('withdraw-week'))
     await act(async () => {
       fireEvent.click(screen.getByTestId('cd-confirm'))
     })
@@ -1117,7 +1099,7 @@ describe('submit and withdraw', () => {
   it('confirm withdraw does not refresh on failure', async () => {
     submissionsMock.withdraw = vi.fn(async () => false)
     renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-day'))
+    fireEvent.click(screen.getByTestId('withdraw-week'))
     weekMock.refresh = vi.fn()
     await act(async () => {
       fireEvent.click(screen.getByTestId('cd-confirm'))
@@ -1128,7 +1110,7 @@ describe('submit and withdraw', () => {
 
   it('cancels withdraw dialog', () => {
     renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-day'))
+    fireEvent.click(screen.getByTestId('withdraw-week'))
     fireEvent.click(screen.getByTestId('cd-cancel'))
     expect(screen.queryByTestId('confirmdialog')).not.toBeInTheDocument()
   })
@@ -1160,7 +1142,6 @@ describe('submitted and future-week states', () => {
     weekMock = makeWeekMock({ selectedWeekStart: '2099-01-05', selectedDate: '2099-01-05' })
     renderPage()
     expect(screen.getByTestId('can-submit-week')).toHaveTextContent('false')
-    expect(screen.getByTestId('dt-can-submit')).toHaveTextContent('false')
   })
 
   it('computes "deze week" correctly when today is a weekday (non-Sunday branch)', () => {

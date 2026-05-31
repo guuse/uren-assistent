@@ -1,7 +1,7 @@
 import type { ISimplicateRepository } from '../repositories/ISimplicateRepository'
 
 // Withdraws ("intrekt") a submitted inclusive date range, unlocking it for editing again.
-// The range is a full Monday–Friday week or a single day (from === to).
+// Simplicate requires a full calendar week: start_date a Monday, end_date a Sunday.
 export class WithdrawSubmissionUseCase {
   constructor(private readonly simplicateRepo: ISimplicateRepository) {}
 

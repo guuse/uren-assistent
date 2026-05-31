@@ -108,13 +108,17 @@ export function useSubmissions() {
         setSubmitError('Geen medewerker bekend om uren voor in te dienen')
         return false
       }
+      // Simplicate submits a whole timesheet week: start_date must be a Monday and
+      // end_date must be a Sunday. Normalise any input range to its full Mon–Sun week.
+      const start = mondayOf(from)
+      const end = addDays(mondayOf(to), 6)
       setIsSubmitting(true)
       setSubmitError(null)
       try {
         const repo = await repoForCall()
         const { submitWeek } = createUseCases(repo)
-        await submitWeek.execute(employeeId, from, to)
-        await reloadRange(from, to)
+        await submitWeek.execute(employeeId, start, end)
+        await reloadRange(start, end)
         return true
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -133,13 +137,15 @@ export function useSubmissions() {
         setSubmitError('Geen medewerker bekend om indiening voor in te trekken')
         return false
       }
+      const start = mondayOf(from)
+      const end = addDays(mondayOf(to), 6)
       setIsSubmitting(true)
       setSubmitError(null)
       try {
         const repo = await repoForCall()
         const { withdrawSubmission } = createUseCases(repo)
-        await withdrawSubmission.execute(employeeId, from, to)
-        await reloadRange(from, to)
+        await withdrawSubmission.execute(employeeId, start, end)
+        await reloadRange(start, end)
         return true
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

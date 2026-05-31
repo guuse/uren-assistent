@@ -176,17 +176,14 @@ describe('DayTimeline', () => {
     expect(onConceptClick).not.toHaveBeenCalled()
   })
 
-  it('shows read-only badge and withdraw-day button', () => {
-    const onWithdrawDay = vi.fn()
-    render(<DayTimeline {...baseProps({ readOnly: true, onWithdrawDay })} />)
+  it('shows read-only badge in read-only mode', () => {
+    render(<DayTimeline {...baseProps({ readOnly: true })} />)
     expect(screen.getByText(/Ingediend · alleen-lezen/)).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Trek dag in'))
-    expect(onWithdrawDay).toHaveBeenCalledOnce()
   })
 
-  it('disables withdraw-day while submitting', () => {
-    render(<DayTimeline {...baseProps({ readOnly: true, onWithdrawDay: vi.fn(), isSubmittingDay: true })} />)
-    expect(screen.getByText('Bezig…')).toBeDisabled()
+  it('does not show the read-only badge when editable', () => {
+    render(<DayTimeline {...baseProps()} />)
+    expect(screen.queryByText(/Ingediend · alleen-lezen/)).toBeNull()
   })
 
   it('renders process-day button and handles click', () => {
@@ -196,28 +193,9 @@ describe('DayTimeline', () => {
     expect(onProcessDay).toHaveBeenCalledOnce()
   })
 
-  it('renders submit-day button enabled and handles click', () => {
-    const onSubmitDay = vi.fn()
-    render(<DayTimeline {...baseProps({ onSubmitDay, canSubmitDay: true })} />)
-    fireEvent.click(screen.getByText('Dien dag in'))
-    expect(onSubmitDay).toHaveBeenCalledOnce()
-  })
-
-  it('disables submit-day for a future day with title hint', () => {
-    render(<DayTimeline {...baseProps({ onSubmitDay: vi.fn(), canSubmitDay: false })} />)
-    const btn = screen.getByText('Dien dag in')
-    expect(btn).toBeDisabled()
-    expect(btn).toHaveAttribute('title', 'Een toekomstige dag kan nog niet ingediend worden')
-  })
-
-  it('shows submitting label on submit-day', () => {
-    render(<DayTimeline {...baseProps({ onSubmitDay: vi.fn(), isSubmittingDay: true })} />)
-    expect(screen.getByText('Indienen…')).toBeInTheDocument()
-  })
-
-  it('hides submit-day in read-only mode', () => {
-    render(<DayTimeline {...baseProps({ onSubmitDay: vi.fn(), readOnly: true })} />)
-    expect(screen.queryByText('Dien dag in')).toBeNull()
+  it('does not render the process-day button when onProcessDay is absent', () => {
+    render(<DayTimeline {...baseProps()} />)
+    expect(screen.queryByText('▶ Verwerk dag')).toBeNull()
   })
 
   it('shows the "Nieuwe CSV" button when there is content and triggers file input click', () => {

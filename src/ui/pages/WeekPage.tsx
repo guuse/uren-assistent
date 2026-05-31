@@ -98,7 +98,8 @@ export function WeekPage() {
   const pendingScopeRef = useRef<{ kind: 'week' } | { kind: 'day'; date: string } | null>(null)
 
   // Week/dag indienen + intrekken state
-  type SubmitScope = { scope: 'week' | 'day'; label: string; from: string; to: string }
+  // Submission is week-granular in Simplicate (Mon–Sun), so the only scope is 'week'.
+  type SubmitScope = { scope: 'week'; label: string; from: string; to: string }
   const [submitModal, setSubmitModal] = useState<(SubmitScope & { unbookedCount: number; bookedHours: number }) | null>(null)
   const [withdrawModal, setWithdrawModal] = useState<SubmitScope | null>(null)
 
@@ -446,22 +447,11 @@ export function WeekPage() {
     return count
   }
 
-  function formatDay(date: string): string {
-    return new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
-  }
-
   async function handleSubmitWeekClick() {
     const unbookedCount = await countUnbooked(week.weekDays)
     const bookedHours = week.weekDays.reduce((s, d) => s + week.hoursForDate(d), 0)
     submissions.clearSubmitError()
     setSubmitModal({ scope: 'week', label: weekLabel(week.selectedWeekStart), from: week.selectedWeekStart, to: week.selectedWeekEnd, unbookedCount, bookedHours })
-  }
-
-  async function handleSubmitDayClick(date: string) {
-    const unbookedCount = await countUnbooked([date])
-    const bookedHours = week.hoursForDate(date)
-    submissions.clearSubmitError()
-    setSubmitModal({ scope: 'day', label: formatDay(date), from: date, to: date, unbookedCount, bookedHours })
   }
 
   async function handleSubmitConfirm() {
@@ -484,7 +474,6 @@ export function WeekPage() {
   const daySubmitted = submissions.isDateSubmitted(week.selectedDate)
   const allWeekSubmitted = week.weekDays.length > 0 && week.weekDays.every(submissions.isDateSubmitted)
   const canSubmitWeek = week.selectedWeekStart <= today // future weeks can't be submitted yet
-  const canSubmitDay = week.selectedDate <= today
 
   const selectedEntries = week.entriesByDate[week.selectedDate] ?? []
   const isClassifying = importState.status === 'parsing'
@@ -563,10 +552,6 @@ export function WeekPage() {
             onConceptClick={handleConceptClick}
             isClassifying={isClassifying || isProcessingDay}
             readOnly={daySubmitted}
-            canSubmitDay={canSubmitDay}
-            isSubmittingDay={submissions.isSubmitting}
-            onSubmitDay={() => void handleSubmitDayClick(week.selectedDate)}
-            onWithdrawDay={() => { submissions.clearSubmitError(); setWithdrawModal({ scope: 'day', label: formatDay(week.selectedDate), from: week.selectedDate, to: week.selectedDate }) }}
             {...(daySubmitted ? {} : { onUploadCsv: handleUploadCsv, onDragNew: handleDragNew })}
             {...(canProcessWeek && !daySubmitted ? { onProcessDay: () => void handleProcessDay(week.selectedDate) } : {})}
           />

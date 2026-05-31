@@ -55,14 +55,9 @@ interface Props {
   isClassifying?: boolean
   onDragNew?: (startTime: string, endTime: string) => void
   onProcessDay?: () => void
-  // When the day is submitted ("ingediend"), it is locked: no booking, editing,
-  // dragging, processing or CSV upload — only viewing.
+  // When the week is submitted ("ingediend"), its days are locked: no booking, editing,
+  // dragging, processing or CSV upload — only viewing. (Submission is week-granular.)
   readOnly?: boolean
-  // Per-day indienen / intrekken
-  onSubmitDay?: () => void
-  onWithdrawDay?: () => void
-  canSubmitDay?: boolean
-  isSubmittingDay?: boolean
 }
 
 export function DayTimeline({
@@ -80,10 +75,6 @@ export function DayTimeline({
   onDragNew,
   onProcessDay,
   readOnly = false,
-  onSubmitDay,
-  onWithdrawDay,
-  canSubmitDay = true,
-  isSubmittingDay = false,
 }: Props) {
   const projects = useAppStore((s) => s.projects)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -350,15 +341,6 @@ export function DayTimeline({
               🔒 Ingediend · alleen-lezen
             </span>
           )}
-          {readOnly && onWithdrawDay && (
-            <button
-              onClick={onWithdrawDay}
-              disabled={isSubmittingDay}
-              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 600, cursor: isSubmittingDay ? 'not-allowed' : 'pointer', opacity: isSubmittingDay ? 0.6 : 1, flexShrink: 0 }}
-            >
-              {isSubmittingDay ? 'Bezig…' : 'Trek dag in'}
-            </button>
-          )}
           {/* Legend */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -384,16 +366,6 @@ export function DayTimeline({
               className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
             >
               ▶ Verwerk dag
-            </button>
-          )}
-          {!readOnly && onSubmitDay && (
-            <button
-              onClick={onSubmitDay}
-              disabled={isSubmittingDay || !canSubmitDay}
-              title={!canSubmitDay ? 'Een toekomstige dag kan nog niet ingediend worden' : undefined}
-              style={{ background: 'transparent', border: '1px solid var(--accent-border)', color: 'var(--accent)', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 600, cursor: (isSubmittingDay || !canSubmitDay) ? 'not-allowed' : 'pointer', opacity: (isSubmittingDay || !canSubmitDay) ? 0.5 : 1, flexShrink: 0 }}
-            >
-              {isSubmittingDay ? 'Indienen…' : 'Dien dag in'}
             </button>
           )}
           {(hasConcepts || hasEntries) && (
