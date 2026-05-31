@@ -59,6 +59,7 @@ function weekLabel(weekStart: string): string {
 export function WeekPage() {
   const week = useWeek()
   const submissions = useSubmissions()
+  const { loadMonth: loadSubmissionMonth } = submissions
   const { suggestions } = useSuggestions(week.selectedDate)
   const importState = useImport()
   const historyStore = useHistoryStore(week.selectedDate)
@@ -125,10 +126,11 @@ export function WeekPage() {
   }, [week.selectedWeekStart])
 
   // Load submission status for the selected week's month (cached per month).
+  // Depend on loadMonth too: it changes once the employee profile finishes loading at
+  // startup, so the current week's status loads then instead of only after navigating.
   useEffect(() => {
-    void submissions.loadMonth(week.selectedWeekStart)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [week.selectedWeekStart])
+    void loadSubmissionMonth(week.selectedWeekStart)
+  }, [week.selectedWeekStart, loadSubmissionMonth])
 
   function llmBlockCountForDate(date: string): number {
     if (date === week.selectedDate) {
@@ -515,7 +517,7 @@ export function WeekPage() {
         isSubmittingWeek={submissions.isSubmitting}
         submitError={submissions.submitError}
         isDateSubmitted={submissions.isDateSubmitted}
-        onPickerMonthChange={submissions.loadMonth}
+        onPickerMonthChange={loadSubmissionMonth}
       />
 
       {week.isLoading ? (
