@@ -131,38 +131,10 @@ export function useSubmissions() {
     [employeeId, repoForCall, reloadRange],
   )
 
-  const withdraw = useCallback(
-    async (from: string, to: string): Promise<boolean> => {
-      if (!employeeId) {
-        setSubmitError('Geen medewerker bekend om indiening voor in te trekken')
-        return false
-      }
-      const start = mondayOf(from)
-      const end = addDays(mondayOf(to), 6)
-      setIsSubmitting(true)
-      setSubmitError(null)
-      try {
-        const repo = await repoForCall()
-        const { withdrawSubmission } = createUseCases(repo)
-        await withdrawSubmission.execute(employeeId, start, end)
-        await reloadRange(start, end)
-        return true
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setSubmitError(`Intrekken mislukt: ${msg}`)
-        return false
-      } finally {
-        setIsSubmitting(false)
-      }
-    },
-    [employeeId, repoForCall, reloadRange],
-  )
-
   return {
     loadMonth,
     isDateSubmitted,
     submit,
-    withdraw,
     isSubmitting,
     submitError,
     clearSubmitError: useCallback(() => setSubmitError(null), []),

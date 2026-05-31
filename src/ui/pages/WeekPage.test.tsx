@@ -110,7 +110,6 @@ vi.mock('../components/WeekDayList', () => ({
       <button data-testid="clear-day" onClick={() => (props.onClearDayBlocks as (d: string) => void)(weekMock.selectedDate)}>cd</button>
       <button data-testid="clear-week" onClick={props.onClearWeekBlocks as () => void}>cw</button>
       <button data-testid="submit-week" onClick={props.onSubmitWeek as () => void}>sw</button>
-      <button data-testid="withdraw-week" onClick={props.onWithdrawWeek as () => void}>ww</button>
       <button data-testid="select-date" onClick={() => (props.onSelectDate as (d: string) => void)('2026-05-12')}>sel</button>
     </div>
   ),
@@ -244,7 +243,6 @@ function resetMocks() {
     loadMonth: vi.fn(),
     isDateSubmitted: vi.fn(() => false),
     submit: vi.fn(async () => true),
-    withdraw: vi.fn(async () => true),
     isSubmitting: false,
     submitError: null,
     clearSubmitError: vi.fn(),
@@ -1028,7 +1026,7 @@ describe('booking flows', () => {
 // Submit / withdraw flows
 // ============================================================
 
-describe('submit and withdraw', () => {
+describe('submit', () => {
   it('opens submit-week modal with counts', async () => {
     getBlocksForDate.mockResolvedValue([{ startTime: '09:00' }, { startTime: null }])
     renderPage()
@@ -1077,42 +1075,6 @@ describe('submit and withdraw', () => {
     await screen.findByTestId('submitmodal')
     fireEvent.click(screen.getByTestId('sm-cancel'))
     expect(screen.queryByTestId('submitmodal')).not.toBeInTheDocument()
-  })
-
-  it('opens withdraw-week dialog', () => {
-    renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-week'))
-    expect(screen.getByTestId('confirmdialog')).toBeInTheDocument()
-    expect(submissionsMock.clearSubmitError).toHaveBeenCalled()
-  })
-
-  it('confirms withdraw and refreshes', async () => {
-    renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-week'))
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('cd-confirm'))
-    })
-    await waitFor(() => expect(submissionsMock.withdraw).toHaveBeenCalled())
-    expect(weekMock.refresh).toHaveBeenCalled()
-  })
-
-  it('confirm withdraw does not refresh on failure', async () => {
-    submissionsMock.withdraw = vi.fn(async () => false)
-    renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-week'))
-    weekMock.refresh = vi.fn()
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('cd-confirm'))
-    })
-    await waitFor(() => expect(submissionsMock.withdraw).toHaveBeenCalled())
-    expect(weekMock.refresh).not.toHaveBeenCalled()
-  })
-
-  it('cancels withdraw dialog', () => {
-    renderPage()
-    fireEvent.click(screen.getByTestId('withdraw-week'))
-    fireEvent.click(screen.getByTestId('cd-cancel'))
-    expect(screen.queryByTestId('confirmdialog')).not.toBeInTheDocument()
   })
 })
 

@@ -3,7 +3,8 @@
 //   - unbooked concept blocks remain → warn they fall outside the submission
 //   - zero booked hours → warn the period is empty
 //   - otherwise → plain confirmation
-// In all cases submitting locks the period (it can be withdrawn again via "intrekken").
+// In all cases submitting locks the period; withdrawing afterwards is only possible in
+// Simplicate itself (the API does not expose a withdraw endpoint).
 
 interface Props {
   scope: 'week' | 'day'
@@ -63,7 +64,7 @@ export function SubmitConfirmModal({
             </p>
           )}
           <p className="text-[var(--text-faint)] text-[0.6875rem] leading-relaxed mt-1.5">
-            Je kunt de indiening later weer intrekken om te wijzigen.
+            Intrekken kan daarna alleen in Simplicate zelf.
           </p>
         </div>
         <div className="flex flex-col gap-2">

@@ -156,16 +156,14 @@ describe('WeekDayList', () => {
     expect(screen.queryByText('LLM-blokken wissen')).toBeNull()
   })
 
-  it('renders submitted-week badge with label and withdraw button', () => {
-    const onWithdrawWeek = vi.fn()
+  it('renders submitted-week badge with label and intrekken hint', () => {
     render(
       <WeekDayList
-        {...baseProps({ isWeekSubmitted: true, submittedLabel: 'do 28 mei', onWithdrawWeek })}
+        {...baseProps({ isWeekSubmitted: true, submittedLabel: 'do 28 mei' })}
       />,
     )
     expect(screen.getByText(/Ingediend · do 28 mei/)).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Trek week in'))
-    expect(onWithdrawWeek).toHaveBeenCalledOnce()
+    expect(screen.getByText('Intrekken doe je in Simplicate')).toBeInTheDocument()
   })
 
   it('renders submitted-week badge without label', () => {
@@ -173,20 +171,16 @@ describe('WeekDayList', () => {
     expect(screen.getByText(/Ingediend/)).toBeInTheDocument()
   })
 
-  it('disables the withdraw button while submitting and shows submit error', () => {
-    const onWithdrawWeek = vi.fn()
+  it('shows submit error in the non-submitted branch under the submit button', () => {
     render(
       <WeekDayList
         {...baseProps({
-          isWeekSubmitted: true,
-          onWithdrawWeek,
-          isSubmittingWeek: true,
+          isWeekSubmitted: false,
+          onSubmitWeek: vi.fn(),
           submitError: 'oeps',
         })}
       />,
     )
-    const btn = screen.getByText('Bezig…')
-    expect(btn).toBeDisabled()
     expect(screen.getByText('oeps')).toBeInTheDocument()
   })
 

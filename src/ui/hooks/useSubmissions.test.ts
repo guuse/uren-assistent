@@ -11,12 +11,10 @@ vi.mock('../../store/appStore', () => ({
 const keychainGet = vi.fn()
 const getSubmissionsExecute = vi.fn()
 const submitWeekExecute = vi.fn()
-const withdrawExecute = vi.fn()
 const createSimplicateRepository = vi.fn(() => ({}))
 const createUseCases = vi.fn(() => ({
   getSubmissions: { execute: (...a: unknown[]) => getSubmissionsExecute(...a) },
   submitWeek: { execute: (...a: unknown[]) => submitWeekExecute(...a) },
-  withdrawSubmission: { execute: (...a: unknown[]) => withdrawExecute(...a) },
 }))
 
 vi.mock('../../application/container', () => ({
@@ -38,7 +36,6 @@ describe('useSubmissions', () => {
     keychainGet.mockReset().mockResolvedValue('secret')
     getSubmissionsExecute.mockReset().mockResolvedValue([sub])
     submitWeekExecute.mockReset().mockResolvedValue(undefined)
-    withdrawExecute.mockReset().mockResolvedValue(undefined)
     createSimplicateRepository.mockClear()
   })
 
@@ -156,47 +153,6 @@ describe('useSubmissions', () => {
       await result.current.submit('2026-05-01', '2026-05-07')
     })
     expect(result.current.submitError).toContain('plain')
-  })
-
-  it('withdraw succeeds and reloads the range', async () => {
-    const { result } = renderHook(() => useSubmissions())
-    let ok = false
-    await act(async () => {
-      ok = await result.current.withdraw('2026-05-04', '2026-05-08')
-    })
-    expect(ok).toBe(true)
-    expect(withdrawExecute).toHaveBeenCalledWith('emp-1', '2026-05-04', '2026-05-10')
-  })
-
-  it('withdraw fails without an employee id', async () => {
-    employeeId = null
-    const { result } = renderHook(() => useSubmissions())
-    let ok = true
-    await act(async () => {
-      ok = await result.current.withdraw('2026-05-01', '2026-05-07')
-    })
-    expect(ok).toBe(false)
-    expect(result.current.submitError).toContain('in te trekken')
-  })
-
-  it('withdraw captures an error message', async () => {
-    withdrawExecute.mockRejectedValue(new Error('withdraw boom'))
-    const { result } = renderHook(() => useSubmissions())
-    let ok = true
-    await act(async () => {
-      ok = await result.current.withdraw('2026-05-01', '2026-05-07')
-    })
-    expect(ok).toBe(false)
-    expect(result.current.submitError).toContain('withdraw boom')
-  })
-
-  it('withdraw stringifies non-Error throws', async () => {
-    withdrawExecute.mockRejectedValue('plain-w')
-    const { result } = renderHook(() => useSubmissions())
-    await act(async () => {
-      await result.current.withdraw('2026-05-01', '2026-05-07')
-    })
-    expect(result.current.submitError).toContain('plain-w')
   })
 
   it('clearSubmitError resets the error', async () => {

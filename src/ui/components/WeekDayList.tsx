@@ -38,7 +38,6 @@ interface Props {
   submittedLabel?: string | null
   canSubmitWeek?: boolean
   onSubmitWeek?: () => void
-  onWithdrawWeek?: () => void
   isSubmittingWeek?: boolean
   submitError?: string | null
   // Submission markings: used for the calendar dropdown AND the day rows. Lazy per-month load.
@@ -96,7 +95,6 @@ export function WeekDayList({
   submittedLabel,
   canSubmitWeek = true,
   onSubmitWeek,
-  onWithdrawWeek,
   isSubmittingWeek,
   submitError,
   isDateSubmitted,
@@ -259,7 +257,8 @@ export function WeekDayList({
       {/* Footer */}
       <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
         {isWeekSubmitted ? (
-          /* Ingediende week: read-only badge + mogelijkheid om in te trekken */
+          /* Ingediende week: read-only badge. Intrekken kan niet via de Simplicate API —
+             dat doe je in Simplicate zelf. */
           <>
             <div
               style={{
@@ -271,25 +270,9 @@ export function WeekDayList({
               <LockClosedIcon style={{ width: 13, height: 13 }} strokeWidth={2} />
               Ingediend{submittedLabel ? ` · ${submittedLabel}` : ''} ✓
             </div>
-            {onWithdrawWeek && (
-              <button
-                onClick={onWithdrawWeek}
-                disabled={isSubmittingWeek}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 5, background: 'transparent', color: 'var(--text-secondary)',
-                  border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px',
-                  fontSize: 11, fontWeight: 600,
-                  cursor: isSubmittingWeek ? 'not-allowed' : 'pointer', opacity: isSubmittingWeek ? 0.6 : 1,
-                  fontFamily: 'inherit',
-                }}
-              >
-                {isSubmittingWeek ? 'Bezig…' : 'Trek week in'}
-              </button>
-            )}
-            {submitError && (
-              <div style={{ fontSize: 10, color: 'var(--danger)' }}>{submitError}</div>
-            )}
+            <div style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4 }}>
+              Intrekken doe je in Simplicate
+            </div>
           </>
         ) : (
           <>

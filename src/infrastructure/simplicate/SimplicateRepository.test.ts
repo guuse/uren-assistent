@@ -246,20 +246,6 @@ describe('SimplicateRepository', () => {
     })
   })
 
-  describe('withdrawHours', () => {
-    it('deletes the submission range with a body', async () => {
-      invokeMock.mockResolvedValueOnce('')
-      await repo().withdrawHours('e1', '2026-05-19', '2026-05-23')
-      const args = callArgs(0)
-      expect(args.method).toBe('DELETE')
-      expect(JSON.parse(args.body as string)).toEqual({
-        employee_id: 'e1',
-        start_date: '2026-05-19',
-        end_date: '2026-05-23',
-      })
-    })
-  })
-
   describe('getSubmissions', () => {
     it('queries with exact q[employee_id]/q[start_date]/q[end_date]', async () => {
       invokeMock.mockResolvedValueOnce(JSON.stringify({ data: [] }))

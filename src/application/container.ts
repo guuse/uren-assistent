@@ -17,7 +17,6 @@ import { BookHoursUseCase } from '../domain/usecases/BookHoursUseCase'
 import { DeleteHourEntryUseCase } from '../domain/usecases/DeleteHourEntryUseCase'
 import { UpdateHourEntryUseCase } from '../domain/usecases/UpdateHourEntryUseCase'
 import { SubmitWeekUseCase } from '../domain/usecases/SubmitWeekUseCase'
-import { WithdrawSubmissionUseCase } from '../domain/usecases/WithdrawSubmissionUseCase'
 import { GetSubmissionsUseCase } from '../domain/usecases/GetSubmissionsUseCase'
 import type { ISimplicateRepository } from '../domain/repositories/ISimplicateRepository'
 import type { ICopilotRepository } from '../domain/repositories/ICopilotRepository'
@@ -81,7 +80,6 @@ export function createUseCases(simplicateRepo: ISimplicateRepository) {
     deleteHourEntry: new DeleteHourEntryUseCase(simplicateRepo),
     updateHourEntry: new UpdateHourEntryUseCase(simplicateRepo),
     submitWeek: new SubmitWeekUseCase(simplicateRepo),
-    withdrawSubmission: new WithdrawSubmissionUseCase(simplicateRepo),
     getSubmissions: new GetSubmissionsUseCase(simplicateRepo),
   }
 }

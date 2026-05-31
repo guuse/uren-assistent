@@ -199,18 +199,6 @@ export class SimplicateRepository implements ISimplicateRepository {
     })
   }
 
-  // Withdraw ("intrekken") a previously submitted period, unlocking those days so they can
-  // be edited again. The v2 reference does not publish a withdraw endpoint; this assumes it
-  // is the symmetric DELETE on /hours/submission with the same body as the POST. If Simplicate
-  // rejects it, adjust the path/method/body here only. See docs/adr/0003.
-  async withdrawHours(employeeId: string, startDate: string, endDate: string): Promise<void> {
-    await this.delete('/hours/submission', {
-      employee_id: employeeId,
-      start_date: startDate,
-      end_date: endDate,
-    })
-  }
-
   // GET /hours/submission — "Fetches hours submission status, by date, for an employee."
   // Verified against the live API: it returns ONE record per day in the range —
   // `{ employee_id, date: "YYYY-MM-DD", status }` — and requires q[employee_id],

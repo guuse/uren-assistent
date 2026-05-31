@@ -21,7 +21,6 @@ import {
 } from '../../application/container'
 import { NoHistoryWarningModal } from '../components/NoHistoryWarningModal'
 import { SubmitConfirmModal } from '../components/SubmitConfirmModal'
-import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useSubmissions } from '../hooks/useSubmissions'
 import { useAppStore } from '../../store/appStore'
 
@@ -102,7 +101,6 @@ export function WeekPage() {
   // Submission is week-granular in Simplicate (Mon–Sun), so the only scope is 'week'.
   type SubmitScope = { scope: 'week'; label: string; from: string; to: string }
   const [submitModal, setSubmitModal] = useState<(SubmitScope & { unbookedCount: number; bookedHours: number }) | null>(null)
-  const [withdrawModal, setWithdrawModal] = useState<SubmitScope | null>(null)
 
   function conceptCountForDate(date: string): number {
     return date === week.selectedDate ? historyStore.blocksForDate.length : 0
@@ -464,14 +462,6 @@ export function WeekPage() {
     if (ok) void week.refresh()
   }
 
-  async function handleWithdrawConfirm() {
-    if (!withdrawModal) return
-    const target = withdrawModal
-    setWithdrawModal(null)
-    const ok = await submissions.withdraw(target.from, target.to)
-    if (ok) void week.refresh()
-  }
-
   const today = toLocalDateString(new Date())
   const daySubmitted = submissions.isDateSubmitted(week.selectedDate)
   const allWeekSubmitted = week.weekDays.length > 0 && week.weekDays.every(submissions.isDateSubmitted)
@@ -513,7 +503,6 @@ export function WeekPage() {
         isWeekSubmitted={allWeekSubmitted}
         canSubmitWeek={canSubmitWeek}
         onSubmitWeek={() => void handleSubmitWeekClick()}
-        onWithdrawWeek={() => { submissions.clearSubmitError(); setWithdrawModal({ scope: 'week', label: weekLabel(week.selectedWeekStart), from: week.selectedWeekStart, to: week.selectedWeekEnd }) }}
         isSubmittingWeek={submissions.isSubmitting}
         submitError={submissions.submitError}
         isDateSubmitted={submissions.isDateSubmitted}
@@ -613,18 +602,6 @@ export function WeekPage() {
           isSubmitting={submissions.isSubmitting}
           onConfirm={() => void handleSubmitConfirm()}
           onCancel={() => setSubmitModal(null)}
-        />
-      )}
-
-      {/* Intrekken: bevestiging (week of dag) */}
-      {withdrawModal && (
-        <ConfirmDialog
-          title="Indiening intrekken"
-          description={`${withdrawModal.label} is ingediend. Intrekken zodat je de uren weer kunt wijzigen?`}
-          confirmLabel="Intrekken"
-          isLoading={submissions.isSubmitting}
-          onConfirm={() => void handleWithdrawConfirm()}
-          onCancel={() => setWithdrawModal(null)}
         />
       )}
     </div>
