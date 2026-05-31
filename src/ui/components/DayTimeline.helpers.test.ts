@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeTimelineBlocks, mergeConceptsIntoTimeline, buildTimelineRows } from './DayTimeline.helpers'
+import { computeTimelineBlocks, mergeConceptsIntoTimeline, buildTimelineRows, assignBlockColumns } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
@@ -202,5 +202,39 @@ describe('buildTimelineRows', () => {
     const conceptRow = rows.find(r => r.left.type === 'concept')
     expect(conceptRow).toBeDefined()
     expect(conceptRow!.right).toBeUndefined()
+  })
+})
+
+describe('assignBlockColumns', () => {
+  const b = (startTime: string, endTime: string) => ({ startTime, endTime })
+
+  it('puts a fully contiguous, non-overlapping day in one column', () => {
+    const { columns, numCols } = assignBlockColumns([
+      b('09:00', '09:30'), b('09:30', '10:00'), b('10:00', '11:00'),
+      b('11:00', '11:30'), b('13:30', '14:30'), b('15:00', '17:00'),
+    ])
+    expect(numCols).toBe(1)
+    expect(columns.every(c => c.col === 0)).toBe(true)
+  })
+
+  it('does not bump a longer block into a second column when it fits a gap (regression)', () => {
+    // Mixed durations, no overlaps — the old duration-sort produced 2 columns here.
+    const { numCols } = assignBlockColumns([
+      b('09:00', '09:30'), b('10:00', '11:00'), b('11:00', '11:30'), b('13:30', '14:30'),
+    ])
+    expect(numCols).toBe(1)
+  })
+
+  it('uses a second column only for genuinely overlapping blocks', () => {
+    const { columns, numCols } = assignBlockColumns([
+      b('09:00', '10:00'), b('09:30', '10:30'),
+    ])
+    expect(numCols).toBe(2)
+    expect(columns.map(c => c.col).sort()).toEqual([0, 1])
+  })
+
+  it('treats touching blocks (end === next start) as the same column', () => {
+    const { numCols } = assignBlockColumns([b('09:00', '10:00'), b('10:00', '11:00')])
+    expect(numCols).toBe(1)
   })
 })

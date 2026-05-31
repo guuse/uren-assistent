@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { mergeConceptsIntoTimeline, computeTimelineBlocks } from './DayTimeline.helpers'
+import { mergeConceptsIntoTimeline, computeTimelineBlocks, assignBlockColumns } from './DayTimeline.helpers'
 import type { TimelineBlock } from './DayTimeline.helpers'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 import type { HourEntrySuggestion } from '../../domain/entities/HourEntrySuggestion'
@@ -501,31 +501,10 @@ export function DayTimeline({
               })()}
                <div className="absolute inset-0">
                 {(() => {
-                  // Column-packing: assign each entry/concept to the first column where it fits.
-                  // Sort by duration ascending first so shorter blocks go left, longer blocks right.
+                  // Interval partitioning: non-overlapping blocks share a column, so a
+                  // gap-free day renders in a single column (see assignBlockColumns).
                   const contentBlocks = flatBlocks.filter(b => b.type === 'entry' || b.type === 'concept')
-                  const sortedByDuration = [...contentBlocks].sort((a, b) => {
-                    const durA = timeToMinutes(a.endTime) - timeToMinutes(a.startTime)
-                    const durB = timeToMinutes(b.endTime) - timeToMinutes(b.startTime)
-                    if (durA !== durB) return durA - durB  // kortste eerst → links
-                    return a.startTime.localeCompare(b.startTime)  // gelijke duur: vroegste eerst
-                  })
-                  // columnEndMin[i] = the end time (in minutes) of the last block placed in column i
-                  const columnEndMin: number[] = []
-
-                  const blockColumns = sortedByDuration.map(block => {
-                    const startMin = timeToMinutes(block.startTime)
-                    // Find first column where this block fits
-                    let col = columnEndMin.findIndex(endMin => startMin >= endMin)
-                    if (col === -1) {
-                      col = columnEndMin.length
-                      columnEndMin.push(0)
-                    }
-                    columnEndMin[col] = timeToMinutes(block.endTime)
-                    return { block, col }
-                  })
-
-                  const numCols = Math.max(1, columnEndMin.length)
+                  const { columns: blockColumns, numCols } = assignBlockColumns(contentBlocks)
                   const colWidthPct = 100 / numCols
 
                   // Render gap blocks first (always column 0, full width only if no content blocks)

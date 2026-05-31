@@ -79,6 +79,41 @@ export function computeTimelineBlocks(
   return blocks
 }
 
+/**
+ * Assigns each block to a column via interval partitioning: blocks that don't
+ * overlap in time share a column, so a gap-free day renders in a SINGLE column.
+ * A second column only appears where two blocks genuinely overlap.
+ *
+ * Process in start-time order (shorter first on ties) and place each block in
+ * the first column whose previous block has already ended.
+ */
+export function assignBlockColumns<T extends { startTime: string; endTime: string }>(
+  blocks: T[],
+): { columns: { block: T; col: number }[]; numCols: number } {
+  const sorted = [...blocks].sort((a, b) => {
+    const startA = timeToMinutes(a.startTime)
+    const startB = timeToMinutes(b.startTime)
+    if (startA !== startB) return startA - startB
+    const durA = timeToMinutes(a.endTime) - startA
+    const durB = timeToMinutes(b.endTime) - startB
+    return durA - durB
+  })
+
+  const columnEndMin: number[] = []
+  const columns = sorted.map(block => {
+    const startMin = timeToMinutes(block.startTime)
+    let col = columnEndMin.findIndex(endMin => startMin >= endMin)
+    if (col === -1) {
+      col = columnEndMin.length
+      columnEndMin.push(0)
+    }
+    columnEndMin[col] = timeToMinutes(block.endTime)
+    return { block, col }
+  })
+
+  return { columns, numCols: Math.max(1, columnEndMin.length) }
+}
+
 export type TimelineRow = {
   startTime: string
   endTime: string
