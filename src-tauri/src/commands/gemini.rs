@@ -8,7 +8,7 @@
 
 use serde::Deserialize;
 
-use super::simplicate::{HttpResponse, HttpSender, PreparedRequest};
+use super::simplicate::{HttpSender, PreparedRequest};
 
 /// Arguments for a Gemini `generateContent` call. The URL already carries the
 /// API key as a query parameter (built on the frontend from the bundled env),
@@ -109,6 +109,7 @@ pub async fn run_gemini_request<S: HttpSender, T: Sleeper>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::simplicate::HttpResponse;
     use std::cell::RefCell;
 
     fn args() -> GeminiRequestArgs {
