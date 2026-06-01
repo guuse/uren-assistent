@@ -7,6 +7,8 @@ import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { DayContext } from '../entities/DayContext'
 import { attachHistoryToMeetings } from './attachHistoryToMeetings'
 import { toConfidenceScore } from './toConfidenceScore'
+import { mappingCacheKey } from './mappingCacheKey'
+import { consolidateByProjectService } from './consolidateByProjectService'
 
 function sanitizeUrl(url: string): string {
   try {
@@ -70,14 +72,14 @@ export class GroupAndClassifyDayUseCase {
         undefined,
       )
       const cacheKey = dominant
-        ? `${group.event.title}:${dominant.urlPattern}`
+        ? `${group.event.title}:${mappingCacheKey(dominant.urlPattern)}`
         : `${group.event.title}:_solo`
       items.push({ kind: 'meeting', index, event: group.event, historyBlocks: group.historyBlocks, cacheKey })
       index++
     }
 
     for (const block of unclaimed) {
-      items.push({ kind: 'standalone', index, block, cacheKey: block.urlPattern })
+      items.push({ kind: 'standalone', index, block, cacheKey: mappingCacheKey(block.urlPattern) })
       index++
     }
 
@@ -271,8 +273,13 @@ export class GroupAndClassifyDayUseCase {
       }
     }
 
+    // Fold observed activity for one project+service into a single Project block
+    // (multiple PR-merges / commit sessions / browser blocks → one block). Meeting
+    // blocks and fill candidates are left untouched (see consolidateByProjectService).
+    const observed = consolidateByProjectService([...cacheResults, ...llmResults])
+
     const coveredProjectService = new Set(
-      [...cacheResults, ...llmResults]
+      observed
         .filter(b => b.projectId && b.serviceId)
         .map(b => `${b.projectId}__${b.serviceId}`)
     )
@@ -280,7 +287,7 @@ export class GroupAndClassifyDayUseCase {
       b => !b.projectId || !b.serviceId || !coveredProjectService.has(`${b.projectId}__${b.serviceId}`)
     )
 
-    const all = [...cacheResults, ...llmResults, ...dedupedPatterns]
+    const all = [...observed, ...dedupedPatterns]
     all.sort((a, b) => a.startTime.localeCompare(b.startTime))
     return all
   }

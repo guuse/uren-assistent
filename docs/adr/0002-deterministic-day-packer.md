@@ -1,5 +1,7 @@
 # Deterministic day-packer: LLM classifies, TypeScript places
 
+> Partly amended by [ADR-0004](0004-deterministic-pattern-engine-and-grow-first-fill.md): pattern detection moved from the LLM to deterministic TS, and fill now grows real blocks before adding pattern blocks. The "LLM classifies, TS places" core below still holds.
+
 The LLM returns only classification (name, project, service, confidence, fill candidates) — it never assigns block times. A deterministic TS packer (a domain use case) owns all time placement: it fixes anchors (meeting blocks + today's existing `HourEntry`s), drops concepts that duplicate an anchor, repacks the remaining movable blocks contiguously from 09:00 around the anchors, and pulls in ranked fill candidates until the day reaches an 8h fill target. 8h is a floor, not a ceiling: filler stops at 8h but real work is never dropped or trimmed.
 
 This deliberately sacrifices fidelity to real activity timestamps for a clean, gap-free, full day — chosen because the user's priority is "create 8 bookable hours," not "show exactly when each thing happened." A future reader will see the LLM emit no times and a packer fabricate a tidy day that doesn't mirror the raw browser/calendar timeline; this is intentional.

@@ -3,6 +3,26 @@ import { PackDayUseCase } from './PackDayUseCase'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { HourEntry } from '../entities/HourEntry'
 import type { CalendarEvent } from '../entities/CalendarEvent'
+import type { TrendPattern, TrendPatternsResult } from './computeTrendPatterns'
+
+/** Build a TrendPatternsResult from terse pattern specs for packer tests. */
+const makeTrends = (
+  specs: { projectId: string; serviceId: string; avg: number; share: number; weeks?: number; strong?: boolean }[],
+): TrendPatternsResult => {
+  const patterns: TrendPattern[] = specs.map(s => ({
+    projectId: s.projectId,
+    serviceId: s.serviceId,
+    weeksPresent: s.weeks ?? (s.strong ? 4 : 1),
+    daysActive: 4,
+    avgDurationHours: s.avg,
+    historicalShare: s.share,
+    cadenceMatchesTarget: s.strong ?? false,
+    isStrong: s.strong ?? false,
+  }))
+  const byKey = new Map(patterns.map(p => [`${p.projectId}__${p.serviceId}`, p]))
+  const strong = patterns.filter(p => p.isStrong)
+  return { patterns, byKey, strong }
+}
 
 const makeBlock = (overrides: Partial<ClassifiedBlock> = {}): ClassifiedBlock => ({
   date: '2024-01-15',
@@ -137,40 +157,78 @@ describe('PackDayUseCase', () => {
     expect(result).toEqual([])
   })
 
-  it('counts existing hours toward the 8h target so filler stops early', () => {
-    const entry = makeEntry('09:00', '16:30', 7.5, { projectId: 'other', projectServiceId: 'other' })
-    const filler = makeCandidate(1, 2, { blockName: 'Filler' })
-    const result = new PackDayUseCase().execute([filler], [entry], { targetHours: 8 })
+  it('grows an observed block toward its historical average to fill the day', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // proj-1/svc-1, 1h real work
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 8, share: 1 }])
+    const result = new PackDayUseCase().execute([observed], [], { targetHours: 8, trends })
 
-    const f = result.find(r => r.blockName === 'Filler')!
-    expect(f).toBeDefined()
-    // only 0.5h remained to reach 8h, so filler is trimmed to 0.5h
-    expect(f.hours).toBe(0.5)
+    const o = result.find(r => r.blockName === 'Observed')!
+    expect(o.hours).toBe(8) // grown from 1h up to its historical average
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(8)
   })
 
-  it('fills with candidates highest-confidence first, trimming the last to land on target', () => {
-    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // 1h real work
-    const genuine = makeCandidate(3, 2, { blockName: 'Genuine', projectId: 'p2', serviceId: 's2' })
-    const filler = makeCandidate(1, 4, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
-    const result = new PackDayUseCase().execute([observed, genuine, filler], [], { targetHours: 4 })
+  it('caps growth at the historical average, then fills the rest with a strong pattern', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // proj-1/svc-1
+    const fill = makeCandidate(1, 99, { blockName: 'Recurring', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 3, share: 0.5 }, // room to grow: 2h
+      { projectId: 'p2', serviceId: 's2', avg: 5, share: 0.5, strong: true },
+    ])
+    const result = new PackDayUseCase().execute([observed, fill], [], { targetHours: 8, trends })
 
     const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
-    expect(byName['Observed']).toBeDefined()
-    expect(byName['Genuine']!.hours).toBe(2)   // conf 3 placed first
-    // 1 + 2 = 3h booked, 1h short of 4h target → conf 1 filler trimmed to 1h
-    expect(byName['Filler']!.hours).toBe(1)
+    expect(byName['Observed']!.hours).toBe(3)   // grown 1h → 3h (capped at avg), not further
+    expect(byName['Recurring']!.hours).toBe(5)  // strong-pattern fill sized at its avg
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(8)
+  })
+
+  it('never grows or fills once real work already meets the target (floor, not ceiling)', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 4 })
+    const fill = makeCandidate(5, 2, { blockName: 'Recurring', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 10, share: 0.5 },
+      { projectId: 'p2', serviceId: 's2', avg: 2, share: 0.5, strong: true },
+    ])
+    const result = new PackDayUseCase().execute([observed, fill], [], { targetHours: 4, trends })
+
+    expect(result.find(r => r.blockName === 'Observed')!.hours).toBe(4) // not grown past target
+    expect(result.find(r => r.blockName === 'Recurring')).toBeUndefined()
     expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
   })
 
-  it('never adds a fill candidate once the target is met by real work, regardless of confidence', () => {
-    const observed = makeBlock({ blockName: 'Observed', hours: 4 })
-    const hiConf = makeCandidate(5, 2, { blockName: 'HiConf', projectId: 'p2', serviceId: 's2' })
-    const filler = makeCandidate(1, 2, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
-    const result = new PackDayUseCase().execute([observed, hiConf, filler], [], { targetHours: 4 })
+  it('distributes growth across blocks proportional to historical share', () => {
+    const a = makeBlock({ blockName: 'A', hours: 1, projectId: 'proj-1', serviceId: 'svc-1' })
+    const b = makeBlock({ blockName: 'B', hours: 1, projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 99, share: 0.75 },
+      { projectId: 'p2', serviceId: 's2', avg: 99, share: 0.25 },
+    ])
+    // gap = 8 - (1 + 1) = 6 → split 0.75/0.25 → A +4.5 (→5.5), B +1.5 (→2.5)
+    const result = new PackDayUseCase().execute([a, b], [], { targetHours: 8, trends })
+    const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
+    expect(byName['A']!.hours).toBeCloseTo(5.5)
+    expect(byName['B']!.hours).toBeCloseTo(2.5)
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBeCloseTo(8)
+  })
 
-    expect(result.find(r => r.blockName === 'HiConf')).toBeUndefined()
-    expect(result.find(r => r.blockName === 'Filler')).toBeUndefined()
-    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
+  it('never grows a meeting block beyond its calendar duration', () => {
+    const meeting = makeMeeting('10:00', '11:00', { blockName: 'Mtg', hours: 1, projectId: 'proj-1', serviceId: 'svc-1' })
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 8, share: 1 }])
+    const result = new PackDayUseCase().execute([meeting], [], { targetHours: 8, trends })
+    expect(result.find(r => r.blockName === 'Mtg')!.hours).toBe(1)
+  })
+
+  it('does not fill from a weak (non-strong) pattern even when the day is short', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 })
+    const weak = makeCandidate(2, 4, { blockName: 'Weak', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      // observed combo absent from trends → no growth; weak pattern is not strong → no fill
+      { projectId: 'p2', serviceId: 's2', avg: 4, share: 1, strong: false },
+    ])
+    const result = new PackDayUseCase().execute([observed, weak], [], { targetHours: 8, trends })
+
+    expect(result.find(r => r.blockName === 'Weak')).toBeUndefined()
+    expect(result.find(r => r.blockName === 'Observed')!.hours).toBe(1) // no trend → not grown
   })
 
   it('keeps all real work even when it exceeds the target (floor, not ceiling)', () => {
@@ -182,10 +240,11 @@ describe('PackDayUseCase', () => {
     expect(total).toBe(10)
   })
 
-  it('drops a fill candidate whose project+service is already booked today', () => {
+  it('does not fill a strong pattern whose project+service is already booked today', () => {
     const entry = makeEntry('09:00', '10:00', 1) // proj-1 / svc-1
     const candidate = makeCandidate(3, 2, { blockName: 'Dup pattern', projectId: 'proj-1', serviceId: 'svc-1' })
-    const result = new PackDayUseCase().execute([candidate], [entry], { targetHours: 8 })
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 2, share: 1, strong: true }])
+    const result = new PackDayUseCase().execute([candidate], [entry], { targetHours: 8, trends })
 
     expect(result.find(r => r.blockName === 'Dup pattern')).toBeUndefined()
   })
