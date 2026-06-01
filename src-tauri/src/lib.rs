@@ -1,8 +1,8 @@
 mod commands;
 
 use commands::glue::{
-    delete_secret, ensure_app_data_dir, get_secret, set_secret, simplicate_request,
-    start_google_oauth,
+    delete_secret, ensure_app_data_dir, gemini_request, get_secret, set_secret,
+    simplicate_request, start_google_oauth,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -17,6 +17,7 @@ pub fn run() {
             delete_secret,
             start_google_oauth,
             simplicate_request,
+            gemini_request,
             ensure_app_data_dir,
         ])
         .run(tauri::generate_context!())

@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { toConfidenceScore } from '../../domain/usecases/toConfidenceScore'
 import type { ICopilotRepository, Project, Service, DayItem, DayClassificationResult, PatternBlock } from '../../domain/repositories/ICopilotRepository'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
@@ -37,33 +38,36 @@ interface LLMBlockResult {
   confidence: number
 }
 
-async function callGemini(prompt: string, attempt = 0): Promise<string> {
-  const response = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1 },
-    }),
-  })
-
-  if (response.status === 429 && attempt < 3) {
-    const text = await response.text()
-    const retryDelay = /"retryDelay":"(\d+)s"/.exec(text)?.[1]
-    const delaySecs = retryDelay ? parseInt(retryDelay, 10) : Math.pow(2, attempt + 1) * 5
-    await new Promise(resolve => setTimeout(resolve, delaySecs * 1000))
-    return callGemini(prompt, attempt + 1)
-  }
-
-  if (!response.ok) {
-    const text = await response.text()
-    if (response.status === 429) {
-      throw new Error(`Gemini quota uitgeput. Upgrade naar een betaald API-plan op https://ai.google.dev/ of probeer het later opnieuw.`)
+async function callGemini(prompt: string): Promise<string> {
+  // Routed through the Rust backend (`gemini_request`) rather than the webview's
+  // `fetch`: the WebKit webview drops large/slow requests with a generic "Load
+  // failed" error. The Rust side also retries transient failures (network
+  // errors, 429, 5xx) with backoff and returns the raw response body, or
+  // rejects with a "Gemini API error: <status> — <body>" / "Request failed: …"
+  // message once retries are exhausted.
+  let body: string
+  try {
+    body = await invoke<string>('gemini_request', {
+      args: {
+        url: GEMINI_URL,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 },
+        }),
+      },
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('429') || /quota/i.test(msg)) {
+      throw new Error('Gemini quota uitgeput. Upgrade naar een betaald API-plan op https://ai.google.dev/ of probeer het later opnieuw.')
     }
-    throw new Error(`Gemini API error: ${response.status} — ${text}`)
+    if (msg.startsWith('Request failed')) {
+      throw new Error(`Gemini niet bereikbaar (netwerkfout na meerdere pogingen). ${msg}`)
+    }
+    throw new Error(msg.startsWith('Gemini') ? msg : `Gemini API error: ${msg}`)
   }
 
-  const data = await response.json() as GeminiResponse
+  const data = JSON.parse(body) as GeminiResponse
   const raw = data.candidates[0]?.content.parts[0]?.text ?? '[]'
   return raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
 }

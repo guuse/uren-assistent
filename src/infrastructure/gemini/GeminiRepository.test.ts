@@ -6,6 +6,11 @@ import type { Project, Service, DayItem } from '../../domain/repositories/ICopil
 import type { DayContext } from '../../domain/entities/DayContext'
 import type { HourEntry } from '../../domain/entities/HourEntry'
 
+// Gemini calls go through the Rust `gemini_request` command via Tauri's invoke.
+vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
+import { invoke } from '@tauri-apps/api/core'
+const invokeMock = vi.mocked(invoke)
+
 // Avoid pulling in Tauri fs / ?raw imports; capture the rendered prompt for assertions.
 let lastPrompt = ''
 vi.mock('./promptStore', () => ({
@@ -16,8 +21,9 @@ vi.mock('./promptStore', () => ({
   }),
 }))
 
-function geminiOk(text: string) {
-  return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }) }
+/** The raw response body the Rust command resolves with (the Gemini JSON). */
+function geminiOk(text: string): string {
+  return JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })
 }
 
 function block(overrides: Partial<HistoryBlock> = {}): HistoryBlock {
@@ -41,22 +47,18 @@ const services: Service[] = [
 ]
 
 describe('GeminiRepository', () => {
-  let fetchMock: ReturnType<typeof vi.fn>
-
   beforeEach(() => {
-    fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
+    invokeMock.mockReset()
     lastPrompt = ''
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
   describe('classify', () => {
     it('matches LLM results onto blocks and applies fallbacks', async () => {
-      fetchMock.mockResolvedValueOnce(
+      invokeMock.mockResolvedValueOnce(
         geminiOk(
           '```json\n' +
             JSON.stringify([
@@ -108,7 +110,7 @@ describe('GeminiRepository', () => {
     })
 
     it('includes calendar context and overlapping meetings in the prompt', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('[]'))
+      invokeMock.mockResolvedValueOnce(geminiOk('[]'))
       const events: CalendarEvent[] = [
         {
           id: 'c1',
@@ -147,19 +149,19 @@ describe('GeminiRepository', () => {
     })
 
     it('throws on invalid JSON', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('not json'))
+      invokeMock.mockResolvedValueOnce(geminiOk('not json'))
       const repo = new GeminiRepository()
       await expect(repo.classify([block()], projects, services)).rejects.toThrow('Gemini returned invalid JSON')
     })
 
     it('throws when result is not an array', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('{"foo":1}'))
+      invokeMock.mockResolvedValueOnce(geminiOk('{"foo":1}'))
       const repo = new GeminiRepository()
       await expect(repo.classify([block()], projects, services)).rejects.toThrow('not an array')
     })
 
     it('renders a calendar event without attendees and tolerates empty blocks', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('[]'))
+      invokeMock.mockResolvedValueOnce(geminiOk('[]'))
       const events: CalendarEvent[] = [
         {
           id: 'c1',
@@ -179,60 +181,55 @@ describe('GeminiRepository', () => {
       expect(lastPrompt).not.toContain('Solo focus')
 
       // Now with a dated block so the event matches the day and the no-attendee branch runs.
-      fetchMock.mockResolvedValueOnce(geminiOk('[]'))
+      invokeMock.mockResolvedValueOnce(geminiOk('[]'))
       await repo.classify([block()], projects, services, events)
       expect(lastPrompt).toContain('Solo focus')
       expect(lastPrompt).not.toContain('Solo focus (')
     })
 
     it('handles empty candidates by defaulting to []', async () => {
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ candidates: [] }) })
+      invokeMock.mockResolvedValueOnce(JSON.stringify({ candidates: [] }))
       const repo = new GeminiRepository()
       const result = await repo.classify([block()], projects, services)
       expect(result[0]!.blockName).toBe('github.com/foo')
     })
   })
 
-  describe('callGemini error handling', () => {
-    it('throws a quota message on a non-retryable 429 (attempt cap reached)', async () => {
-      vi.useFakeTimers()
-      // Always 429 with a retryDelay so backoff is short; exhaust the 3 retries.
-      fetchMock.mockResolvedValue({
-        status: 429,
-        ok: false,
-        text: async () => '{"retryDelay":"1s"}',
-      })
+  // Retry/backoff now lives in the Rust `gemini_request` command; the TS layer
+  // only maps the rejection it surfaces onto a user-facing message.
+  describe('callGemini error mapping', () => {
+    it('maps a 429 error to a friendly quota message', async () => {
+      invokeMock.mockRejectedValueOnce(new Error('Gemini API error: 429 — {"retryDelay":"1s"}'))
       const repo = new GeminiRepository()
-      const promise = repo.classify([block()], projects, services)
-      // Attach the rejection handler before advancing timers so the rejection
-      // is never unhandled.
-      const assertion = expect(promise).rejects.toThrow('Gemini quota uitgeput')
-      // Advance through the retry sleeps.
-      await vi.runAllTimersAsync()
-      await assertion
-      // initial + 3 retries = 4 calls
-      expect(fetchMock).toHaveBeenCalledTimes(4)
-      vi.useRealTimers()
+      await expect(repo.classify([block()], projects, services)).rejects.toThrow('Gemini quota uitgeput')
     })
 
-    it('retries on 429 then succeeds, using exponential backoff when no retryDelay', async () => {
-      vi.useFakeTimers()
-      fetchMock
-        .mockResolvedValueOnce({ status: 429, ok: false, text: async () => 'rate limited' })
-        .mockResolvedValueOnce(geminiOk('[]'))
+    it('maps a quota-worded error to the same friendly message', async () => {
+      invokeMock.mockRejectedValueOnce(new Error('RESOURCE_EXHAUSTED: quota exceeded'))
       const repo = new GeminiRepository()
-      const promise = repo.classify([block()], projects, services)
-      await vi.runAllTimersAsync()
-      const result = await promise
-      expect(result).toHaveLength(1)
-      expect(fetchMock).toHaveBeenCalledTimes(2)
-      vi.useRealTimers()
+      await expect(repo.classify([block()], projects, services)).rejects.toThrow('Gemini quota uitgeput')
     })
 
-    it('throws a generic error on other non-ok statuses', async () => {
-      fetchMock.mockResolvedValueOnce({ status: 500, ok: false, text: async () => 'boom' })
+    it('maps a network failure to an unreachable message', async () => {
+      invokeMock.mockRejectedValueOnce(new Error('Request failed: connection reset'))
+      const repo = new GeminiRepository()
+      await expect(repo.classify([block()], projects, services)).rejects.toThrow(
+        'Gemini niet bereikbaar (netwerkfout na meerdere pogingen). Request failed: connection reset',
+      )
+    })
+
+    it('passes through an already-formatted Gemini API error', async () => {
+      invokeMock.mockRejectedValueOnce(new Error('Gemini API error: 500 — boom'))
       const repo = new GeminiRepository()
       await expect(repo.classify([block()], projects, services)).rejects.toThrow('Gemini API error: 500 — boom')
+    })
+
+    it('wraps a bare/unknown rejection as a Gemini API error', async () => {
+      invokeMock.mockRejectedValueOnce('weird transport failure')
+      const repo = new GeminiRepository()
+      await expect(repo.classify([block()], projects, services)).rejects.toThrow(
+        'Gemini API error: weird transport failure',
+      )
     })
   })
 
@@ -247,7 +244,7 @@ describe('GeminiRepository', () => {
     }
 
     it('returns a bare array response directly', async () => {
-      fetchMock.mockResolvedValueOnce(
+      invokeMock.mockResolvedValueOnce(
         geminiOk(
           JSON.stringify([
             { index: 0, blockName: 'B', summary: 'S', projectId: 'p1', serviceId: 's1', note: 'n', confidence: 3 },
@@ -315,7 +312,7 @@ describe('GeminiRepository', () => {
       ]
       const cacheHints = { 'github.com/foo': { projectName: 'Proj', serviceName: 'Dev' } }
 
-      fetchMock.mockResolvedValueOnce(
+      invokeMock.mockResolvedValueOnce(
         geminiOk(
           JSON.stringify({
             blocks: [
@@ -375,7 +372,7 @@ describe('GeminiRepository', () => {
     })
 
     it('omits optional sections when data is empty', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk(JSON.stringify({ blocks: [] })))
+      invokeMock.mockResolvedValueOnce(geminiOk(JSON.stringify({ blocks: [] })))
       const repo = new GeminiRepository()
       const result = await repo.classifyDay('2026-05-20', [], projects, services, {}, undefined, [], [])
       expect(result).toEqual([])
@@ -424,7 +421,7 @@ describe('GeminiRepository', () => {
         },
       ]
 
-      fetchMock.mockResolvedValueOnce(geminiOk(JSON.stringify({ blocks: [] })))
+      invokeMock.mockResolvedValueOnce(geminiOk(JSON.stringify({ blocks: [] })))
       const repo = new GeminiRepository()
       await repo.classifyDay('2026-05-20', items, projects, services, {}, context, undefined, existing)
 
@@ -438,7 +435,7 @@ describe('GeminiRepository', () => {
     })
 
     it('throws on invalid JSON', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('garbage'))
+      invokeMock.mockResolvedValueOnce(geminiOk('garbage'))
       const repo = new GeminiRepository()
       await expect(repo.classifyDay('2026-05-20', [], projects, services, {})).rejects.toThrow(
         'Gemini returned invalid JSON for classifyDay',
@@ -446,7 +443,7 @@ describe('GeminiRepository', () => {
     })
 
     it('throws when blocks is not an array', async () => {
-      fetchMock.mockResolvedValueOnce(geminiOk('{"blocks":"nope"}'))
+      invokeMock.mockResolvedValueOnce(geminiOk('{"blocks":"nope"}'))
       const repo = new GeminiRepository()
       await expect(repo.classifyDay('2026-05-20', [], projects, services, {})).rejects.toThrow(
         'unexpected format',
@@ -454,7 +451,7 @@ describe('GeminiRepository', () => {
     })
 
     it('defaults patternBlocks to empty when absent', async () => {
-      fetchMock.mockResolvedValueOnce(
+      invokeMock.mockResolvedValueOnce(
         geminiOk(JSON.stringify({ blocks: [{ index: 0, blockName: 'B', summary: '', projectId: null, serviceId: null, note: '', confidence: 1 }] })),
       )
       const repo = new GeminiRepository()
