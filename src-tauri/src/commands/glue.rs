@@ -16,6 +16,7 @@ use tokio::net::TcpListener;
 use tokio::time::Duration;
 
 use super::auth;
+use super::gemini::{run_gemini_request, GeminiRequestArgs, TokioSleeper};
 use super::keychain::{CmdOutput, CommandRunner};
 use super::simplicate::{run_request, ReqwestSender, SimplicateRequestArgs};
 use super::storage;
@@ -61,6 +62,11 @@ pub fn delete_secret(key: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn simplicate_request(args: SimplicateRequestArgs) -> Result<String, String> {
     run_request(&ReqwestSender::new(), &args).await
+}
+
+#[tauri::command]
+pub async fn gemini_request(args: GeminiRequestArgs) -> Result<String, String> {
+    run_gemini_request(&ReqwestSender::new(), &TokioSleeper, &args).await
 }
 
 #[tauri::command]
