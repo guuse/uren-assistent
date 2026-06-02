@@ -41,6 +41,10 @@ The amount of booked time a day should reach — 8.0h total (a floor, not a ceil
 **Anchor**:
 A block whose time is fixed and must not move during layout: meeting blocks and existing hours. Everything else is movable and gets repacked contiguously from 09:00 around the anchors.
 
+**Leftover block**:
+A classified block that was found but did not land on the timeline — either real observed work that overflowed past the day (no room left after the anchored meetings) or an LLM pattern/fill suggestion the packer didn't need. It is not discarded: it surfaces in a right-hand sidebar that auto-opens after _verwerken_ when leftovers exist and collapses to a rail with a count badge. From there each leftover can be added to the day, dismissed, or booked directly to Simplicate. (Already-booked duplicates are _not_ leftovers — they stay suppressed as noise.)
+_Avoid_: dropped block, overflow (when ambiguous with the timeline)
+
 ### The week
 
 **Ingediende week** (submitted week):

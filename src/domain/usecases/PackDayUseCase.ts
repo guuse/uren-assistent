@@ -10,6 +10,11 @@ export interface PackDayOptions {
   /** Minute grid that start/end times snap to. Default 5. */
   gridMinutes?: number
   /**
+   * End of the visible day. Movable work that can't start before this becomes a
+   * leftover ('overflow') instead of being placed off-screen. Default '18:00'.
+   */
+  dayEnd?: string
+  /**
    * Deterministic trend data (see ADR-0004). When supplied, the day is filled to
    * the target by first GROWING observed project blocks toward their historical
    * size, then adding fill blocks only for strong recurring patterns. When
@@ -116,10 +121,23 @@ function distributeGrowth(
  *
  * Existing entries are NOT returned — they're already booked; the packer only positions concepts.
  */
+export interface PackedDay {
+  /** Blocks laid onto the timeline. */
+  placed: ClassifiedBlock[]
+  /** Blocks classification found but the packer couldn't place — for the sidebar. */
+  leftovers: ClassifiedBlock[]
+}
+
 export class PackDayUseCase {
+  /** Backwards-compatible: returns only the placed blocks. */
   execute(blocks: ClassifiedBlock[], existingEntries: HourEntry[], options: PackDayOptions = {}): ClassifiedBlock[] {
+    return this.executeWithLeftovers(blocks, existingEntries, options).placed
+  }
+
+  executeWithLeftovers(blocks: ClassifiedBlock[], existingEntries: HourEntry[], options: PackDayOptions = {}): PackedDay {
     const targetHours = options.targetHours ?? 8
     const dayStartMin = timeToMinutes(options.dayStart ?? '09:00')
+    const dayEndMin = timeToMinutes(options.dayEnd ?? '18:00')
     const grid = options.gridMinutes ?? 5
     const trends = options.trends
 
@@ -201,24 +219,33 @@ export class PackDayUseCase {
     ])
 
     let cursor = dayStartMin
-    const place = (hours: number): { startTime: string; endTime: string; minutes: number } => {
+    // Returns null when the block can't start before the day ends (overflow).
+    const place = (hours: number): { startTime: string; endTime: string; minutes: number } | null => {
       const durMin = snapDuration(hours)
       const start = nextFreeStart(cursor, durMin, occupied)
+      if (start >= dayEndMin) return null
       occupied = mergeIntervals([...occupied, { start, end: start + durMin }])
       cursor = start + durMin
       return { startTime: minutesToTime(start), endTime: minutesToTime(start + durMin), minutes: durMin }
     }
 
-    // Anchored meetings keep their real calendar times unchanged.
+    const leftovers: ClassifiedBlock[] = []
+
+    // Anchored meetings keep their real calendar times unchanged — never leftovers.
     const placedMeetings = anchoredMeetings.map(b => ({ ...b }))
 
     // --- Place movable concept blocks (with any growth) contiguously around fixed zones ---
-    const placedConcepts = grownMovable
-      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
-      .map(b => {
-        const { startTime, endTime, minutes } = place(b.hours)
-        return { ...b, startTime, endTime, hours: minutes / 60 }
-      })
+    // Work that can no longer start before the day ends overflows to the sidebar
+    // rather than being laid off-screen.
+    const placedConcepts: ClassifiedBlock[] = []
+    for (const b of [...grownMovable].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))) {
+      const slot = place(b.hours)
+      if (slot === null) {
+        leftovers.push({ ...b, unplaced: true, leftoverReason: 'overflow' })
+      } else {
+        placedConcepts.push({ ...b, startTime: slot.startTime, endTime: slot.endTime, hours: slot.minutes / 60 })
+      }
+    }
 
     // --- Fill the remaining gap with strong recurring patterns only ---
     // A fill block is added only when the gap couldn't be absorbed by growing real
@@ -244,14 +271,32 @@ export class PackDayUseCase {
         if (leftoverGap <= EPSILON) break
         const pattern = trends.byKey.get(serviceKey(c))!
         const wanted = Math.min(pattern.avgDurationHours, leftoverGap)
-        const { startTime, endTime, minutes } = place(wanted)
-        placedCandidates.push({ ...c, startTime, endTime, hours: minutes / 60 })
-        leftoverGap -= minutes / 60
+        const slot = place(wanted)
+        if (slot === null) break // day is full — remaining candidates surface as suggestions below
+        placedCandidates.push({ ...c, startTime: slot.startTime, endTime: slot.endTime, hours: slot.minutes / 60 })
+        leftoverGap -= slot.minutes / 60
       }
     }
 
-    return [...placedMeetings, ...placedConcepts, ...placedCandidates].sort(
+    const placed = [...placedMeetings, ...placedConcepts, ...placedCandidates].sort(
       (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
     )
+
+    // --- Unused LLM suggestions become leftovers ---
+    // Any candidate the day didn't need surfaces in the sidebar, deduped by
+    // project+service against what's placed, already booked, or already collected.
+    const placedKeys = new Set<string>(
+      placed.filter(b => b.projectId && b.serviceId).map(serviceKey),
+    )
+    const seenSuggestion = new Set<string>()
+    for (const c of candidates) {
+      if (!c.projectId || !c.serviceId) continue
+      const key = serviceKey(c)
+      if (placedKeys.has(key) || entriesByService.has(key) || seenSuggestion.has(key)) continue
+      seenSuggestion.add(key)
+      leftovers.push({ ...c, unplaced: true, leftoverReason: 'suggestion' })
+    }
+
+    return { placed, leftovers }
   }
 }

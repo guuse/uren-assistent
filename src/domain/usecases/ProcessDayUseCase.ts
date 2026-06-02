@@ -155,9 +155,11 @@ export class ProcessDayUseCase {
       // growth (proportional to historical share) and strong-pattern fill — see
       // ADR-0004. The LLM no longer decides what gets filled or how big.
       const trends = computeTrendPatterns(activeProjectsResult.historicalEntries, date)
-      const packed = new PackDayUseCase().execute(classified, existingEntries, { trends })
+      const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers(classified, existingEntries, { trends })
 
-      await this.historyStore.setBlocksForDate(date, packed)
+      // Leftovers ride alongside placed blocks (tagged `unplaced`); the UI routes
+      // placed → timeline, unplaced → the leftover sidebar.
+      await this.historyStore.setBlocksForDate(date, [...placed, ...leftovers])
     } catch (err) {
       yield {
         phase: 'error',

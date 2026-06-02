@@ -281,6 +281,45 @@ describe('PackDayUseCase', () => {
     expect(w.endTime).toBe('13:00')
   })
 
+  it('overflows movable work that cannot start before dayEnd into leftovers', () => {
+    // A meeting fills 09:00–18:00; no room left before dayEnd. The work block
+    // can't start before 18:00 → it overflows to the sidebar, not the timeline.
+    const meeting = makeMeeting('09:00', '18:00', { blockName: 'Allday workshop', hours: 9 })
+    const work = makeBlock({ blockName: 'Late work', hours: 2, projectId: 'p2', serviceId: 's2' })
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers([meeting, work], [], { targetHours: 8 })
+
+    expect(placed.find(b => b.blockName === 'Allday workshop')).toBeDefined()
+    expect(placed.find(b => b.blockName === 'Late work')).toBeUndefined()
+    const lo = leftovers.find(b => b.blockName === 'Late work')!
+    expect(lo).toBeDefined()
+    expect(lo.unplaced).toBe(true)
+    expect(lo.leftoverReason).toBe('overflow')
+  })
+
+  it('never overflows a meeting, even one running past dayEnd', () => {
+    const meeting = makeMeeting('17:00', '19:00', { blockName: 'Evening sync', hours: 2 })
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers([meeting], [], { targetHours: 8 })
+    expect(placed.find(b => b.blockName === 'Evening sync')).toBeDefined()
+    expect(leftovers).toHaveLength(0)
+  })
+
+  it('surfaces unused LLM suggestions as leftovers, deduped by project+service', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 8 }) // fills the day, proj-1/svc-1
+    const usedKey = makeCandidate(3, 1, { blockName: 'Dup of observed', projectId: 'proj-1', serviceId: 'svc-1' })
+    const suggestion = makeCandidate(3, 1, { blockName: 'Idle pattern', projectId: 'p9', serviceId: 's9' })
+    const trends = makeTrends([{ projectId: 'p9', serviceId: 's9', avg: 1, share: 0.2 }])
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers(
+      [observed, usedKey, suggestion], [], { targetHours: 8, trends },
+    )
+
+    // proj-1/svc-1 is covered by the observed block → not a leftover.
+    expect(leftovers.find(b => b.blockName === 'Dup of observed')).toBeUndefined()
+    const s = leftovers.find(b => b.blockName === 'Idle pattern')!
+    expect(s).toBeDefined()
+    expect(s.leftoverReason).toBe('suggestion')
+    expect(placed.find(b => b.origin === 'llm-pattern')).toBeUndefined() // none needed (day full)
+  })
+
   it('output is sorted by startTime ascending', () => {
     const meeting = makeMeeting('11:00', '12:00', { blockName: 'Mtg' })
     const work = makeBlock({ blockName: 'Work', hours: 1 })

@@ -325,11 +325,12 @@ describe('WeekPage render states', () => {
   it('renders timeline in normal state with concept blocks', () => {
     historyStoreMock.blocksForDate = [
       { startTime: '09:00', origin: 'llm', urlPattern: 'u', commits: [{ a: 1 }], linearIssues: [{ b: 2 }] },
-      { startTime: null, origin: 'manual', urlPattern: 'u2' },
+      // an unplaced leftover is routed to the sidebar, not the timeline
+      { startTime: '00:00', origin: 'llm-pattern', urlPattern: 'u2', unplaced: true, leftoverReason: 'suggestion' },
     ]
     renderPage()
     expect(screen.getByTestId('daytimeline')).toBeInTheDocument()
-    // only startTime != null block counts as concept on timeline
+    // only the placed (non-unplaced) block counts as a concept on the timeline
     expect(screen.getByTestId('dt-concept-len')).toHaveTextContent('1')
     // commits/linear pulled from first block fallback
     expect(screen.getByTestId('dt-commits-len')).toHaveTextContent('1')
