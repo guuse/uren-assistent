@@ -10,8 +10,8 @@ import { useAppStore } from '../../store/appStore'
 import { pixelToMinutes, snapToInterval, minutesToTime, swapIfNeeded } from './DragOverlay'
 import EvidencePanel from './EvidencePanel'
 
-const DAY_START = '08:00'
-const DAY_END = '18:00'
+const DEFAULT_START_HOUR = 8
+const DEFAULT_END_HOUR = 18
 const HOUR_HEIGHT_PX = 80
 
 function timeToMinutes(time: string): number {
@@ -51,6 +51,7 @@ interface Props {
   onBookSuggestion: (suggestion: HourEntrySuggestion) => void
   onEditEntry: (entry: HourEntry) => void
   onConceptClick?: (block: ClassifiedBlock) => void
+  onDeleteConcept?: (block: ClassifiedBlock) => void
   onUploadCsv?: (csvContent: string) => void
   isClassifying?: boolean
   onDragNew?: (startTime: string, endTime: string) => void
@@ -70,6 +71,7 @@ export function DayTimeline({
   onBookSuggestion,
   onEditEntry,
   onConceptClick,
+  onDeleteConcept,
   onUploadCsv,
   isClassifying = false,
   onDragNew,
@@ -80,15 +82,32 @@ export function DayTimeline({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const blocksContainerRef = useRef<HTMLDivElement>(null)
 
+  // Dynamic day extent: the grid grows to fit blocks that run past 18:00 (e.g.
+  // overflow work, late meetings) or start before 08:00, so nothing is clipped
+  // off the visible timeline. Defaults to 08:00–18:00 when there's nothing later.
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const blockTimes = [
+    ...entries.flatMap((e) => [e.startTime, e.endTime]),
+    ...conceptBlocks.flatMap((b) => [b.startTime, b.endTime]),
+  ].filter((t): t is string => Boolean(t))
+  const startHour = Math.max(0, Math.min(DEFAULT_START_HOUR, ...blockTimes.map((t) => Math.floor(timeToMinutes(t) / 60))))
+  const endHour = Math.min(24, Math.max(DEFAULT_END_HOUR, ...blockTimes.map((t) => Math.ceil(timeToMinutes(t) / 60))))
+  const numHours = Math.max(1, endHour - startHour)
+  const DAY_START = `${pad2(startHour)}:00`
+  const DAY_END = `${pad2(endHour)}:00`
+  const DAY_START_MIN = startHour * 60
+  const TOTAL_MINS = numHours * 60
+  const TOTAL_PX = HOUR_HEIGHT_PX * numHours
+
   // Drag-to-book state
   const [dragState, setDragState] = useState<{ startMin: number; endMin: number } | null>(null)
   const isDragging = useRef(false)
 
   const getMinutesFromEvent = useCallback((e: MouseEvent) => {
     const rect = blocksContainerRef.current!.getBoundingClientRect()
-    const y = Math.max(0, Math.min(e.clientY - rect.top, HOUR_HEIGHT_PX * 10))
-    return snapToInterval(pixelToMinutes(y, HOUR_HEIGHT_PX * 10, 8 * 60), 30)
-  }, [])
+    const y = Math.max(0, Math.min(e.clientY - rect.top, TOTAL_PX))
+    return snapToInterval(pixelToMinutes(y, TOTAL_PX, DAY_START_MIN), 30)
+  }, [TOTAL_PX, DAY_START_MIN])
 
   function handleBlocksMouseDown(e: React.MouseEvent<HTMLDivElement>) {
     if (!onDragNew) return
@@ -150,10 +169,6 @@ export function DayTimeline({
   const flatBlocks = hasConcepts || hasEntries
     ? mergeConceptsIntoTimeline(entries, conceptBlocks, DAY_START, DAY_END)
     : computeTimelineBlocks(entries, suggestions, DAY_START, DAY_END)
-
-  const DAY_START_MIN = timeToMinutes(DAY_START)
-  const TOTAL_MINS = timeToMinutes(DAY_END) - DAY_START_MIN
-  const TOTAL_PX = HOUR_HEIGHT_PX * 10
 
   function blockTop(startTime: string): number {
     return ((timeToMinutes(startTime) - DAY_START_MIN) / TOTAL_MINS) * TOTAL_PX
@@ -222,19 +237,30 @@ export function DayTimeline({
       const badgeLabel = block.block.origin === 'cache'
         ? 'Cache'
         : `${block.block.confidence}/5`
+      const canDelete = !readOnly && onDeleteConcept !== undefined
       return (
+        <div key={key} className="group" style={baseStyle}>
+          {canDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteConcept!(block.block) }}
+              title="Verwijderen uit dag"
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ position: 'absolute', top: 2, right: 3, zIndex: 5, width: 18, height: 18, borderRadius: 4, border: 'none', background: 'rgba(255,255,255,.85)', color: '#ef4444', fontSize: 12, fontWeight: 700, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              ✕
+            </button>
+          )}
         <button
-          key={key}
           onClick={readOnly ? undefined : () => onConceptClick?.(block.block)}
           style={{
-            ...baseStyle,
+            width: '100%',
+            height: '100%',
             background: cs.bg,
             border: `1.5px ${cs.borderStyle} ${cs.borderColor}`,
             borderLeft: `3px solid ${cs.borderLeft}`,
             borderRadius: 5,
             overflow: 'hidden',
             cursor: readOnly ? 'default' : 'pointer',
-            position: 'absolute',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -243,7 +269,7 @@ export function DayTimeline({
           }}
         >
           {!compact && (
-            <span style={{ background: cs.badgeBg, color: cs.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '1px 4px', position: 'absolute', top: 3, right: 4 }}>
+            <span className={canDelete ? 'group-hover:opacity-0 transition-opacity' : ''} style={{ background: cs.badgeBg, color: cs.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '1px 4px', position: 'absolute', top: 3, right: 4 }}>
               {badgeLabel}
             </span>
           )}
@@ -271,6 +297,7 @@ export function DayTimeline({
             </>
           )}
         </button>
+        </div>
       )
     }
 
@@ -478,7 +505,7 @@ export function DayTimeline({
           <div className="flex gap-3">
             {/* Uurlabels */}
             <div className="flex flex-col flex-shrink-0 w-8">
-              {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
+              {Array.from({ length: numHours }, (_, i) => i + startHour).map((hour) => (
                 <div
                   key={hour}
                   className="relative flex-shrink-0"
@@ -502,7 +529,7 @@ export function DayTimeline({
               ref={blocksContainerRef}
               className="flex-1 relative"
               style={{
-                minHeight: HOUR_HEIGHT_PX * 10,
+                minHeight: TOTAL_PX,
                 cursor: onDragNew ? (dragState ? 'ns-resize' : 'crosshair') : undefined,
                 userSelect: onDragNew ? 'none' : undefined,
               }}
@@ -511,8 +538,8 @@ export function DayTimeline({
               {/* Drag preview-blok */}
               {dragState && (() => {
                 const { start, end } = swapIfNeeded(dragState.startMin, dragState.endMin)
-                const top = ((start - 8 * 60) / 600) * (HOUR_HEIGHT_PX * 10)
-                const height = Math.max(1, ((end - start) / 600) * (HOUR_HEIGHT_PX * 10))
+                const top = ((start - DAY_START_MIN) / TOTAL_MINS) * TOTAL_PX
+                const height = Math.max(1, ((end - start) / TOTAL_MINS) * TOTAL_PX)
                 const durationMins = end - start
                 const durationLabel = durationMins >= 60 ? `${durationMins / 60}u` : `${durationMins}m`
                 return (

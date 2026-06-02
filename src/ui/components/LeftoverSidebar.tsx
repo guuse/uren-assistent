@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import { useAppStore } from '../../store/appStore'
 
@@ -11,10 +11,8 @@ import { useAppStore } from '../../store/appStore'
 
 interface Props {
   leftovers: ClassifiedBlock[]
-  onAdd: (block: ClassifiedBlock) => void
   onBook: (block: ClassifiedBlock) => void
   onDismiss: (block: ClassifiedBlock) => void
-  onAddAll?: () => void
   readOnly?: boolean
 }
 
@@ -43,15 +41,20 @@ function durationLabel(hours: number): string {
   return `~${String(rounded).replace('.', ',')}u`
 }
 
-export function LeftoverSidebar({ leftovers, onAdd, onBook, onDismiss, onAddAll, readOnly = false }: Props) {
+export function LeftoverSidebar({ leftovers, onBook, onDismiss, readOnly = false }: Props) {
   const projects = useAppStore(s => s.projects)
   const [open, setOpen] = useState(true)
   const [hovered, setHovered] = useState<string | null>(null)
 
-  // Auto-open whenever a fresh set of leftovers appears (e.g. after "Verwerk dag").
-  useEffect(() => {
+  // Auto-open whenever a fresh set of leftovers appears (e.g. after "Verwerk dag"),
+  // while still letting the user collapse manually. Done by adjusting state during
+  // render when the leftover set changes (React's recommended pattern — no effect).
+  const leftoverKey = leftovers.map(l => l.urlPattern).join('|')
+  const [seenKey, setSeenKey] = useState(leftoverKey)
+  if (leftoverKey !== seenKey) {
+    setSeenKey(leftoverKey)
     if (leftovers.length > 0) setOpen(true)
-  }, [leftovers.length])
+  }
 
   if (leftovers.length === 0) return null
 
@@ -88,20 +91,9 @@ export function LeftoverSidebar({ leftovers, onAdd, onBook, onDismiss, onAddAll,
           Niet geplaatst
           <span style={{ background: '#fef3c7', color: '#d97706', fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '0 6px' }}>{leftovers.length}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {!readOnly && onAddAll && (
-            <button
-              onClick={onAddAll}
-              style={{ fontSize: 9, padding: '3px 7px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              title="Alles aan de dag toevoegen"
-            >
-              Alles +
-            </button>
-          )}
-          <button onClick={() => setOpen(false)} title="Inklappen" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', padding: '0 4px', background: 'none', border: 'none' }}>
-            »
-          </button>
-        </div>
+        <button onClick={() => setOpen(false)} title="Inklappen" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', padding: '0 4px', background: 'none', border: 'none' }}>
+          »
+        </button>
       </div>
 
       {/* Chips */}
@@ -140,7 +132,6 @@ export function LeftoverSidebar({ leftovers, onAdd, onBook, onDismiss, onAddAll,
               </div>
               {showActions && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                  <button onClick={() => onAdd(block)} title="Toevoegen aan dag" style={iconBtn('#4f46e5', '#eef2ff')}>+</button>
                   <button onClick={() => onBook(block)} title="Direct boeken" style={iconBtn('#fff', '#16a34a', true)}>✓</button>
                   <button onClick={() => onDismiss(block)} title="Negeren" style={iconBtn('var(--text-muted)', 'var(--bg)')}>✕</button>
                 </div>

@@ -212,18 +212,6 @@ export function WeekPage() {
     return ends.length > 0 ? ends.reduce((a, b) => (a > b ? a : b)) : '09:00'
   }
 
-  // Promote a leftover onto the timeline, appended after the last placed block.
-  async function handleAddLeftover(block: ClassifiedBlock) {
-    const start = latestPlacedEnd(historyStore.blocksForDate)
-    const end = addHoursToTime(start, block.hours)
-    const updated = historyStore.blocksForDate.map(b =>
-      b.urlPattern === block.urlPattern
-        ? { ...b, unplaced: false, startTime: start, endTime: end, firstVisitTime: start, lastVisitTime: end }
-        : b,
-    )
-    await saveBlocksForDate(week.selectedDate, updated)
-  }
-
   // Book a leftover directly via the normal booking modal (handles missing
   // project/service and confirms times). Synthetic 00:00 times get a real slot.
   function handleBookLeftover(block: ClassifiedBlock) {
@@ -235,17 +223,9 @@ export function WeekPage() {
     await historyStore.removeBlock(week.selectedDate, block.urlPattern)
   }
 
-  async function handleAddAllLeftovers() {
-    let cursor = latestPlacedEnd(historyStore.blocksForDate)
-    const updated = historyStore.blocksForDate.map(b => ({ ...b }))
-    for (const b of updated) {
-      if (!b.unplaced) continue
-      const end = addHoursToTime(cursor, b.hours)
-      b.startTime = cursor; b.endTime = end; b.firstVisitTime = cursor; b.lastVisitTime = end
-      b.unplaced = false
-      cursor = end
-    }
-    await saveBlocksForDate(week.selectedDate, updated)
+  // Delete a concept block straight from the timeline (no booking modal).
+  async function handleDeleteConcept(block: ClassifiedBlock) {
+    await historyStore.removeBlock(week.selectedDate, block.urlPattern)
   }
 
   const { saveBlocksForDate, reloadForDate } = historyStore
@@ -593,15 +573,13 @@ export function WeekPage() {
               onConceptClick={handleConceptClick}
               isClassifying={isClassifying || isProcessingDay}
               readOnly={daySubmitted}
-              {...(daySubmitted ? {} : { onUploadCsv: handleUploadCsv, onDragNew: handleDragNew })}
+              {...(daySubmitted ? {} : { onUploadCsv: handleUploadCsv, onDragNew: handleDragNew, onDeleteConcept: (b: ClassifiedBlock) => void handleDeleteConcept(b) })}
               {...(canProcessWeek && !daySubmitted ? { onProcessDay: () => void handleProcessDay(week.selectedDate) } : {})}
             />
             <LeftoverSidebar
               leftovers={historyStore.blocksForDate.filter(b => b.unplaced)}
-              onAdd={b => void handleAddLeftover(b)}
               onBook={handleBookLeftover}
               onDismiss={b => void handleDismissLeftover(b)}
-              onAddAll={() => void handleAddAllLeftovers()}
               readOnly={daySubmitted}
             />
           </div>
