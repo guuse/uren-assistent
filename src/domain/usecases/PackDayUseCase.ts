@@ -104,7 +104,9 @@ function distributeGrowth(
 /**
  * Lays a day's classified blocks onto the timeline so it reads as a clean, gap-free, ~8h day.
  *
- * - Anchors (today's existing entries) keep their fixed times; movable blocks flow around them.
+ * - Anchors keep their fixed times: today's existing entries AND meeting blocks (calendar is the
+ *   highest-priority source). Meetings may overlap each other — the timeline renders concurrent
+ *   meetings side by side. Movable blocks (work, fill) flow around the union of all anchors.
  * - Concepts that duplicate an existing entry are dropped.
  * - With `trends` (ADR-0004): the gap to the target is filled FIRST by growing observed
  *   project blocks proportional to their historical share (capped at their historical average
@@ -150,21 +152,28 @@ export class PackDayUseCase {
 
     const keptConcepts = concepts.filter(b => !isTimedConceptDuplicate(b))
 
-    const anchorHours = existingEntries.reduce((s, e) => s + e.hours, 0)
-    const observedHours = keptConcepts.reduce((s, b) => s + b.hours, 0)
-    const gap = targetHours - anchorHours - observedHours
+    // Calendar is the highest-priority source: meeting blocks are anchored at
+    // their real event times and never repacked. They may overlap each other —
+    // the timeline renders concurrent meetings side by side (assignBlockColumns),
+    // Google-Calendar style. Everything else is movable and flows around them.
+    const anchoredMeetings = keptConcepts.filter(isMeeting)
+    const movableConcepts = keptConcepts.filter(b => !isMeeting(b))
 
-    // --- Grow phase: distribute the gap across observed project blocks ---
-    // Growable = scoped, non-meeting concepts whose project+service has a trend.
-    // A meeting's duration is fixed by its calendar event; a block without a
-    // historical average can't be sized, so neither grows.
-    const grownConcepts: ClassifiedBlock[] = keptConcepts.map(b => ({ ...b }))
+    const anchorHours = existingEntries.reduce((s, e) => s + e.hours, 0)
+    const meetingHours = anchoredMeetings.reduce((s, b) => s + b.hours, 0)
+    const movableObservedHours = movableConcepts.reduce((s, b) => s + b.hours, 0)
+    const gap = targetHours - anchorHours - meetingHours - movableObservedHours
+
+    // --- Grow phase: distribute the gap across observed (movable) project blocks ---
+    // A meeting's duration is fixed by its calendar event, so meetings never grow.
+    // A block without a historical average can't be sized, so it doesn't grow either.
+    const grownMovable: ClassifiedBlock[] = movableConcepts.map(b => ({ ...b }))
     let leftoverGap = Math.max(0, gap)
 
     if (trends && gap > EPSILON) {
-      const growable = grownConcepts
+      const growable = grownMovable
         .map((b, i) => ({ b, i }))
-        .filter(({ b }) => !isMeeting(b) && b.projectId && b.serviceId && trends.byKey.has(serviceKey(b)))
+        .filter(({ b }) => b.projectId && b.serviceId && trends.byKey.has(serviceKey(b)))
 
       if (growable.length > 0) {
         const items = growable.map(({ b }) => {
@@ -174,16 +183,19 @@ export class PackDayUseCase {
         })
         const { growth, leftover } = distributeGrowth(items, gap)
         growable.forEach(({ i }, k) => {
-          grownConcepts[i]!.hours += growth[k]!
+          grownMovable[i]!.hours += growth[k]!
         })
         leftoverGap = leftover
       }
     }
 
-    // --- Occupied zones: only the already-booked entries are fixed ---
-    let occupied: Interval[] = mergeIntervals(
-      existingEntries.map(e => ({ start: timeToMinutes(e.startTime), end: timeToMinutes(e.endTime) })),
-    )
+    // --- Occupied zones: booked entries AND anchored meetings are fixed ---
+    // Movable blocks flow around the union of both; meetings keep their own times
+    // even where they overlap each other.
+    let occupied: Interval[] = mergeIntervals([
+      ...existingEntries.map(e => ({ start: timeToMinutes(e.startTime), end: timeToMinutes(e.endTime) })),
+      ...anchoredMeetings.map(m => ({ start: timeToMinutes(m.startTime), end: timeToMinutes(m.endTime) })),
+    ])
 
     let cursor = dayStartMin
     const place = (hours: number): { startTime: string; endTime: string; minutes: number } => {
@@ -194,8 +206,11 @@ export class PackDayUseCase {
       return { startTime: minutesToTime(start), endTime: minutesToTime(start + durMin), minutes: durMin }
     }
 
-    // --- Place concept blocks (with any growth) contiguously, chronologically, around booked hours ---
-    const placedConcepts = grownConcepts
+    // Anchored meetings keep their real calendar times unchanged.
+    const placedMeetings = anchoredMeetings.map(b => ({ ...b }))
+
+    // --- Place movable concept blocks (with any growth) contiguously around fixed zones ---
+    const placedConcepts = grownMovable
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       .map(b => {
         const { startTime, endTime, minutes } = place(b.hours)
@@ -232,7 +247,7 @@ export class PackDayUseCase {
       }
     }
 
-    return [...placedConcepts, ...placedCandidates].sort(
+    return [...placedMeetings, ...placedConcepts, ...placedCandidates].sort(
       (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
     )
   }

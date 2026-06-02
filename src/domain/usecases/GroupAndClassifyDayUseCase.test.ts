@@ -115,6 +115,31 @@ describe('GroupAndClassifyDayUseCase', () => {
     expect(result[0]!.origin).toBe('llm')
   })
 
+  it('still emits a meeting block when the LLM omits it (calendar is guaranteed)', async () => {
+    const event = makeEvent({ title: 'Sprint review' })
+    // LLM returns no results at all — the meeting must not vanish.
+    const { copilotRepo, cacheRepo } = makeDeps({}, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [], [event])
+
+    expect(result).toHaveLength(1)
+    expect(result[0]!.blockName).toBe('Sprint review') // falls back to the event title
+    expect(result[0]!.overlappingMeetings).toHaveLength(1)
+    expect(result[0]!.projectId).toBeUndefined() // unclassified — user fills it in
+  })
+
+  it('falls back to the cached mapping for a meeting the LLM omits', async () => {
+    const event = makeEvent({ title: 'All Hands' })
+    const cacheAll = { 'All Hands:_solo': { projectId: 'proj-1', serviceId: 'svc-1', note: 'wekelijks' } }
+    const { copilotRepo, cacheRepo } = makeDeps(cacheAll, [])
+    const useCase = new GroupAndClassifyDayUseCase(copilotRepo, cacheRepo, projects, services)
+    const result = await useCase.execute('2024-01-15', [], [event])
+
+    expect(result).toHaveLength(1)
+    expect(result[0]!.projectId).toBe('proj-1')
+    expect(result[0]!.serviceId).toBe('svc-1')
+  })
+
   it('consolidates two standalone blocks on the same project+service into one', async () => {
     const blockA = makeBlock({ urlPattern: 'github.com/org/repo@09:00', firstVisitTime: '09:00', lastVisitTime: '10:00', hours: 1 })
     const blockB = makeBlock({ urlPattern: 'github.com/org/repo@14:00', firstVisitTime: '14:00', lastVisitTime: '15:00', hours: 1 })

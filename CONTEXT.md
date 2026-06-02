@@ -15,7 +15,7 @@ Time already booked for the day as a Simplicate `HourEntry`. Rendered blue ("geb
 _Avoid_: entry (when ambiguous with concept block), booking
 
 **Meeting block**:
-A concept block anchored to a calendar event; its start/end come from the event and are treated as fixed.
+A concept block anchored to a calendar event; its start/end come from the event and are treated as fixed. Calendar is the highest-priority source, so an accepted meeting **always** produces a block — even if the classifier omits it (it then falls back to the event title / cached mapping, or stays unclassified). Concurrent meetings keep their real times and overlap each other; the timeline renders them side by side, Google-Calendar style.
 
 **Source**:
 An origin of evidence about the day. The five sources, in fixed priority order, are: **calendar** > **GitHub commits** > **browser history** > **Linear** > **trends**. The first four are _observed activity_; trends are historical bookings from prior weeks. A higher source outranks a lower one when they describe the same work.

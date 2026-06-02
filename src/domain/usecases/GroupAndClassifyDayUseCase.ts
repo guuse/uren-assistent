@@ -1,4 +1,4 @@
-import type { ICopilotRepository, DayItem, Project, Service } from '../repositories/ICopilotRepository'
+import type { ICopilotRepository, DayItem, Project, Service, DayClassificationResult } from '../repositories/ICopilotRepository'
 import type { IMappingCacheRepository } from '../repositories/IMappingCacheRepository'
 import type { CalendarEvent } from '../entities/CalendarEvent'
 import type { HistoryBlock } from '../entities/HistoryBlock'
@@ -168,51 +168,68 @@ export class GroupAndClassifyDayUseCase {
         }))
 
       const regularResults = results.filter(r => r.isPatternBlock !== true)
+      const resultByIndex = new Map<number, DayClassificationResult>(
+        regularResults.map(r => [r.index, r]),
+      )
 
+      // Calendar is the highest-priority source: every meeting item ALWAYS yields a
+      // block, even when the LLM omits its index from the response. Use the LLM
+      // result when present, else the cached mapping for this recurring meeting,
+      // else leave it unclassified so the user can fill it in — never silently
+      // drop a meeting.
+      for (const item of llmItems) {
+        if (item.kind !== 'meeting') continue
+        const result = resultByIndex.get(item.index)
+        const cached = allCache[item.cacheKey]
+        const event = item.event
+        const hBlocks = item.historyBlocks
+        const meetingUrls = hBlocks.flatMap(b => b.urls)
+        const meetingTitles = hBlocks.flatMap(b => b.titles)
+        const classified: ClassifiedBlock = {
+          date,
+          urlPattern: item.cacheKey,
+          urls: meetingUrls,
+          titles: meetingTitles,
+          visitCount: hBlocks.reduce((sum, b) => sum + b.visitCount, 0),
+          firstVisitTime: toTime(event.start),
+          lastVisitTime: toTime(event.end),
+          hours: roundToHalf((event.end.getTime() - event.start.getTime()) / 3_600_000),
+          blockName: result?.blockName ?? event.title,
+          summary: result?.summary ?? '',
+          startTime: toTime(event.start),
+          endTime: toTime(event.end),
+          note: result?.note ?? cached?.note ?? '',
+          confidence: result ? toConfidenceScore(result.confidence) : 1,
+          origin: 'llm',
+          overlappingMeetings: [event],
+          rawTitles: meetingTitles.slice(0, 5),
+          rawUrls: meetingUrls.slice(0, 5).map(sanitizeUrl),
+          ...(context?.commits !== undefined ? { commits: context.commits } : {}),
+          ...((() => {
+            if (!context?.linearIssues?.length) return {}
+            if (result?.relatedIssueIds && result.relatedIssueIds.length > 0) {
+              const relatedSet = new Set(result.relatedIssueIds)
+              return { linearIssues: context.linearIssues.filter(i => relatedSet.has(i.identifier)) }
+            }
+            return { linearIssues: context.linearIssues }
+          })()),
+        }
+        const projectId = result?.projectId ?? cached?.projectId
+        const serviceId = result?.serviceId ?? cached?.serviceId
+        if (projectId != null) classified.projectId = projectId
+        if (serviceId != null) classified.serviceId = serviceId
+        const ht = this.resolveHourTypeId(classified.serviceId, result?.hourTypeId)
+        if (ht !== undefined) classified.hourTypeId = ht
+        llmResults.push(classified)
+      }
+
+      // Standalone items stay LLM-result-driven: the model may legitimately skip
+      // low-signal browser noise, so we only emit a block when it classified one.
       for (const result of regularResults) {
         const matchedItem = llmItems.find(i => i.index === result.index)
-        if (!matchedItem) continue
+        if (!matchedItem || matchedItem.kind !== 'standalone') continue
 
-        if (matchedItem.kind === 'meeting') {
-          const event = matchedItem.event
-          const hBlocks = matchedItem.historyBlocks
-          const meetingUrls = hBlocks.flatMap(b => b.urls)
-          const meetingTitles = hBlocks.flatMap(b => b.titles)
-          const classified: ClassifiedBlock = {
-            date,
-            urlPattern: matchedItem.cacheKey,
-            urls: meetingUrls,
-            titles: meetingTitles,
-            visitCount: hBlocks.reduce((sum, b) => sum + b.visitCount, 0),
-            firstVisitTime: toTime(event.start),
-            lastVisitTime: toTime(event.end),
-            hours: roundToHalf((event.end.getTime() - event.start.getTime()) / 3_600_000),
-            blockName: result.blockName,
-            summary: result.summary,
-            startTime: toTime(event.start),
-            endTime: toTime(event.end),
-            note: result.note,
-            confidence: toConfidenceScore(result.confidence),
-            origin: 'llm',
-            overlappingMeetings: [event],
-            rawTitles: meetingTitles.slice(0, 5),
-            rawUrls: meetingUrls.slice(0, 5).map(sanitizeUrl),
-            ...(context?.commits !== undefined ? { commits: context.commits } : {}),
-            ...((() => {
-              if (!context?.linearIssues?.length) return {}
-              if (result.relatedIssueIds && result.relatedIssueIds.length > 0) {
-                const relatedSet = new Set(result.relatedIssueIds)
-                return { linearIssues: context.linearIssues.filter(i => relatedSet.has(i.identifier)) }
-              }
-              return { linearIssues: context.linearIssues }
-            })()),
-          }
-          if (result.projectId !== null) classified.projectId = result.projectId
-          if (result.serviceId !== null) classified.serviceId = result.serviceId
-          const ht = this.resolveHourTypeId(classified.serviceId, result.hourTypeId)
-          if (ht !== undefined) classified.hourTypeId = ht
-          llmResults.push(classified)
-        } else {
+        {
           const block = matchedItem.block
 
           // Voor commit-blocks: filter commits op deze repo + tijdsperiode
