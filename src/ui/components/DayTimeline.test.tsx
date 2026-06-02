@@ -136,6 +136,30 @@ describe('DayTimeline', () => {
     expect(onConceptClick).toHaveBeenCalledWith(concept)
   })
 
+  it('deletes a concept from the timeline via the ✕ when onDeleteConcept is given', () => {
+    const onDeleteConcept = vi.fn()
+    const concept = makeConcept()
+    render(<DayTimeline {...baseProps({ conceptBlocks: [concept], onDeleteConcept })} />)
+    fireEvent.click(screen.getByTitle('Verwijderen uit dag'))
+    expect(onDeleteConcept).toHaveBeenCalledWith(concept)
+  })
+
+  it('shows no delete control when onDeleteConcept is absent or read-only', () => {
+    const concept = makeConcept()
+    const { rerender } = render(<DayTimeline {...baseProps({ conceptBlocks: [concept] })} />)
+    expect(screen.queryByTitle('Verwijderen uit dag')).not.toBeInTheDocument()
+    rerender(<DayTimeline {...baseProps({ conceptBlocks: [concept], onDeleteConcept: vi.fn(), readOnly: true })} />)
+    expect(screen.queryByTitle('Verwijderen uit dag')).not.toBeInTheDocument()
+  })
+
+  it('extends the grid past 18:00 to fit a late block', () => {
+    const late = makeConcept({ blockName: 'Late', startTime: '18:30', endTime: '19:15' })
+    render(<DayTimeline {...baseProps({ conceptBlocks: [late] })} />)
+    // hour labels now include 18 and 19 (grid extended), not just up to 17
+    expect(screen.getByText('18')).toBeInTheDocument()
+    expect(screen.getByText('19')).toBeInTheDocument()
+  })
+
   it('shows concept header summary with pending count (plural)', () => {
     const concepts = [
       makeConcept({ blockName: 'A', projectId: undefined, serviceId: undefined, startTime: '08:00', endTime: '09:00' }),

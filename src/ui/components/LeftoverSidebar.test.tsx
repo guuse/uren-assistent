@@ -24,10 +24,8 @@ function leftover(overrides: Record<string, unknown> = {}): ClassifiedBlock {
 function props(overrides: Partial<Parameters<typeof LeftoverSidebar>[0]> = {}) {
   return {
     leftovers: [leftover()],
-    onAdd: vi.fn(),
     onBook: vi.fn(),
     onDismiss: vi.fn(),
-    onAddAll: vi.fn(),
     ...overrides,
   }
 }
@@ -58,26 +56,27 @@ describe('LeftoverSidebar', () => {
     expect(screen.getByTitle('Direct boeken')).toBeInTheDocument()
   })
 
-  it('fires add / book / dismiss for a chip', () => {
-    const onAdd = vi.fn(), onBook = vi.fn(), onDismiss = vi.fn()
+  it('fires book / dismiss for a chip (no add action)', () => {
+    const onBook = vi.fn(), onDismiss = vi.fn()
     const block = leftover()
-    render(<LeftoverSidebar {...props({ leftovers: [block], onAdd, onBook, onDismiss })} />)
+    render(<LeftoverSidebar {...props({ leftovers: [block], onBook, onDismiss })} />)
     fireEvent.mouseEnter(screen.getByText('Uren-assistent Gemini fix').closest('div')!.parentElement!)
-    fireEvent.click(screen.getByTitle('Toevoegen aan dag'))
+    expect(screen.queryByTitle('Toevoegen aan dag')).not.toBeInTheDocument() // add removed
     fireEvent.click(screen.getByTitle('Direct boeken'))
     fireEvent.click(screen.getByTitle('Negeren'))
-    expect(onAdd).toHaveBeenCalledWith(block)
     expect(onBook).toHaveBeenCalledWith(block)
     expect(onDismiss).toHaveBeenCalledWith(block)
   })
 
   it('collapses to a rail and re-opens', () => {
     render(<LeftoverSidebar {...props()} />)
+    expect(screen.getByTitle('Inklappen')).toBeInTheDocument()
     fireEvent.click(screen.getByTitle('Inklappen'))
-    // collapsed: the rail button is present, header bulk action is gone
-    expect(screen.queryByText('Alles +')).not.toBeInTheDocument()
+    // collapsed: chips are hidden, the rail toggle is shown
+    expect(screen.queryByTitle('Inklappen')).not.toBeInTheDocument()
+    expect(screen.queryByText('Uren-assistent Gemini fix')).not.toBeInTheDocument()
     fireEvent.click(screen.getByTitle('Niet-geplaatste blokken tonen'))
-    expect(screen.getByText('Alles +')).toBeInTheDocument()
+    expect(screen.getByTitle('Inklappen')).toBeInTheDocument()
   })
 
   it('hides actions when read-only', () => {
