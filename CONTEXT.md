@@ -15,17 +15,35 @@ Time already booked for the day as a Simplicate `HourEntry`. Rendered blue ("geb
 _Avoid_: entry (when ambiguous with concept block), booking
 
 **Meeting block**:
-A concept block anchored to a calendar event; its start/end come from the event and are treated as fixed.
+A concept block anchored to a calendar event; its start/end come from the event and are treated as fixed. Calendar is the highest-priority source. A meeting counts as attended unless you explicitly **declined** it (un-RSVP'd `needsAction` meetings — recurring team rituals — are kept). Every such meeting **always** produces a block — even if the classifier omits it (it then falls back to the event title / cached mapping, or stays unclassified). Concurrent meetings keep their real times and overlap each other; the timeline renders them side by side, Google-Calendar style.
 
-**Fill candidate**:
-A concept block the LLM invents from recurring history (a project+service that recurs at regular intervals) rather than from observed activity. Origin `llm-pattern`. Returned as an ordered list with a confidence and `estimatedHours`. High-confidence candidates are genuine recurring work added regardless; the lowest-confidence ones (conf 1) are filler, pulled in only when the day is short of the fill target.
-_Avoid_: pattern block, filler block (both are now this one concept)
+**Source**:
+An origin of evidence about the day. The five sources, in fixed priority order, are: **calendar** > **GitHub commits** > **browser history** > **Linear** > **trends**. The first four are _observed activity_; trends are historical bookings from prior weeks. A higher source outranks a lower one when they describe the same work.
+_Avoid_: signal, input (when ambiguous)
+
+**Absorption**:
+A higher-priority source claiming related lower-priority activity that falls in its scope into a single concept block, instead of producing parallel blocks. A meeting absorbs the commits/browser activity in its window; a commit block absorbs the Linear issue it implements. Absorption only happens with **hard evidence** of a relationship (shared repo↔project mapping, a shared Linear issue ref, or clear keyword overlap) — never on time-overlap alone. Without evidence the activities stay separate blocks.
+
+**Project block**:
+The single concept block that all observed activity for one project+service on one day folds into. Several commit sessions / PR-merges and browser blocks on the same project+service become one block; the individual PRs/commits live on in its summary and note. Different services under the same project stay separate blocks (a service is a billable distinction), optionally grouped under a project header in the UI.
+_Avoid_: PR block, commit block (those are now folded into this)
+
+**Trends**:
+Historical bookings from prior weeks, used only to reach the fill target — never to create or relabel observed work. Trends fill in two ways, in order: first by **growing** the day's existing project blocks toward their historical size; then, only if still short, by adding loose fill blocks for **strong recurring patterns**. Trends are the lowest-priority source.
+_Avoid_: pattern block, filler block, fill candidate (all superseded by this term + Strong recurring pattern)
+
+**Strong recurring pattern**:
+A project+service booked in ≥ 3 of the last 4 weeks on a cadence that lands on the target date. This is the only trend allowed to introduce a project that had _no_ observed activity that day. Detected deterministically (counts + cadence + historical average duration computed in TypeScript); the LLM may select and label from the detected list but never invents one.
 
 **Fill target**:
-The amount of booked time a day should reach — 8.0h total, counting existing hours and meeting blocks toward it. The packer fills the remainder with movable concept blocks, then with fill candidates until the target is met.
+The amount of booked time a day should reach — 8.0h total (a floor, not a ceiling), counting existing hours and meeting blocks toward it. The packer reaches it by first placing observed (absorbed, consolidated) blocks, then growing those blocks toward their historical share via trends, then adding strong-recurring-pattern fill blocks. Real work is never trimmed to stay under the target.
 
 **Anchor**:
 A block whose time is fixed and must not move during layout: meeting blocks and existing hours. Everything else is movable and gets repacked contiguously from 09:00 around the anchors.
+
+**Leftover block**:
+A classified block that was found but did not land on the timeline — either real observed work that overflowed past the day (no room left after the anchored meetings) or an LLM pattern/fill suggestion the packer didn't need. It is not discarded: it surfaces in a right-hand sidebar that auto-opens after _verwerken_ when leftovers exist and collapses to a rail with a count badge. From there each leftover can be added to the day, dismissed, or booked directly to Simplicate. (Already-booked duplicates are _not_ leftovers — they stay suppressed as noise.)
+_Avoid_: dropped block, overflow (when ambiguous with the timeline)
 
 ### The week
 

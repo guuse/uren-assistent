@@ -142,6 +142,36 @@ describe('GoogleCalendarRepository', () => {
       expect(e2.attendees).toEqual(['other@x.com'])
     })
 
+    it("keeps un-RSVP'd (needsAction) meetings and drops only declined ones", async () => {
+      const kc = makeKeychain({ 'google-access-token': 'tok', 'google-token-expiry': FUTURE })
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            // never responded — a recurring team meeting you attend without RSVP
+            {
+              id: 'na',
+              summary: 'Standup T3',
+              start: { dateTime: '2026-05-20T09:00:00Z' },
+              end: { dateTime: '2026-05-20T09:15:00Z' },
+              attendees: [{ email: 'me@x.com', self: true, responseStatus: 'needsAction' }],
+            },
+            // explicitly declined — still excluded
+            {
+              id: 'dec',
+              summary: 'Optional sync',
+              start: { dateTime: '2026-05-20T12:00:00Z' },
+              end: { dateTime: '2026-05-20T13:00:00Z' },
+              attendees: [{ email: 'me@x.com', self: true, responseStatus: 'declined' }],
+            },
+          ],
+        }),
+      })
+      const repo = new GoogleCalendarRepository(kc, 'cid', 'secret')
+      const events = await repo.fetchEvents(start, end)
+      expect(events.map(e => e.id)).toEqual(['na'])
+    })
+
     it('returns [] when items is absent', async () => {
       const kc = makeKeychain({ 'google-access-token': 'tok', 'google-token-expiry': FUTURE })
       fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) })

@@ -168,6 +168,10 @@ export function DayTimeline({
   function renderBlock(block: TimelineBlock, height: number, key: string | number, positionStyle?: React.CSSProperties) {
     const baseStyle: React.CSSProperties = { height, ...positionStyle }
 
+    // Short blocks (e.g. 15-min meetings) can't fit two stacked lines; render a
+    // single compact line (title + time inline) so nothing clips.
+    const compact = height < 42
+
     if (block.type === 'entry') {
       return (
         <button
@@ -183,18 +187,31 @@ export function DayTimeline({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            padding: '4px 12px',
+            padding: compact ? '2px 10px' : '4px 12px',
             textAlign: 'left',
           }}
         >
-          <div style={{ color: 'rgba(255,255,255,.95)', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {projectName(block.entry.projectId)}
-          </div>
-          <div style={{ color: 'rgba(255,255,255,.65)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
-          </div>
-          {block.entry.note && height > 52 && (
-            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.entry.note}</div>
+          {compact ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, overflow: 'hidden' }}>
+              <span style={{ color: 'rgba(255,255,255,.95)', fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {projectName(block.entry.projectId)}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,.6)', fontSize: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {block.entry.startTime}–{block.entry.endTime}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div style={{ color: 'rgba(255,255,255,.95)', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {projectName(block.entry.projectId)}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,.65)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {block.entry.startTime}–{block.entry.endTime} · {block.entry.hours}u
+              </div>
+              {block.entry.note && height > 52 && (
+                <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.entry.note}</div>
+              )}
+            </>
           )}
         </button>
       )
@@ -221,22 +238,37 @@ export function DayTimeline({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            padding: '4px 12px',
+            padding: compact ? '2px 10px' : '4px 12px',
             textAlign: 'left',
           }}
         >
-          <span style={{ background: cs.badgeBg, color: cs.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '1px 4px', position: 'absolute', top: 3, right: 4 }}>
-            {badgeLabel}
-          </span>
-          <div style={{ color: cs.titleColor, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
-            {block.block.blockName}
-          </div>
-          <div style={{ color: cs.subColor, fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3, marginTop: 1 }}>
-            {block.block.startTime}–{block.block.endTime}
-            {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
-          </div>
-          {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
-            <div style={{ fontSize: 8, color: '#a8a29e', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>⚠ Project ontbreekt — klik om in te vullen</div>
+          {!compact && (
+            <span style={{ background: cs.badgeBg, color: cs.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '1px 4px', position: 'absolute', top: 3, right: 4 }}>
+              {badgeLabel}
+            </span>
+          )}
+          {compact ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, overflow: 'hidden' }}>
+              <span style={{ color: cs.titleColor, fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {block.block.blockName}
+              </span>
+              <span style={{ color: cs.subColor, fontSize: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {block.block.startTime}–{block.block.endTime}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div style={{ color: cs.titleColor, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
+                {block.block.blockName}
+              </div>
+              <div style={{ color: cs.subColor, fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3, marginTop: 1 }}>
+                {block.block.startTime}–{block.block.endTime}
+                {block.block.projectId ? ` · ${projectName(block.block.projectId)}` : ''}
+              </div>
+              {(!block.block.projectId || !block.block.serviceId) && height > 52 && (
+                <div style={{ fontSize: 8, color: '#a8a29e', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>⚠ Project ontbreekt — klik om in te vullen</div>
+              )}
+            </>
           )}
         </button>
       )
@@ -516,13 +548,14 @@ export function DayTimeline({
               })()}
                <div className="absolute inset-0">
                 {(() => {
-                  // Interval partitioning: non-overlapping blocks share a column, so a
-                  // gap-free day renders in a single column (see assignBlockColumns).
+                  // Google-Calendar-style layout: blocks are grouped into transitive
+                  // overlap clusters and the width split happens only within a cluster,
+                  // so a non-overlapping block stays full width and two concurrent blocks
+                  // each take half of just their shared band (see assignBlockColumns).
                   const contentBlocks = flatBlocks.filter(b => b.type === 'entry' || b.type === 'concept')
-                  const { columns: blockColumns, numCols } = assignBlockColumns(contentBlocks)
-                  const colWidthPct = 100 / numCols
+                  const { columns: blockColumns } = assignBlockColumns(contentBlocks)
 
-                  // Render gap blocks first (always column 0, full width only if no content blocks)
+                  // Render gap blocks first (full width — they never overlap content)
                   const gapElements = flatBlocks
                     .filter(b => b.type === 'gap' && b.suggestion)
                     /* v8 ignore start -- gaps from mergeConceptsIntoTimeline never carry a suggestion, and computeTimelineBlocks (which does attach suggestions) only runs when the timeline is hidden by showEmptyHint */
@@ -530,12 +563,10 @@ export function DayTimeline({
                       if (block.type !== 'gap') return null
                       const top = blockTop(block.startTime)
                       const height = blockPx(block.startTime, block.endTime)
-                      // Gaps fill column 0 width (or full width if single column)
-                      const width = `${colWidthPct}%`
                       return (
                         <div
                           key={`gap-${i}`}
-                          style={{ position: 'absolute', top, left: 0, width, height, borderBottom: '1px solid var(--border)' }}
+                          style={{ position: 'absolute', top, left: 0, width: '100%', height, borderBottom: '1px solid var(--border)' }}
                           className="px-3 py-1 flex items-center justify-between"
                         >
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.625rem' }} className="truncate flex-1 mr-2">
@@ -555,12 +586,19 @@ export function DayTimeline({
                     })
                     /* v8 ignore stop */
 
-                  // Render content blocks in their assigned columns
-                  const contentElements = blockColumns.map(({ block, col }, i) => {
-                    const top = blockTop(block.startTime)
-                    const height = blockPx(block.startTime, block.endTime)
-                    const left = `${col * colWidthPct}%`
-                    const width = `${colWidthPct}%`
+                  // Render content blocks. Width is split only within the block's own
+                  // overlap cluster (`cols`); a 4px gutter separates concurrent columns,
+                  // and a 3px vertical inset gives Google-Calendar-style breathing room.
+                  const GUTTER = 4
+                  const V_INSET = 3
+                  const contentElements = blockColumns.map(({ block, col, cols }, i) => {
+                    const top = blockTop(block.startTime) + V_INSET
+                    // Floor of 24px keeps a single compact line (title + time) readable
+                    // even for 15-min meetings, without the two-line layout clipping.
+                    const height = Math.max(24, blockPx(block.startTime, block.endTime) - V_INSET * 2)
+                    const wPct = 100 / cols
+                    const left = `calc(${col * wPct}% + ${col === 0 ? 0 : GUTTER / 2}px)`
+                    const width = `calc(${wPct}% - ${cols > 1 ? GUTTER / 2 : 0}px)`
                     return renderBlock(block, height, `content-${i}`, {
                       position: 'absolute', top, left, width,
                     })

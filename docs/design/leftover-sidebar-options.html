@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leftover-blocks sidebar — 4 ontwerpopties</title>
+<style>
+  /* ============================================================
+     App tokens — copied verbatim from src/index.css + DayTimeline.tsx
+     ============================================================ */
+  :root {
+    --bg-app:    #f0efe9;
+    --bg:        #f8f7f4;
+    --surface:   #ffffff;
+    --border:    #e7e5e4;
+    --text-primary:   #1c1917;
+    --text-secondary: #57534e;
+    --text-muted:     #78716c;
+    --text-faint:     #a8a29e;
+    --accent:         #6366f1;
+    --accent-hover:   #4f46e5;
+    --accent-light:   #eef2ff;
+    --accent-border:  #c7d2fe;
+    --success:        #16a34a;
+    --success-light:  #f0fdf4;
+    --warning:        #d97706;
+    --warning-light:  #fffbeb;
+    --danger:         #ef4444;
+    --danger-light:   #fff1f2;
+
+    /* Confidence palettes (DayTimeline CONFIDENCE_COLORS) */
+    --hi-bg: #f0fdf4;   --hi-border: #86efac; --hi-left: #16a34a; --hi-title: #14532d; --hi-sub: #16a34a; --hi-badge-bg: #dcfce7; --hi-badge-fg: #16a34a;
+    --mid-bg: #fffbeb;  --mid-border: #fcd34d; --mid-left: #d97706; --mid-title: #78350f; --mid-sub: #d97706; --mid-badge-bg: #fef3c7; --mid-badge-fg: #d97706;
+    --lo-bg: #fff1f2;   --lo-border: #fca5a5; --lo-left: #ef4444; --lo-title: #7f1d1d; --lo-sub: #ef4444; --lo-badge-bg: #fee2e2; --lo-badge-fg: #ef4444;
+    /* Missing-project / warn (same as mid but dashed + warn line) */
+    --warn-bg: #fffbeb; --warn-border: #fcd34d; --warn-left: #d97706; --warn-title: #78350f; --warn-sub: #d97706; --warn-badge-bg: #fef3c7; --warn-badge-fg: #d97706;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-app);
+    -webkit-font-smoothing: antialiased;
+    font-size: 13px;
+  }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+  .page > h1 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+  .page > .lead { color: var(--text-muted); font-size: 13px; margin: 0 0 28px; max-width: 720px; line-height: 1.5; }
+
+  .option { margin-bottom: 44px; }
+  .option-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .option-head .num {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: #fff;
+    font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    align-self: center;
+  }
+  .option-head h2 { font-size: 16px; font-weight: 800; margin: 0; }
+  .option .rationale { color: var(--text-secondary); font-size: 12px; margin: 0 0 14px 32px; max-width: 760px; line-height: 1.5; }
+
+  /* Demo stage: timeline left + sidebar right + collapsed rail strip */
+  .stage {
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .app-frame {
+    display: flex; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    flex: 1; min-width: 0;
+  }
+
+  /* ---------- shared: left timeline ---------- */
+  .tl { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
+  .tl-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .tl-header .title { font-size: 14px; font-weight: 700; }
+  .tl-header .sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .tl-bar { flex: 1; height: 5px; background: #f0ede8; border-radius: 100px; overflow: hidden; }
+  .tl-bar > i { display: block; height: 100%; width: 62%; background: #f59e0b; border-radius: 100px; }
+  .tl-process {
+    background: var(--accent-hover); color: #fff; border: none; font-size: 10px; font-weight: 600;
+    padding: 5px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  }
+
+  .tl-body { padding: 10px 14px 14px; display: flex; gap: 12px; height: 430px; overflow: hidden; }
+  .tl-hours { display: flex; flex-direction: column; width: 22px; flex-shrink: 0; }
+  .tl-hours .h { height: 41px; position: relative; }
+  .tl-hours .h span { position: absolute; top: -5px; font-size: 9px; color: var(--text-faint); }
+  .tl-grid { flex: 1; position: relative; }
+  .tl-grid .row { height: 41px; border-top: 1px solid #f0ede8; }
+  .tl-block {
+    position: absolute; left: 0; right: 0; border-radius: 5px; padding: 4px 10px; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .tl-block .bt { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .tl-block .bs { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; margin-top: 1px; }
+  .tl-block.booked { background: #6366f1; border-left: 3px solid rgba(255,255,255,.3); }
+  .tl-block.booked .bt { color: rgba(255,255,255,.95); }
+  .tl-block.booked .bs { color: rgba(255,255,255,.65); }
+  .tl-block.hi { background: var(--hi-bg); border: 1.5px solid var(--hi-border); border-left: 3px solid var(--hi-left); }
+  .tl-block.hi .bt { color: var(--hi-title); } .tl-block.hi .bs { color: var(--hi-sub); }
+  .tl-badge {
+    position: absolute; top: 3px; right: 4px; font-size: 8px; font-weight: 700; border-radius: 3px; padding: 1px 4px;
+  }
+  .tl-badge.hi { background: var(--hi-badge-bg); color: var(--hi-badge-fg); }
+  .tl-full-note {
+    position: absolute; left: 8px; right: 8px; bottom: 10px;
+    font-size: 9px; color: var(--text-faint); text-align: center; font-style: italic;
+  }
+
+  /* ============================================================
+     Generic leftover-card pieces (reused, restyled per design)
+     ============================================================ */
+  .conf-badge { font-size: 8px; font-weight: 700; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; }
+  .conf-badge.hi { background: var(--hi-badge-bg); color: var(--hi-badge-fg); }
+  .conf-badge.mid { background: var(--mid-badge-bg); color: var(--mid-badge-fg); }
+  .conf-badge.lo { background: var(--lo-badge-bg); color: var(--lo-badge-fg); }
+  .conf-badge.cache { background: #e0e7ff; color: var(--accent-hover); }
+
+  .reason-pill {
+    display: inline-flex; align-items: center; gap: 3px; font-size: 8.5px; font-weight: 600;
+    border-radius: 4px; padding: 1px 6px; line-height: 1.5;
+  }
+  .reason-pill.overflow { background: #f1f5f9; color: #475569; }
+  .reason-pill.suggestion { background: var(--accent-light); color: var(--accent-hover); }
+
+  /* leftover card colour variants (left accent bar like timeline) */
+  .lo-card { border-radius: 7px; }
+  .lo-card.hi  { background: var(--hi-bg);  border: 1px solid var(--hi-border);  border-left: 3px solid var(--hi-left); }
+  .lo-card.mid { background: var(--mid-bg); border: 1px solid var(--mid-border); border-left: 3px solid var(--mid-left); }
+  .lo-card.lo  { background: var(--lo-bg);  border: 1px dashed var(--lo-border); border-left: 3px solid var(--lo-left); }
+  .lo-card.warn{ background: var(--warn-bg);border: 1px dashed var(--warn-border);border-left: 3px solid var(--warn-left); }
+  .lo-title.hi  { color: var(--hi-title); } .lo-sub.hi  { color: var(--hi-sub); }
+  .lo-title.mid { color: var(--mid-title);} .lo-sub.mid { color: var(--mid-sub);}
+  .lo-title.lo  { color: var(--lo-title); } .lo-sub.lo  { color: var(--lo-sub); }
+  .lo-title.warn{ color: var(--warn-title);} .lo-sub.warn{ color: var(--warn-sub);}
+
+  /* buttons */
+  .btn {
+    border: none; cursor: pointer; font-family: inherit; font-weight: 600;
+    border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+    transition: background .12s ease, border-color .12s ease;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent-hover); color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary); }
+  .btn-ghost:hover { border-color: #d6d3d1; }
+  .btn-accent { background: var(--accent-light); border: 1px solid var(--accent-border); color: var(--accent-hover); }
+  .btn-dismiss { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; }
+  .btn-dismiss:hover { color: var(--danger); }
+
+  /* ============================================================
+     SIDEBAR SHELL (each design provides its own .lo-panel inner)
+     ============================================================ */
+  .lo-panel { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+  .lo-panel-head {
+    padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .lo-panel-head .h-title { font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .lo-count-pill {
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 800;
+    border-radius: 100px; min-width: 16px; height: 16px; padding: 0 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .lo-collapse { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 14px; line-height: 1; }
+  .lo-body { overflow-y: auto; flex: 1; }
+
+  /* ---------- collapsed rail (shared look, used in strip) ---------- */
+  .rail-strip { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .rail-strip .cap { font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+  .rail {
+    width: 44px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px;
+    height: 480px; position: relative; cursor: pointer;
+  }
+  .rail:hover { border-color: var(--accent-border); }
+  .rail .rail-icon { font-size: 16px; color: var(--text-muted); }
+  .rail .rail-badge {
+    position: absolute; top: 6px; right: 6px;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 800;
+    border-radius: 100px; min-width: 16px; height: 16px; padding: 0 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .rail .rail-label {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    font-size: 10px; font-weight: 700; color: var(--text-secondary);
+    letter-spacing: .02em; margin-top: 8px; white-space: nowrap;
+  }
+
+  /* ============================================================
+     DESIGN 1 — Classic drawer
+     ============================================================ */
+  .d1-panel { width: 300px; }
+  .d1-card { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  .d1-card .row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+  .d1-card .lo-title { font-size: 11px; font-weight: 700; line-height: 1.3; }
+  .d1-card .lo-sub { font-size: 9px; margin-top: 2px; line-height: 1.3; }
+  .d1-card .meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .d1-card .dur { font-size: 9px; color: var(--text-muted); font-weight: 600; }
+  .d1-card .actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .d1-card .actions .btn { font-size: 10px; padding: 4px 9px; }
+  .d1-card .actions .grow { flex: 1; }
+
+  /* ============================================================
+     DESIGN 2 — Compact chips / triage rail
+     ============================================================ */
+  .d2-panel { width: 260px; }
+  .d2-head-actions { display: flex; gap: 6px; }
+  .d2-chip {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #f0ede8;
+    position: relative; cursor: default;
+  }
+  .d2-chip .swatch { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+  .d2-chip.hi .swatch  { background: var(--hi-left); }
+  .d2-chip.mid .swatch { background: var(--mid-left); }
+  .d2-chip.lo .swatch  { background: var(--lo-left); }
+  .d2-chip.warn .swatch{ background: var(--warn-left); }
+  .d2-chip .body { flex: 1; min-width: 0; }
+  .d2-chip .name { font-size: 11px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d2-chip .line2 { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .d2-chip .dur { font-size: 9px; color: var(--text-muted); font-weight: 600; }
+  .d2-chip .proj { font-size: 9px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d2-chip .hover-actions {
+    display: flex; gap: 3px; opacity: 0; transition: opacity .12s ease; flex-shrink: 0;
+  }
+  .d2-chip:hover { background: var(--bg); }
+  .d2-chip:hover .hover-actions { opacity: 1; }
+  .d2-chip .icon-btn {
+    width: 22px; height: 22px; border-radius: 5px; font-size: 11px; padding: 0;
+  }
+  .d2-hint { font-size: 9px; color: var(--text-faint); text-align: center; padding: 8px; font-style: italic; }
+
+  /* ============================================================
+     DESIGN 3 — Grouped by reason
+     ============================================================ */
+  .d3-panel { width: 290px; }
+  .d3-sticky {
+    position: sticky; top: 0; z-index: 2; background: var(--surface);
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .d3-sticky .sum { font-size: 11px; font-weight: 700; }
+  .d3-sticky .sum small { color: var(--text-muted); font-weight: 500; }
+  .d3-group-head {
+    display: flex; align-items: center; gap: 6px; padding: 8px 12px 4px;
+    font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em;
+  }
+  .d3-group-head .cnt { color: var(--text-faint); font-weight: 600; }
+  .d3-card { margin: 4px 10px; padding: 8px 9px; }
+  .d3-card .lo-title { font-size: 11px; font-weight: 700; }
+  .d3-card .lo-sub { font-size: 9px; margin-top: 2px; }
+  .d3-card .foot { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+  .d3-card .foot .btn { font-size: 9.5px; padding: 3px 8px; }
+  .d3-card .foot .dur { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-right: auto; }
+
+  /* ============================================================
+     DESIGN 4 — Inbox / card-stack
+     ============================================================ */
+  .d4-panel { width: 330px; }
+  .d4-summary {
+    padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg);
+  }
+  .d4-summary .big { font-size: 15px; font-weight: 800; }
+  .d4-summary .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .d4-card {
+    margin: 10px 12px; padding: 12px; border-radius: 8px; background: var(--surface);
+    border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    border-left-width: 4px;
+  }
+  .d4-card.hi  { border-left-color: var(--hi-left); }
+  .d4-card.mid { border-left-color: var(--mid-left); }
+  .d4-card.lo  { border-left-color: var(--lo-left); border-style: dashed; }
+  .d4-card.warn{ border-left-color: var(--warn-left); border-style: dashed; }
+  .d4-card .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .d4-card .name { font-size: 13px; font-weight: 700; line-height: 1.25; }
+  .d4-card .proj { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+  .d4-card .proj.warn-text { color: var(--warning); font-weight: 600; }
+  .d4-card .row-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .d4-card .dur { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .d4-card .actions { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+  .d4-card .actions .btn-primary { font-size: 12px; padding: 7px 14px; flex: 1; }
+  .d4-card .actions .btn-ghost { font-size: 11px; padding: 6px 12px; }
+
+  .footnote { color: var(--text-faint); font-size: 11px; margin-top: 8px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0 0 36px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Leftover-blocks sidebar — 4 ontwerpopties</h1>
+  <p class="lead">
+    Vier verschillende manieren om de rechter "Niet geplaatst / Overgebleven" sidebar te tonen na <em>Verwerk dag</em>.
+    Elke optie staat in context naast een vereenvoudigde dagtijdlijn, met dezelfde voorbeelddata, en toont zowel de
+    open sidebar als de ingeklapte rail-staat (met telbadge). Kleuren, badges en confidence-stijlen zijn overgenomen
+    uit <code>DayTimeline.tsx</code>.
+  </p>
+
+  <!-- ====================== TIMELINE TEMPLATE (inlined per option via JS would be heavier; hand-written) ====================== -->
+
+  <!-- ============================== OPTION 1 ============================== -->
+  <section class="option" id="opt1">
+    <div class="option-head"><span class="num">1</span><h2>Classic drawer</h2></div>
+    <p class="rationale">
+      Een ~300px paneel dat over de tijdlijn schuift, met volledige verticale kaarten die elk de drie acties inline tonen.
+      Veilige, herkenbare keuze: alles is direct zichtbaar zonder hover. Ingeklapt wordt het een 44px rail met verticaal
+      label "Niet geplaatst · 4" en telbadge.
+    </p>
+    <div class="stage">
+      <div class="app-frame">
+        <!-- timeline -->
+        <div class="tl">
+          <div class="tl-header">
+            <div>
+              <div class="title">maandag 2 juni</div>
+              <div class="sub">5u geboekt · 2 concepten te bevestigen</div>
+            </div>
+            <div class="tl-bar"><i></i></div>
+            <button class="tl-process">▶ Verwerk dag</button>
+          </div>
+          <div class="tl-body">
+            <div class="tl-hours">
+              <div class="h"><span>08</span></div><div class="h"><span>09</span></div>
+              <div class="h"><span>10</span></div><div class="h"><span>11</span></div>
+              <div class="h"><span>12</span></div><div class="h"><span>13</span></div>
+              <div class="h"><span>14</span></div><div class="h"><span>15</span></div>
+              <div class="h"><span>16</span></div><div class="h"><span>17</span></div>
+            </div>
+            <div class="tl-grid">
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="tl-block booked" style="top:3px;height:75px;"><div class="bt">Haven operationeel 2026</div><div class="bs">08:00–10:00 · 2u</div></div>
+              <div class="tl-block hi" style="top:85px;height:55px;"><span class="tl-badge hi">5/5</span><div class="bt">Standup &amp; planning</div><div class="bs">10:00–11:30 · Harbase</div></div>
+              <div class="tl-block booked" style="top:210px;height:115px;"><div class="bt">Default urenpost 2026</div><div class="bs">13:00–16:00 · 3u</div></div>
+              <div class="tl-block hi" style="top:332px;height:42px;"><span class="tl-badge hi">4/5</span><div class="bt">Klantcall n8n</div><div class="bs">16:00–17:00</div></div>
+              <div class="tl-full-note">Dag vol — overige blokken rechts geplaatst →</div>
+            </div>
+          </div>
+        </div>
+        <!-- OPEN sidebar -->
+        <div class="lo-panel d1-panel">
+          <div class="lo-panel-head">
+            <div class="h-title">Niet geplaatst <span class="lo-count-pill">4</span></div>
+            <button class="lo-collapse" title="Inklappen">»</button>
+          </div>
+          <div class="lo-body">
+            <!-- card 1 -->
+            <div class="d1-card lo-card hi">
+              <div class="row1">
+                <div>
+                  <div class="lo-title hi">Uren-assistent Gemini fix</div>
+                  <div class="lo-sub hi">Harbase Innovatieprogramma 2026</div>
+                </div>
+                <span class="conf-badge hi">5/5</span>
+              </div>
+              <div class="meta"><span class="dur">~1,5u</span><span class="reason-pill overflow">⏏ Paste niet meer in de dag</span></div>
+              <div class="actions">
+                <button class="btn btn-accent">+ Toevoegen</button>
+                <button class="btn btn-primary grow">Boek</button>
+                <button class="btn-dismiss" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- card 2 -->
+            <div class="d1-card lo-card hi">
+              <div class="row1">
+                <div>
+                  <div class="lo-title hi">Monitoring &amp; alerting tweaks</div>
+                  <div class="lo-sub hi">Haven operationeel 2026</div>
+                </div>
+                <span class="conf-badge hi">4/5</span>
+              </div>
+              <div class="meta"><span class="dur">~1u</span><span class="reason-pill overflow">⏏ Paste niet meer in de dag</span></div>
+              <div class="actions">
+                <button class="btn btn-accent">+ Toevoegen</button>
+                <button class="btn btn-primary grow">Boek</button>
+                <button class="btn-dismiss" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- card 3 -->
+            <div class="d1-card lo-card mid">
+              <div class="row1">
+                <div>
+                  <div class="lo-title mid">Code review n8n PR's</div>
+                  <div class="lo-sub mid">Default urenpost 2026</div>
+                </div>
+                <span class="conf-badge mid">3/5</span>
+              </div>
+              <div class="meta"><span class="dur">~1u</span><span class="reason-pill suggestion">✦ LLM-suggestie</span></div>
+              <div class="actions">
+                <button class="btn btn-accent">+ Toevoegen</button>
+                <button class="btn btn-primary grow">Boek</button>
+                <button class="btn-dismiss" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- card 4 (warn / missing project) -->
+            <div class="d1-card lo-card warn">
+              <div class="row1">
+                <div>
+                  <div class="lo-title warn">Documentatie bijwerken</div>
+                  <div class="lo-sub warn">⚠ Project ontbreekt — klik om in te vullen</div>
+                </div>
+                <span class="conf-badge lo">1/5</span>
+              </div>
+              <div class="meta"><span class="dur">~0,5u</span><span class="reason-pill suggestion">✦ Zwakke suggestie</span></div>
+              <div class="actions">
+                <button class="btn btn-accent">+ Toevoegen</button>
+                <button class="btn btn-primary grow">Boek</button>
+                <button class="btn-dismiss" title="Negeer">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- collapsed rail strip -->
+      <div class="rail-strip">
+        <span class="cap">Ingeklapt</span>
+        <div class="rail">
+          <span class="rail-badge">4</span>
+          <span class="rail-icon">📥</span>
+          <span class="rail-label">Niet geplaatst · 4</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <hr class="divider" />
+
+  <!-- ============================== OPTION 2 ============================== -->
+  <section class="option" id="opt2">
+    <div class="option-head"><span class="num">2</span><h2>Compact chips / triage rail</h2></div>
+    <p class="rationale">
+      Dichte, scanbare rij van chips (naam + tijd, kleur-swatch voor confidence). Acties verschijnen op hover, zodat de lijst
+      rustig blijft en je snel kunt triagen. Ideaal als er regelmatig veel leftovers zijn. Ingeklapt: smalle rail met alleen de badge.
+    </p>
+    <div class="stage">
+      <div class="app-frame">
+        <div class="tl">
+          <div class="tl-header">
+            <div>
+              <div class="title">maandag 2 juni</div>
+              <div class="sub">5u geboekt · 2 concepten te bevestigen</div>
+            </div>
+            <div class="tl-bar"><i></i></div>
+            <button class="tl-process">▶ Verwerk dag</button>
+          </div>
+          <div class="tl-body">
+            <div class="tl-hours">
+              <div class="h"><span>08</span></div><div class="h"><span>09</span></div>
+              <div class="h"><span>10</span></div><div class="h"><span>11</span></div>
+              <div class="h"><span>12</span></div><div class="h"><span>13</span></div>
+              <div class="h"><span>14</span></div><div class="h"><span>15</span></div>
+              <div class="h"><span>16</span></div><div class="h"><span>17</span></div>
+            </div>
+            <div class="tl-grid">
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="tl-block booked" style="top:3px;height:75px;"><div class="bt">Haven operationeel 2026</div><div class="bs">08:00–10:00 · 2u</div></div>
+              <div class="tl-block hi" style="top:85px;height:55px;"><span class="tl-badge hi">5/5</span><div class="bt">Standup &amp; planning</div><div class="bs">10:00–11:30 · Harbase</div></div>
+              <div class="tl-block booked" style="top:210px;height:115px;"><div class="bt">Default urenpost 2026</div><div class="bs">13:00–16:00 · 3u</div></div>
+              <div class="tl-block hi" style="top:332px;height:42px;"><span class="tl-badge hi">4/5</span><div class="bt">Klantcall n8n</div><div class="bs">16:00–17:00</div></div>
+              <div class="tl-full-note">Dag vol — overige blokken rechts geplaatst →</div>
+            </div>
+          </div>
+        </div>
+        <!-- OPEN sidebar -->
+        <div class="lo-panel d2-panel">
+          <div class="lo-panel-head">
+            <div class="h-title">Overgebleven <span class="lo-count-pill">4</span></div>
+            <div class="d2-head-actions">
+              <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px;">Alles +</button>
+              <button class="lo-collapse" title="Inklappen">»</button>
+            </div>
+          </div>
+          <div class="lo-body">
+            <!-- chip 1 -->
+            <div class="d2-chip hi">
+              <div class="swatch"></div>
+              <div class="body">
+                <div class="name">Uren-assistent Gemini fix</div>
+                <div class="line2"><span class="dur">~1,5u</span><span class="conf-badge hi">5/5</span><span class="proj">overflow</span></div>
+              </div>
+              <div class="hover-actions">
+                <button class="btn btn-accent icon-btn" title="Toevoegen">+</button>
+                <button class="btn btn-primary icon-btn" title="Boek">✓</button>
+                <button class="btn btn-ghost icon-btn" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- chip 2 -->
+            <div class="d2-chip hi">
+              <div class="swatch"></div>
+              <div class="body">
+                <div class="name">Monitoring &amp; alerting tweaks</div>
+                <div class="line2"><span class="dur">~1u</span><span class="conf-badge hi">4/5</span><span class="proj">overflow</span></div>
+              </div>
+              <div class="hover-actions">
+                <button class="btn btn-accent icon-btn" title="Toevoegen">+</button>
+                <button class="btn btn-primary icon-btn" title="Boek">✓</button>
+                <button class="btn btn-ghost icon-btn" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- chip 3 -->
+            <div class="d2-chip mid">
+              <div class="swatch"></div>
+              <div class="body">
+                <div class="name">Code review n8n PR's</div>
+                <div class="line2"><span class="dur">~1u</span><span class="conf-badge mid">3/5</span><span class="proj">suggestie</span></div>
+              </div>
+              <div class="hover-actions">
+                <button class="btn btn-accent icon-btn" title="Toevoegen">+</button>
+                <button class="btn btn-primary icon-btn" title="Boek">✓</button>
+                <button class="btn btn-ghost icon-btn" title="Negeer">✕</button>
+              </div>
+            </div>
+            <!-- chip 4 (hovered state shown) -->
+            <div class="d2-chip warn" style="background:var(--bg);">
+              <div class="swatch"></div>
+              <div class="body">
+                <div class="name" style="color:var(--warning);">⚠ Documentatie bijwerken</div>
+                <div class="line2"><span class="dur">~0,5u</span><span class="conf-badge lo">1/5</span><span class="proj">project ontbreekt</span></div>
+              </div>
+              <div class="hover-actions" style="opacity:1;">
+                <button class="btn btn-accent icon-btn" title="Toevoegen">+</button>
+                <button class="btn btn-primary icon-btn" title="Boek">✓</button>
+                <button class="btn btn-ghost icon-btn" title="Negeer">✕</button>
+              </div>
+            </div>
+            <div class="d2-hint">hover over een chip voor acties</div>
+          </div>
+        </div>
+      </div>
+      <div class="rail-strip">
+        <span class="cap">Ingeklapt</span>
+        <div class="rail">
+          <span class="rail-badge">4</span>
+          <span class="rail-icon">▣</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <hr class="divider" />
+
+  <!-- ============================== OPTION 3 ============================== -->
+  <section class="option" id="opt3">
+    <div class="option-head"><span class="num">3</span><h2>Grouped by reason</h2></div>
+    <p class="rationale">
+      Kaarten gegroepeerd onder reden-headers ("Paste niet in de dag (2)", "Suggesties (2)") met een sticky header die
+      een bulk-actie <em>Boek alles</em> biedt. Maakt de aard van elk blok meteen duidelijk en versnelt batch-verwerking.
+    </p>
+    <div class="stage">
+      <div class="app-frame">
+        <div class="tl">
+          <div class="tl-header">
+            <div>
+              <div class="title">maandag 2 juni</div>
+              <div class="sub">5u geboekt · 2 concepten te bevestigen</div>
+            </div>
+            <div class="tl-bar"><i></i></div>
+            <button class="tl-process">▶ Verwerk dag</button>
+          </div>
+          <div class="tl-body">
+            <div class="tl-hours">
+              <div class="h"><span>08</span></div><div class="h"><span>09</span></div>
+              <div class="h"><span>10</span></div><div class="h"><span>11</span></div>
+              <div class="h"><span>12</span></div><div class="h"><span>13</span></div>
+              <div class="h"><span>14</span></div><div class="h"><span>15</span></div>
+              <div class="h"><span>16</span></div><div class="h"><span>17</span></div>
+            </div>
+            <div class="tl-grid">
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="tl-block booked" style="top:3px;height:75px;"><div class="bt">Haven operationeel 2026</div><div class="bs">08:00–10:00 · 2u</div></div>
+              <div class="tl-block hi" style="top:85px;height:55px;"><span class="tl-badge hi">5/5</span><div class="bt">Standup &amp; planning</div><div class="bs">10:00–11:30 · Harbase</div></div>
+              <div class="tl-block booked" style="top:210px;height:115px;"><div class="bt">Default urenpost 2026</div><div class="bs">13:00–16:00 · 3u</div></div>
+              <div class="tl-block hi" style="top:332px;height:42px;"><span class="tl-badge hi">4/5</span><div class="bt">Klantcall n8n</div><div class="bs">16:00–17:00</div></div>
+              <div class="tl-full-note">Dag vol — overige blokken rechts geplaatst →</div>
+            </div>
+          </div>
+        </div>
+        <!-- OPEN sidebar -->
+        <div class="lo-panel d3-panel">
+          <div class="lo-body" style="overflow-y:auto;">
+            <div class="d3-sticky">
+              <div class="sum">Niet geplaatst <small>· 4 blokken</small></div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button class="btn btn-primary" style="font-size:9.5px;padding:4px 9px;">Boek alles</button>
+                <button class="lo-collapse" title="Inklappen">»</button>
+              </div>
+            </div>
+
+            <!-- group: overflow -->
+            <div class="d3-group-head">⏏ Paste niet in de dag <span class="cnt">(2)</span></div>
+            <div class="d3-card lo-card hi">
+              <div style="display:flex;justify-content:space-between;gap:6px;">
+                <div><div class="lo-title hi">Uren-assistent Gemini fix</div><div class="lo-sub hi">Harbase Innovatieprogramma 2026</div></div>
+                <span class="conf-badge hi">5/5</span>
+              </div>
+              <div class="foot"><span class="dur">~1,5u</span><button class="btn btn-accent">+ Toevoegen</button><button class="btn btn-primary">Boek</button><button class="btn-dismiss" title="Negeer">✕</button></div>
+            </div>
+            <div class="d3-card lo-card hi">
+              <div style="display:flex;justify-content:space-between;gap:6px;">
+                <div><div class="lo-title hi">Monitoring &amp; alerting tweaks</div><div class="lo-sub hi">Haven operationeel 2026</div></div>
+                <span class="conf-badge hi">4/5</span>
+              </div>
+              <div class="foot"><span class="dur">~1u</span><button class="btn btn-accent">+ Toevoegen</button><button class="btn btn-primary">Boek</button><button class="btn-dismiss" title="Negeer">✕</button></div>
+            </div>
+
+            <!-- group: suggestions -->
+            <div class="d3-group-head" style="margin-top:6px;">✦ Suggesties <span class="cnt">(2)</span></div>
+            <div class="d3-card lo-card mid">
+              <div style="display:flex;justify-content:space-between;gap:6px;">
+                <div><div class="lo-title mid">Code review n8n PR's</div><div class="lo-sub mid">Default urenpost 2026</div></div>
+                <span class="conf-badge mid">3/5</span>
+              </div>
+              <div class="foot"><span class="dur">~1u</span><button class="btn btn-accent">+ Toevoegen</button><button class="btn btn-primary">Boek</button><button class="btn-dismiss" title="Negeer">✕</button></div>
+            </div>
+            <div class="d3-card lo-card warn">
+              <div style="display:flex;justify-content:space-between;gap:6px;">
+                <div><div class="lo-title warn">Documentatie bijwerken</div><div class="lo-sub warn">⚠ Project ontbreekt</div></div>
+                <span class="conf-badge lo">1/5</span>
+              </div>
+              <div class="foot"><span class="dur">~0,5u</span><button class="btn btn-accent">+ Toevoegen</button><button class="btn btn-primary">Boek</button><button class="btn-dismiss" title="Negeer">✕</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rail-strip">
+        <span class="cap">Ingeklapt</span>
+        <div class="rail">
+          <span class="rail-badge">4</span>
+          <span class="rail-icon">☰</span>
+          <span class="rail-label">Overgebleven · 4</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <hr class="divider" />
+
+  <!-- ============================== OPTION 4 ============================== -->
+  <section class="option" id="opt4">
+    <div class="option-head"><span class="num">4</span><h2>Inbox / card-stack</h2></div>
+    <p class="rationale">
+      Grotere, e-mail-inbox-achtige kaarten met een prominente primaire <em>Boek</em>-knop, secundaire <em>Toevoegen</em> en
+      subtiele <em>Negeer</em>. Een samenvattende header ("4 blokken · 4,5u niet geplaatst") geeft direct overzicht. Comfortabel
+      één-voor-één afhandelen, met de booking-actie als duidelijk hoofddoel.
+    </p>
+    <div class="stage">
+      <div class="app-frame">
+        <div class="tl">
+          <div class="tl-header">
+            <div>
+              <div class="title">maandag 2 juni</div>
+              <div class="sub">5u geboekt · 2 concepten te bevestigen</div>
+            </div>
+            <div class="tl-bar"><i></i></div>
+            <button class="tl-process">▶ Verwerk dag</button>
+          </div>
+          <div class="tl-body">
+            <div class="tl-hours">
+              <div class="h"><span>08</span></div><div class="h"><span>09</span></div>
+              <div class="h"><span>10</span></div><div class="h"><span>11</span></div>
+              <div class="h"><span>12</span></div><div class="h"><span>13</span></div>
+              <div class="h"><span>14</span></div><div class="h"><span>15</span></div>
+              <div class="h"><span>16</span></div><div class="h"><span>17</span></div>
+            </div>
+            <div class="tl-grid">
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+              <div class="tl-block booked" style="top:3px;height:75px;"><div class="bt">Haven operationeel 2026</div><div class="bs">08:00–10:00 · 2u</div></div>
+              <div class="tl-block hi" style="top:85px;height:55px;"><span class="tl-badge hi">5/5</span><div class="bt">Standup &amp; planning</div><div class="bs">10:00–11:30 · Harbase</div></div>
+              <div class="tl-block booked" style="top:210px;height:115px;"><div class="bt">Default urenpost 2026</div><div class="bs">13:00–16:00 · 3u</div></div>
+              <div class="tl-block hi" style="top:332px;height:42px;"><span class="tl-badge hi">4/5</span><div class="bt">Klantcall n8n</div><div class="bs">16:00–17:00</div></div>
+              <div class="tl-full-note">Dag vol — overige blokken rechts geplaatst →</div>
+            </div>
+          </div>
+        </div>
+        <!-- OPEN sidebar -->
+        <div class="lo-panel d4-panel">
+          <div class="lo-panel-head">
+            <div class="h-title">Niet geplaatst <span class="lo-count-pill">4</span></div>
+            <button class="lo-collapse" title="Inklappen">»</button>
+          </div>
+          <div class="d4-summary">
+            <div class="big">4 blokken · 4,5u niet geplaatst</div>
+            <div class="sub">2 overgelopen uit de dag · 2 suggesties</div>
+          </div>
+          <div class="lo-body">
+            <!-- card 1 -->
+            <div class="d4-card hi">
+              <div class="top">
+                <div class="name">Uren-assistent Gemini fix</div>
+                <span class="conf-badge hi">5/5</span>
+              </div>
+              <div class="proj">Harbase Innovatieprogramma 2026</div>
+              <div class="row-meta"><span class="dur">~1,5u</span><span class="reason-pill overflow">⏏ Paste niet meer in de dag</span></div>
+              <div class="actions">
+                <button class="btn btn-primary">Boek</button>
+                <button class="btn btn-ghost">+ Toevoegen</button>
+                <button class="btn-dismiss" style="margin-left:auto;" title="Negeer">Negeer</button>
+              </div>
+            </div>
+            <!-- card 2 -->
+            <div class="d4-card hi">
+              <div class="top">
+                <div class="name">Monitoring &amp; alerting tweaks</div>
+                <span class="conf-badge hi">4/5</span>
+              </div>
+              <div class="proj">Haven operationeel 2026</div>
+              <div class="row-meta"><span class="dur">~1u</span><span class="reason-pill overflow">⏏ Paste niet meer in de dag</span></div>
+              <div class="actions">
+                <button class="btn btn-primary">Boek</button>
+                <button class="btn btn-ghost">+ Toevoegen</button>
+                <button class="btn-dismiss" style="margin-left:auto;" title="Negeer">Negeer</button>
+              </div>
+            </div>
+            <!-- card 3 -->
+            <div class="d4-card mid">
+              <div class="top">
+                <div class="name">Code review n8n PR's</div>
+                <span class="conf-badge mid">3/5</span>
+              </div>
+              <div class="proj">Default urenpost 2026</div>
+              <div class="row-meta"><span class="dur">~1u</span><span class="reason-pill suggestion">✦ LLM-suggestie</span></div>
+              <div class="actions">
+                <button class="btn btn-primary">Boek</button>
+                <button class="btn btn-ghost">+ Toevoegen</button>
+                <button class="btn-dismiss" style="margin-left:auto;" title="Negeer">Negeer</button>
+              </div>
+            </div>
+            <!-- card 4 -->
+            <div class="d4-card warn">
+              <div class="top">
+                <div class="name">Documentatie bijwerken</div>
+                <span class="conf-badge lo">1/5</span>
+              </div>
+              <div class="proj warn-text">⚠ Project ontbreekt</div>
+              <div class="row-meta"><span class="dur">~0,5u</span><span class="reason-pill suggestion">✦ Zwakke suggestie</span></div>
+              <div class="actions">
+                <button class="btn btn-primary">Boek</button>
+                <button class="btn btn-ghost">+ Toevoegen</button>
+                <button class="btn-dismiss" style="margin-left:auto;" title="Negeer">Negeer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rail-strip">
+        <span class="cap">Ingeklapt</span>
+        <div class="rail">
+          <span class="rail-badge">4</span>
+          <span class="rail-icon">✉</span>
+          <span class="rail-label">Niet geplaatst · 4</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

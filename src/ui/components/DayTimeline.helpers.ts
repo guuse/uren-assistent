@@ -80,16 +80,20 @@ export function computeTimelineBlocks(
 }
 
 /**
- * Assigns each block to a column via interval partitioning: blocks that don't
- * overlap in time share a column, so a gap-free day renders in a SINGLE column.
- * A second column only appears where two blocks genuinely overlap.
+ * Lays blocks out Google-Calendar style: blocks are grouped into transitive
+ * overlap CLUSTERS (a chain of mutually-overlapping blocks), and the width split
+ * happens only WITHIN a cluster. A block that overlaps nothing keeps full width;
+ * two concurrent blocks each take half of just their shared band — no block is
+ * ever flung to a far global column.
  *
- * Process in start-time order (shorter first on ties) and place each block in
- * the first column whose previous block has already ended.
+ * Each returned entry carries `col` (its column index inside its cluster) and
+ * `cols` (the number of columns in that cluster, i.e. its local width divisor).
+ * `numCols` is the max `cols` across all clusters, kept for callers that want a
+ * global sense of how crowded the day is.
  */
 export function assignBlockColumns<T extends { startTime: string; endTime: string }>(
   blocks: T[],
-): { columns: { block: T; col: number }[]; numCols: number } {
+): { columns: { block: T; col: number; cols: number }[]; numCols: number } {
   const sorted = [...blocks].sort((a, b) => {
     const startA = timeToMinutes(a.startTime)
     const startB = timeToMinutes(b.startTime)
@@ -99,19 +103,49 @@ export function assignBlockColumns<T extends { startTime: string; endTime: strin
     return durA - durB
   })
 
-  const columnEndMin: number[] = []
-  const columns = sorted.map(block => {
-    const startMin = timeToMinutes(block.startTime)
-    let col = columnEndMin.findIndex(endMin => startMin >= endMin)
-    if (col === -1) {
-      col = columnEndMin.length
-      columnEndMin.push(0)
-    }
-    columnEndMin[col] = timeToMinutes(block.endTime)
-    return { block, col }
-  })
+  const columns: { block: T; col: number; cols: number }[] = []
+  let numCols = 1
 
-  return { columns, numCols: Math.max(1, columnEndMin.length) }
+  // Sweep start-time-ordered blocks into clusters: a block joins the current
+  // cluster if it starts before the cluster's running end.
+  let cluster: T[] = []
+  let clusterEnd = -1
+  const flushCluster = () => {
+    if (cluster.length === 0) return
+    // Greedy column assignment within the cluster: first column whose previous
+    // block has already ended.
+    const columnEndMin: number[] = []
+    const placed = cluster.map(block => {
+      const startMin = timeToMinutes(block.startTime)
+      let col = columnEndMin.findIndex(endMin => startMin >= endMin)
+      if (col === -1) {
+        col = columnEndMin.length
+        columnEndMin.push(0)
+      }
+      columnEndMin[col] = timeToMinutes(block.endTime)
+      return { block, col }
+    })
+    const cols = columnEndMin.length
+    numCols = Math.max(numCols, cols)
+    for (const p of placed) columns.push({ block: p.block, col: p.col, cols })
+    cluster = []
+    clusterEnd = -1
+  }
+
+  for (const block of sorted) {
+    const startMin = timeToMinutes(block.startTime)
+    if (cluster.length > 0 && startMin < clusterEnd) {
+      cluster.push(block)
+      clusterEnd = Math.max(clusterEnd, timeToMinutes(block.endTime))
+    } else {
+      flushCluster()
+      cluster = [block]
+      clusterEnd = timeToMinutes(block.endTime)
+    }
+  }
+  flushCluster()
+
+  return { columns, numCols }
 }
 
 export type TimelineRow = {

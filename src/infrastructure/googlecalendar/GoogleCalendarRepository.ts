@@ -106,7 +106,10 @@ export class GoogleCalendarRepository implements IGoogleCalendarRepository {
     if (!ev.attendees) return true // solo events have no attendees array
     const self = ev.attendees.find(a => a.self)
     if (!self) return true
-    return self.responseStatus === 'accepted' || self.responseStatus === 'tentative'
+    // Keep everything except meetings you explicitly declined. Recurring team
+    // meetings are often left on 'needsAction' (never RSVP'd) yet still attended,
+    // and calendar is the highest-priority source — so only 'declined' drops out.
+    return self.responseStatus !== 'declined'
   }
 
   private toCalendarEvent(ev: GoogleEvent): CalendarEvent | null {

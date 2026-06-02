@@ -14,7 +14,9 @@ import { FetchLinearContextUseCase } from './FetchLinearContextUseCase'
 import { GroupAndClassifyDayUseCase } from './GroupAndClassifyDayUseCase'
 import { GetActiveProjectsForDateUseCase, type ActiveProjectsResult } from './GetActiveProjectsForDateUseCase'
 import { groupCommitsIntoBlocks } from './GroupCommitsIntoBlocks'
+import { groupLinearIssuesIntoBlocks } from './groupLinearIssuesIntoBlocks'
 import { PackDayUseCase } from './PackDayUseCase'
+import { computeTrendPatterns } from './computeTrendPatterns'
 
 export interface ProcessDayProgress {
   phase: 'fetching-context' | 'classifying-day' | 'done' | 'error'
@@ -116,7 +118,10 @@ export class ProcessDayUseCase {
       yield { phase: 'classifying-day', date }
 
       const commitBlocks = groupCommitsIntoBlocks(allCommits, date)
-      const allBlocks = [...historyBlocks, ...commitBlocks]
+      // Completed Linear issues not already explained by a commit become their
+      // own blocks (Linear is the 4th source, above trends — see ADR/CONTEXT).
+      const linearBlocks = groupLinearIssuesIntoBlocks(linearIssues, allCommits, date)
+      const allBlocks = [...historyBlocks, ...commitBlocks, ...linearBlocks]
 
       // Services for the day's active projects, with their hour types — the
       // global store keeps no services, so load (or slice from the prefetch) here.
@@ -146,9 +151,15 @@ export class ProcessDayUseCase {
         existingEntries,
       )
 
-      const packed = new PackDayUseCase().execute(classified, existingEntries)
+      // Deterministic trend patterns from the 28-day history window drive both
+      // growth (proportional to historical share) and strong-pattern fill — see
+      // ADR-0004. The LLM no longer decides what gets filled or how big.
+      const trends = computeTrendPatterns(activeProjectsResult.historicalEntries, date)
+      const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers(classified, existingEntries, { trends })
 
-      await this.historyStore.setBlocksForDate(date, packed)
+      // Leftovers ride alongside placed blocks (tagged `unplaced`); the UI routes
+      // placed → timeline, unplaced → the leftover sidebar.
+      await this.historyStore.setBlocksForDate(date, [...placed, ...leftovers])
     } catch (err) {
       yield {
         phase: 'error',

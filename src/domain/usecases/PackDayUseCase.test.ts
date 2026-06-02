@@ -3,6 +3,26 @@ import { PackDayUseCase } from './PackDayUseCase'
 import type { ClassifiedBlock } from '../entities/ClassifiedBlock'
 import type { HourEntry } from '../entities/HourEntry'
 import type { CalendarEvent } from '../entities/CalendarEvent'
+import type { TrendPattern, TrendPatternsResult } from './computeTrendPatterns'
+
+/** Build a TrendPatternsResult from terse pattern specs for packer tests. */
+const makeTrends = (
+  specs: { projectId: string; serviceId: string; avg: number; share: number; weeks?: number; strong?: boolean }[],
+): TrendPatternsResult => {
+  const patterns: TrendPattern[] = specs.map(s => ({
+    projectId: s.projectId,
+    serviceId: s.serviceId,
+    weeksPresent: s.weeks ?? (s.strong ? 4 : 1),
+    daysActive: 4,
+    avgDurationHours: s.avg,
+    historicalShare: s.share,
+    cadenceMatchesTarget: s.strong ?? false,
+    isStrong: s.strong ?? false,
+  }))
+  const byKey = new Map(patterns.map(p => [`${p.projectId}__${p.serviceId}`, p]))
+  const strong = patterns.filter(p => p.isStrong)
+  return { patterns, byKey, strong }
+}
 
 const makeBlock = (overrides: Partial<ClassifiedBlock> = {}): ClassifiedBlock => ({
   date: '2024-01-15',
@@ -92,26 +112,29 @@ describe('PackDayUseCase', () => {
     expect(result[1]!.endTime).toBe('10:30')
   })
 
-  it('repacks meeting blocks contiguously too (meetings are not fixed)', () => {
-    const work = makeBlock({ blockName: 'Work', hours: 1, startTime: '08:00', endTime: '09:00' })
+  it('anchors meeting blocks at their real calendar times and flows work around them', () => {
+    const work = makeBlock({ blockName: 'Work', hours: 0.5, startTime: '08:00', endTime: '08:30' })
     const meeting = makeMeeting('09:30', '10:00', { blockName: 'Standup', hours: 0.5 })
-    const result = new PackDayUseCase().execute([work, meeting], [], { targetHours: 1.5 })
+    const result = new PackDayUseCase().execute([work, meeting], [], { targetHours: 1 })
 
     const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
-    // Earlier original start wins order: Work (08:00) then Standup (09:30), packed from 09:00.
+    // Meeting keeps its real time; work is placed from 09:00 in the gap before it.
+    expect(byName['Standup']!.startTime).toBe('09:30')
+    expect(byName['Standup']!.endTime).toBe('10:00')
     expect(byName['Work']!.startTime).toBe('09:00')
-    expect(byName['Work']!.endTime).toBe('10:00')
-    expect(byName['Standup']!.startTime).toBe('10:00')
-    expect(byName['Standup']!.endTime).toBe('10:30')
+    expect(byName['Work']!.endTime).toBe('09:30')
   })
 
-  it('moves a meeting block that overlaps a booked entry to after it', () => {
-    const entry = makeEntry('09:00', '11:00', 2, { projectId: 'other', projectServiceId: 'other' })
-    const meeting = makeMeeting('09:30', '10:00', { blockName: 'Overleg', hours: 0.5 })
-    const result = new PackDayUseCase().execute([meeting], [entry], { targetHours: 8 })
+  it('keeps overlapping meetings at their real times (rendered side by side)', () => {
+    const a = makeMeeting('10:00', '11:00', { blockName: 'Projectoverleg', hours: 1, projectId: 'p1', serviceId: 's1' })
+    const b = makeMeeting('10:00', '10:30', { blockName: 'FinOps', hours: 0.5, projectId: 'p2', serviceId: 's2' })
+    const result = new PackDayUseCase().execute([a, b], [], { targetHours: 8 })
 
-    const m = result.find(r => r.blockName === 'Overleg')!
-    expect(minutes(m.startTime)).toBeGreaterThanOrEqual(minutes('11:00'))
+    const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
+    expect(byName['Projectoverleg']!.startTime).toBe('10:00')
+    expect(byName['Projectoverleg']!.endTime).toBe('11:00')
+    expect(byName['FinOps']!.startTime).toBe('10:00') // not shifted away from the overlap
+    expect(byName['FinOps']!.endTime).toBe('10:30')
   })
 
   it('never overlaps an existing booked entry', () => {
@@ -123,12 +146,20 @@ describe('PackDayUseCase', () => {
     expect(minutes(w.startTime)).toBeGreaterThanOrEqual(minutes('10:00'))
   })
 
-  it('drops a concept that duplicates an existing entry (same project+service, overlapping time)', () => {
+  it('drops a non-meeting concept that duplicates an existing entry (same project+service, overlapping time)', () => {
     const entry = makeEntry('10:00', '11:00', 1) // proj-1 / svc-1
-    const dup = makeMeeting('10:00', '11:00', { blockName: 'ISO GAP overleg', projectId: 'proj-1', serviceId: 'svc-1' })
+    const dup = makeBlock({ blockName: 'ISO GAP werk', startTime: '10:00', endTime: '11:00', projectId: 'proj-1', serviceId: 'svc-1' })
     const result = new PackDayUseCase().execute([dup], [entry], { targetHours: 1 })
 
-    expect(result.find(r => r.blockName === 'ISO GAP overleg')).toBeUndefined()
+    expect(result.find(r => r.blockName === 'ISO GAP werk')).toBeUndefined()
+  })
+
+  it('never drops a meeting, even when it duplicates an existing booked entry', () => {
+    const entry = makeEntry('10:00', '11:00', 1) // proj-1 / svc-1
+    const meeting = makeMeeting('10:00', '11:00', { blockName: 'ISO GAP overleg', projectId: 'proj-1', serviceId: 'svc-1' })
+    const result = new PackDayUseCase().execute([meeting], [entry], { targetHours: 1 })
+
+    expect(result.find(r => r.blockName === 'ISO GAP overleg')).toBeDefined()
   })
 
   it('does not return existing entries as blocks (only concepts)', () => {
@@ -137,40 +168,78 @@ describe('PackDayUseCase', () => {
     expect(result).toEqual([])
   })
 
-  it('counts existing hours toward the 8h target so filler stops early', () => {
-    const entry = makeEntry('09:00', '16:30', 7.5, { projectId: 'other', projectServiceId: 'other' })
-    const filler = makeCandidate(1, 2, { blockName: 'Filler' })
-    const result = new PackDayUseCase().execute([filler], [entry], { targetHours: 8 })
+  it('grows an observed block toward its historical average to fill the day', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // proj-1/svc-1, 1h real work
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 8, share: 1 }])
+    const result = new PackDayUseCase().execute([observed], [], { targetHours: 8, trends })
 
-    const f = result.find(r => r.blockName === 'Filler')!
-    expect(f).toBeDefined()
-    // only 0.5h remained to reach 8h, so filler is trimmed to 0.5h
-    expect(f.hours).toBe(0.5)
+    const o = result.find(r => r.blockName === 'Observed')!
+    expect(o.hours).toBe(8) // grown from 1h up to its historical average
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(8)
   })
 
-  it('fills with candidates highest-confidence first, trimming the last to land on target', () => {
-    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // 1h real work
-    const genuine = makeCandidate(3, 2, { blockName: 'Genuine', projectId: 'p2', serviceId: 's2' })
-    const filler = makeCandidate(1, 4, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
-    const result = new PackDayUseCase().execute([observed, genuine, filler], [], { targetHours: 4 })
+  it('caps growth at the historical average, then fills the rest with a strong pattern', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 }) // proj-1/svc-1
+    const fill = makeCandidate(1, 99, { blockName: 'Recurring', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 3, share: 0.5 }, // room to grow: 2h
+      { projectId: 'p2', serviceId: 's2', avg: 5, share: 0.5, strong: true },
+    ])
+    const result = new PackDayUseCase().execute([observed, fill], [], { targetHours: 8, trends })
 
     const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
-    expect(byName['Observed']).toBeDefined()
-    expect(byName['Genuine']!.hours).toBe(2)   // conf 3 placed first
-    // 1 + 2 = 3h booked, 1h short of 4h target → conf 1 filler trimmed to 1h
-    expect(byName['Filler']!.hours).toBe(1)
+    expect(byName['Observed']!.hours).toBe(3)   // grown 1h → 3h (capped at avg), not further
+    expect(byName['Recurring']!.hours).toBe(5)  // strong-pattern fill sized at its avg
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(8)
+  })
+
+  it('never grows or fills once real work already meets the target (floor, not ceiling)', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 4 })
+    const fill = makeCandidate(5, 2, { blockName: 'Recurring', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 10, share: 0.5 },
+      { projectId: 'p2', serviceId: 's2', avg: 2, share: 0.5, strong: true },
+    ])
+    const result = new PackDayUseCase().execute([observed, fill], [], { targetHours: 4, trends })
+
+    expect(result.find(r => r.blockName === 'Observed')!.hours).toBe(4) // not grown past target
+    expect(result.find(r => r.blockName === 'Recurring')).toBeUndefined()
     expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
   })
 
-  it('never adds a fill candidate once the target is met by real work, regardless of confidence', () => {
-    const observed = makeBlock({ blockName: 'Observed', hours: 4 })
-    const hiConf = makeCandidate(5, 2, { blockName: 'HiConf', projectId: 'p2', serviceId: 's2' })
-    const filler = makeCandidate(1, 2, { blockName: 'Filler', projectId: 'p3', serviceId: 's3' })
-    const result = new PackDayUseCase().execute([observed, hiConf, filler], [], { targetHours: 4 })
+  it('distributes growth across blocks proportional to historical share', () => {
+    const a = makeBlock({ blockName: 'A', hours: 1, projectId: 'proj-1', serviceId: 'svc-1' })
+    const b = makeBlock({ blockName: 'B', hours: 1, projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      { projectId: 'proj-1', serviceId: 'svc-1', avg: 99, share: 0.75 },
+      { projectId: 'p2', serviceId: 's2', avg: 99, share: 0.25 },
+    ])
+    // gap = 8 - (1 + 1) = 6 → split 0.75/0.25 → A +4.5 (→5.5), B +1.5 (→2.5)
+    const result = new PackDayUseCase().execute([a, b], [], { targetHours: 8, trends })
+    const byName = Object.fromEntries(result.map(r => [r.blockName, r]))
+    expect(byName['A']!.hours).toBeCloseTo(5.5)
+    expect(byName['B']!.hours).toBeCloseTo(2.5)
+    expect(result.reduce((s, r) => s + r.hours, 0)).toBeCloseTo(8)
+  })
 
-    expect(result.find(r => r.blockName === 'HiConf')).toBeUndefined()
-    expect(result.find(r => r.blockName === 'Filler')).toBeUndefined()
-    expect(result.reduce((s, r) => s + r.hours, 0)).toBe(4)
+  it('never grows a meeting block beyond its calendar duration', () => {
+    const meeting = makeMeeting('10:00', '11:00', { blockName: 'Mtg', hours: 1, projectId: 'proj-1', serviceId: 'svc-1' })
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 8, share: 1 }])
+    const result = new PackDayUseCase().execute([meeting], [], { targetHours: 8, trends })
+    expect(result.find(r => r.blockName === 'Mtg')!.hours).toBe(1)
+  })
+
+  it('does not fill from a weak (non-strong) pattern even when the day is short', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 1 })
+    const weak = makeCandidate(2, 4, { blockName: 'Weak', projectId: 'p2', serviceId: 's2' })
+    const trends = makeTrends([
+      // observed combo absent from trends → no growth; weak pattern is not strong → no fill
+      { projectId: 'p2', serviceId: 's2', avg: 4, share: 1, strong: false },
+    ])
+    const result = new PackDayUseCase().execute([observed, weak], [], { targetHours: 8, trends })
+
+    expect(result.find(r => r.blockName === 'Weak')).toBeUndefined()
+    expect(result.find(r => r.blockName === 'Observed')!.hours).toBe(1) // no trend → not grown
   })
 
   it('keeps all real work even when it exceeds the target (floor, not ceiling)', () => {
@@ -182,10 +251,11 @@ describe('PackDayUseCase', () => {
     expect(total).toBe(10)
   })
 
-  it('drops a fill candidate whose project+service is already booked today', () => {
+  it('does not fill a strong pattern whose project+service is already booked today', () => {
     const entry = makeEntry('09:00', '10:00', 1) // proj-1 / svc-1
     const candidate = makeCandidate(3, 2, { blockName: 'Dup pattern', projectId: 'proj-1', serviceId: 'svc-1' })
-    const result = new PackDayUseCase().execute([candidate], [entry], { targetHours: 8 })
+    const trends = makeTrends([{ projectId: 'proj-1', serviceId: 'svc-1', avg: 2, share: 1, strong: true }])
+    const result = new PackDayUseCase().execute([candidate], [entry], { targetHours: 8, trends })
 
     expect(result.find(r => r.blockName === 'Dup pattern')).toBeUndefined()
   })
@@ -209,6 +279,45 @@ describe('PackDayUseCase', () => {
     const w = result.find(r => r.blockName === 'After')!
     expect(w.startTime).toBe('12:00')
     expect(w.endTime).toBe('13:00')
+  })
+
+  it('overflows movable work that cannot start before dayEnd into leftovers', () => {
+    // A meeting fills 09:00–18:00; no room left before dayEnd. The work block
+    // can't start before 18:00 → it overflows to the sidebar, not the timeline.
+    const meeting = makeMeeting('09:00', '18:00', { blockName: 'Allday workshop', hours: 9 })
+    const work = makeBlock({ blockName: 'Late work', hours: 2, projectId: 'p2', serviceId: 's2' })
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers([meeting, work], [], { targetHours: 8 })
+
+    expect(placed.find(b => b.blockName === 'Allday workshop')).toBeDefined()
+    expect(placed.find(b => b.blockName === 'Late work')).toBeUndefined()
+    const lo = leftovers.find(b => b.blockName === 'Late work')!
+    expect(lo).toBeDefined()
+    expect(lo.unplaced).toBe(true)
+    expect(lo.leftoverReason).toBe('overflow')
+  })
+
+  it('never overflows a meeting, even one running past dayEnd', () => {
+    const meeting = makeMeeting('17:00', '19:00', { blockName: 'Evening sync', hours: 2 })
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers([meeting], [], { targetHours: 8 })
+    expect(placed.find(b => b.blockName === 'Evening sync')).toBeDefined()
+    expect(leftovers).toHaveLength(0)
+  })
+
+  it('surfaces unused LLM suggestions as leftovers, deduped by project+service', () => {
+    const observed = makeBlock({ blockName: 'Observed', hours: 8 }) // fills the day, proj-1/svc-1
+    const usedKey = makeCandidate(3, 1, { blockName: 'Dup of observed', projectId: 'proj-1', serviceId: 'svc-1' })
+    const suggestion = makeCandidate(3, 1, { blockName: 'Idle pattern', projectId: 'p9', serviceId: 's9' })
+    const trends = makeTrends([{ projectId: 'p9', serviceId: 's9', avg: 1, share: 0.2 }])
+    const { placed, leftovers } = new PackDayUseCase().executeWithLeftovers(
+      [observed, usedKey, suggestion], [], { targetHours: 8, trends },
+    )
+
+    // proj-1/svc-1 is covered by the observed block → not a leftover.
+    expect(leftovers.find(b => b.blockName === 'Dup of observed')).toBeUndefined()
+    const s = leftovers.find(b => b.blockName === 'Idle pattern')!
+    expect(s).toBeDefined()
+    expect(s.leftoverReason).toBe('suggestion')
+    expect(placed.find(b => b.origin === 'llm-pattern')).toBeUndefined() // none needed (day full)
   })
 
   it('output is sorted by startTime ascending', () => {

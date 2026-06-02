@@ -1,0 +1,166 @@
+import { useEffect, useState } from 'react'
+import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
+import { useAppStore } from '../../store/appStore'
+
+/**
+ * Right-hand "leftover blocks" sidebar (see CONTEXT.md "Leftover block").
+ * Design 2 — compact chips: a dense, scannable list whose actions appear on
+ * hover. Auto-opens when leftovers exist; collapses to a thin rail with a count
+ * badge. Each chip can be added to the day, booked directly, or dismissed.
+ */
+
+interface Props {
+  leftovers: ClassifiedBlock[]
+  onAdd: (block: ClassifiedBlock) => void
+  onBook: (block: ClassifiedBlock) => void
+  onDismiss: (block: ClassifiedBlock) => void
+  onAddAll?: () => void
+  readOnly?: boolean
+}
+
+type Tier = 'high' | 'mid' | 'low'
+
+const TIER: Record<Tier, { swatch: string; badgeBg: string; badgeColor: string; name: string }> = {
+  high: { swatch: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a', name: '#14532d' },
+  mid: { swatch: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706', name: '#78350f' },
+  low: { swatch: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444', name: '#7f1d1d' },
+}
+
+function tierFor(block: ClassifiedBlock): Tier {
+  if (!block.projectId || !block.serviceId) return 'mid' // missing project → amber warn
+  if (block.confidence >= 4) return 'high'
+  if (block.confidence === 3) return 'mid'
+  return 'low'
+}
+
+function reasonLabel(block: ClassifiedBlock): string {
+  if (!block.projectId || !block.serviceId) return 'project ontbreekt'
+  return block.leftoverReason === 'overflow' ? 'paste niet in dag' : 'suggestie'
+}
+
+function durationLabel(hours: number): string {
+  const rounded = Math.round(hours * 10) / 10
+  return `~${String(rounded).replace('.', ',')}u`
+}
+
+export function LeftoverSidebar({ leftovers, onAdd, onBook, onDismiss, onAddAll, readOnly = false }: Props) {
+  const projects = useAppStore(s => s.projects)
+  const [open, setOpen] = useState(true)
+  const [hovered, setHovered] = useState<string | null>(null)
+
+  // Auto-open whenever a fresh set of leftovers appears (e.g. after "Verwerk dag").
+  useEffect(() => {
+    if (leftovers.length > 0) setOpen(true)
+  }, [leftovers.length])
+
+  if (leftovers.length === 0) return null
+
+  const projectName = (id?: string): string =>
+    id ? (projects.find(p => p.id === id)?.name ?? id) : ''
+
+  // Collapsed rail: just a badge + label.
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        title="Niet-geplaatste blokken tonen"
+        style={{
+          width: 44, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--surface)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 12,
+          cursor: 'pointer',
+        }}
+      >
+        <span style={{ background: '#d97706', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px' }}>
+          {leftovers.length}
+        </span>
+        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.3 }}>
+          Niet geplaatst
+        </span>
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ width: 288, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          Niet geplaatst
+          <span style={{ background: '#fef3c7', color: '#d97706', fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '0 6px' }}>{leftovers.length}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {!readOnly && onAddAll && (
+            <button
+              onClick={onAddAll}
+              style={{ fontSize: 9, padding: '3px 7px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              title="Alles aan de dag toevoegen"
+            >
+              Alles +
+            </button>
+          )}
+          <button onClick={() => setOpen(false)} title="Inklappen" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', padding: '0 4px', background: 'none', border: 'none' }}>
+            »
+          </button>
+        </div>
+      </div>
+
+      {/* Chips */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {leftovers.map(block => {
+          const tier = tierFor(block)
+          const t = TIER[tier]
+          const missing = !block.projectId || !block.serviceId
+          const isHovered = hovered === block.urlPattern
+          const showActions = !readOnly && (isHovered || missing)
+          return (
+            <div
+              key={block.urlPattern}
+              onMouseEnter={() => setHovered(block.urlPattern)}
+              onMouseLeave={() => setHovered(prev => (prev === block.urlPattern ? null : prev))}
+              style={{
+                display: 'flex', alignItems: 'stretch', gap: 8, background: 'var(--bg)',
+                border: `1px ${missing ? 'dashed' : 'solid'} ${missing ? '#fcd34d' : 'var(--border)'}`,
+                borderRadius: 6, padding: '6px 8px', position: 'relative',
+              }}
+            >
+              <div style={{ width: 3, borderRadius: 2, background: t.swatch, flexShrink: 0 }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: missing ? '#d97706' : t.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {missing ? '⚠ ' : ''}{block.blockName}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, overflow: 'hidden' }}>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', flexShrink: 0 }}>{durationLabel(block.hours)}</span>
+                  <span style={{ background: t.badgeBg, color: t.badgeColor, fontSize: 8, fontWeight: 700, borderRadius: 3, padding: '0 4px', flexShrink: 0 }}>
+                    {block.confidence}/5
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {block.projectId ? projectName(block.projectId) : reasonLabel(block)}
+                  </span>
+                </div>
+              </div>
+              {showActions && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <button onClick={() => onAdd(block)} title="Toevoegen aan dag" style={iconBtn('#4f46e5', '#eef2ff')}>+</button>
+                  <button onClick={() => onBook(block)} title="Direct boeken" style={iconBtn('#fff', '#16a34a', true)}>✓</button>
+                  <button onClick={() => onDismiss(block)} title="Negeren" style={iconBtn('var(--text-muted)', 'var(--bg)')}>✕</button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        <div style={{ fontSize: 9, color: 'var(--text-faint)', textAlign: 'center', padding: '4px 0' }}>
+          {readOnly ? 'week ingediend — alleen-lezen' : 'hover voor acties'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function iconBtn(color: string, bg: string, filled = false): React.CSSProperties {
+  return {
+    width: 22, height: 22, borderRadius: 4, fontSize: 12, lineHeight: 1, cursor: 'pointer',
+    border: filled ? 'none' : '1px solid var(--border)',
+    background: filled ? bg : bg, color, fontWeight: 700,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }
+}

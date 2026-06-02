@@ -18,4 +18,10 @@ export interface ClassifiedBlock extends HistoryBlock {
   rawUrls?: string[]
   commits?: GitHubCommit[]
   linearIssues?: LinearIssue[]
+  // Set when classification found this block but the packer didn't place it on the
+  // timeline (see CONTEXT.md "Leftover block"). Such blocks live in the sidebar,
+  // not the day. `leftoverReason` records why: 'overflow' (real work that ran past
+  // the day) or 'suggestion' (an LLM pattern the day didn't need).
+  unplaced?: boolean
+  leftoverReason?: 'overflow' | 'suggestion'
 }

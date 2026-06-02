@@ -6,6 +6,7 @@ import {
   createSimplicateRepository,
 } from '../../application/container'
 import { ParseBrowserHistoryUseCase, ParseError } from '../../domain/usecases/ParseBrowserHistoryUseCase'
+import { mappingCacheKey } from '../../domain/usecases/mappingCacheKey'
 import type { ClassifiedBlock } from '../../domain/entities/ClassifiedBlock'
 import type { HistoryBlock } from '../../domain/entities/HistoryBlock'
 import type { CachedMapping } from '../../domain/repositories/IMappingCacheRepository'
@@ -108,7 +109,7 @@ export function useImport(): ImportState {
   }, [])
 
   const confirmBlock = useCallback(async (index: number, mapping: CachedMapping) => {
-    await mappingCacheRepo.set(blocks[index]!.urlPattern, {
+    await mappingCacheRepo.set(mappingCacheKey(blocks[index]!.urlPattern), {
       projectId: mapping.projectId,
       serviceId: mapping.serviceId,
       note: mapping.note,
@@ -162,7 +163,7 @@ export function useImport(): ImportState {
         results[i] = 'success'
         // Only cache mappings for non-calendar blocks (calendar blocks have synthetic urlPattern)
         if (block.origin !== 'calendar') {
-          await mappingCacheRepo.set(block.urlPattern, {
+          await mappingCacheRepo.set(mappingCacheKey(block.urlPattern), {
             projectId: block.projectId,
             serviceId: block.serviceId,
             note: block.note ?? '',

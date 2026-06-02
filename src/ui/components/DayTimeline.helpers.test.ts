@@ -332,4 +332,20 @@ describe('assignBlockColumns', () => {
     const shorter = columns.find(c => c.block.endTime === '09:30')!
     expect(shorter.col).toBe(0)
   })
+
+  it('scopes the width split to the overlap cluster — non-overlapping blocks stay full width', () => {
+    // A is alone; B and C overlap each other. A must keep cols=1 (full width),
+    // only B and C share a band (cols=2). This is the GCal fix: one local overlap
+    // no longer narrows the whole day.
+    const { columns, numCols } = assignBlockColumns([
+      b('09:00', '10:00'), // A — no overlap
+      b('10:00', '10:30'), // B ─┐ overlap
+      b('10:00', '11:00'), // C ─┘
+    ])
+    const byEnd = Object.fromEntries(columns.map(c => [c.block.endTime, c]))
+    expect(byEnd['10:00']!.cols).toBe(1) // A: full width
+    expect(byEnd['10:30']!.cols).toBe(2) // B: half of its band
+    expect(byEnd['11:00']!.cols).toBe(2) // C: half of its band
+    expect(numCols).toBe(2)
+  })
 })
