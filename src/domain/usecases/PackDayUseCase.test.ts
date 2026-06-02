@@ -146,12 +146,20 @@ describe('PackDayUseCase', () => {
     expect(minutes(w.startTime)).toBeGreaterThanOrEqual(minutes('10:00'))
   })
 
-  it('drops a concept that duplicates an existing entry (same project+service, overlapping time)', () => {
+  it('drops a non-meeting concept that duplicates an existing entry (same project+service, overlapping time)', () => {
     const entry = makeEntry('10:00', '11:00', 1) // proj-1 / svc-1
-    const dup = makeMeeting('10:00', '11:00', { blockName: 'ISO GAP overleg', projectId: 'proj-1', serviceId: 'svc-1' })
+    const dup = makeBlock({ blockName: 'ISO GAP werk', startTime: '10:00', endTime: '11:00', projectId: 'proj-1', serviceId: 'svc-1' })
     const result = new PackDayUseCase().execute([dup], [entry], { targetHours: 1 })
 
-    expect(result.find(r => r.blockName === 'ISO GAP overleg')).toBeUndefined()
+    expect(result.find(r => r.blockName === 'ISO GAP werk')).toBeUndefined()
+  })
+
+  it('never drops a meeting, even when it duplicates an existing booked entry', () => {
+    const entry = makeEntry('10:00', '11:00', 1) // proj-1 / svc-1
+    const meeting = makeMeeting('10:00', '11:00', { blockName: 'ISO GAP overleg', projectId: 'proj-1', serviceId: 'svc-1' })
+    const result = new PackDayUseCase().execute([meeting], [entry], { targetHours: 1 })
+
+    expect(result.find(r => r.blockName === 'ISO GAP overleg')).toBeDefined()
   })
 
   it('does not return existing entries as blocks (only concepts)', () => {

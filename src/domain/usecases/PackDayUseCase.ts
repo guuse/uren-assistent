@@ -150,7 +150,10 @@ export class PackDayUseCase {
       return entries.some(e => overlaps(bs, be, timeToMinutes(e.startTime), timeToMinutes(e.endTime)))
     }
 
-    const keptConcepts = concepts.filter(b => !isTimedConceptDuplicate(b))
+    // Meetings are never dropped — calendar is the highest-priority source and the
+    // user manually deselects what shouldn't be booked. Only non-meeting concepts
+    // are deduplicated against already-booked entries.
+    const keptConcepts = concepts.filter(b => isMeeting(b) || !isTimedConceptDuplicate(b))
 
     // Calendar is the highest-priority source: meeting blocks are anchored at
     // their real event times and never repacked. They may overlap each other —
