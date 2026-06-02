@@ -190,8 +190,17 @@ describe('useBooking', () => {
     expect(result.current.errorMessage).toContain('API key')
   })
 
-  it('book sets a default error message for non-Error throws', async () => {
-    bookExecute.mockRejectedValue('weird')
+  it('book surfaces a string error (e.g. the Simplicate API message) instead of a generic one', async () => {
+    bookExecute.mockRejectedValue('Simplicate API error: 400 — invalid type_id')
+    const { result } = renderHook(() => useBooking({ projectId: 'p1' }))
+    await act(async () => {
+      await result.current.book()
+    })
+    expect(result.current.errorMessage).toBe('Simplicate API error: 400 — invalid type_id')
+  })
+
+  it('book falls back to a generic message for non-string, non-Error throws', async () => {
+    bookExecute.mockRejectedValue({ weird: true })
     const { result } = renderHook(() => useBooking({ projectId: 'p1' }))
     await act(async () => {
       await result.current.book()

@@ -130,7 +130,12 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
       setStatus('success')
     } catch (err) {
       setStatus('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Boeken mislukt')
+      // Tauri's invoke rejects with the Rust error STRING (e.g. the Simplicate
+      // API status + body), not an Error — surface it instead of hiding the real
+      // reason behind a generic message.
+      console.error('[useBooking] booking failed:', err)
+      const msg = err instanceof Error ? err.message : typeof err === 'string' && err.trim() ? err : 'Boeken mislukt'
+      setErrorMessage(msg)
     }
   }
 
