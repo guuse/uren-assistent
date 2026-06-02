@@ -40,3 +40,41 @@ jobs:
       - name: Coverage report
         if: ${{ !cancelled() }}
         uses: davelosert/vitest-coverage-report-action@v2
+
+  e2e:
+    name: E2E (Playwright / WebKit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only WebKit — it matches the Tauri webview the app ships in. The browser
+      # binary is cached implicitly by setup-node's npm cache miss otherwise; deps
+      # are the OS libraries WebKit needs on the runner.
+      - name: Install Playwright WebKit + system deps
+        run: npx playwright install --with-deps webkit
+
+      # playwright.config.ts's webServer builds the prod bundle (vite build --mode
+      # e2e) and serves it (vite preview); specs drive it with the fake bridge.
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

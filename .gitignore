@@ -10,6 +10,13 @@ src-tauri/target/
 .superpowers/
 coverage/
 
+# Playwright e2e
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+tests/e2e/.generated/
+
 # Local AI-assisted dev planning docs (not for publication)
 docs/superpowers/
 

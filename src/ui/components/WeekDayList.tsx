@@ -207,6 +207,7 @@ export function WeekDayList({
           return (
             <div
               key={date}
+              data-testid={`day-row-${date}`}
               onClick={() => onSelectDate(date)}
               style={{
                 padding: isSelected ? '9px 14px 9px 11px' : '9px 14px',
@@ -220,7 +221,7 @@ export function WeekDayList({
                 <span style={{ fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {label}
                   {daySubmitted && (
-                    <LockClosedIcon style={{ width: 10, height: 10, color: '#15803d' }} strokeWidth={2.5} />
+                    <LockClosedIcon data-testid={`day-submitted-${date}`} style={{ width: 10, height: 10, color: '#15803d' }} strokeWidth={2.5} />
                   )}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{dateLabel}</span>
@@ -235,6 +236,7 @@ export function WeekDayList({
                 </span>
                 {llmCount > 0 && onClearDayBlocks && (
                   <button
+                    data-testid={`day-clear-${date}`}
                     title={`Wis ${llmCount} LLM-blok${llmCount !== 1 ? 'ken' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setConfirmClearDate(date) }}
                     style={{ ...iconBtn(), color: 'var(--danger)', borderColor: '#fecaca' }}
@@ -261,6 +263,7 @@ export function WeekDayList({
              dat doe je in Simplicate zelf. */
           <>
             <div
+              data-testid="week-submitted-badge"
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 gap: 6, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac',
@@ -282,6 +285,7 @@ export function WeekDayList({
             {totalLlmBlockCount != null && totalLlmBlockCount > 0 && onClearWeekBlocks && (
               <button
                 onClick={() => setConfirmClearWeek(true)}
+                data-testid="clear-week"
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 5, border: '1px solid #fecaca', borderRadius: 7, padding: '5px 10px',
@@ -297,6 +301,7 @@ export function WeekDayList({
               <button
                 onClick={onProcessWeek}
                 disabled={isProcessingWeek}
+                data-testid="process-week"
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 5, background: 'var(--accent)', color: 'white', border: 'none',
@@ -312,6 +317,7 @@ export function WeekDayList({
               <button
                 onClick={onSubmitWeek}
                 disabled={isSubmittingWeek || !canSubmitWeek}
+                data-testid="submit-week"
                 title={!canSubmitWeek ? 'Een toekomstige week kan nog niet ingediend worden' : undefined}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -332,6 +338,7 @@ export function WeekDayList({
             {onUploadCsv && (
               <button
                 onClick={onUploadCsv}
+                data-testid="upload-csv"
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 5, background: 'transparent', color: 'var(--text-secondary)',

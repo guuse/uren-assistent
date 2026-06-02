@@ -97,6 +97,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
         <button
           ref={triggerRef}
           type="button"
+          data-testid={`select-${label.toLowerCase()}`}
           onClick={handleOpen}
           disabled={disabled}
           className={`w-full bg-[var(--surface)] text-left text-sm rounded-lg px-3 py-2 border focus:outline-none disabled:opacity-50 flex items-center justify-between gap-2 ${highlight ? 'border-[#a07848] focus:border-[#a07848]' : 'border-[var(--border)] focus:border-[var(--border-strong)]'}`}
@@ -139,6 +140,7 @@ export function SearchableSelect({ label, options, value, onChange, required, di
                     <div className="flex items-center">
                       <button
                         type="button"
+                        data-testid={`option-${opt.id}`}
                         onClick={() => handleSelect(opt.id)}
                         className={`flex-1 text-left px-3 py-2 text-sm hover:bg-[var(--bg)] transition-colors ${
                           opt.id === value ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-primary)]'

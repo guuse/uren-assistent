@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -12,6 +13,8 @@ export default defineConfig(async () => ({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
+    // Playwright e2e specs live under tests/e2e and must not be run by vitest.
+    exclude: [...configDefaults.exclude, "tests/e2e/**"],
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "text", "html"],

@@ -191,6 +191,7 @@ export function DayTimeline({
       return (
         <button
           key={key}
+          data-testid={`entry-block-${block.entry.id}`}
           onClick={readOnly ? undefined : () => onEditEntry(block.entry)}
           style={{
             ...baseStyle,
@@ -239,10 +240,11 @@ export function DayTimeline({
         : `${block.block.confidence}/5`
       const canDelete = !readOnly && onDeleteConcept !== undefined
       return (
-        <div key={key} className="group" style={baseStyle}>
+        <div key={key} className="group" data-testid={`concept-block-${block.block.urlPattern}`} style={baseStyle}>
           {canDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteConcept!(block.block) }}
+              data-testid={`concept-delete-${block.block.urlPattern}`}
               title="Verwijderen uit dag"
               className="opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ position: 'absolute', top: 2, right: 3, zIndex: 5, width: 18, height: 18, borderRadius: 4, border: 'none', background: 'rgba(255,255,255,.85)', color: '#ef4444', fontSize: 12, fontWeight: 700, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -396,7 +398,7 @@ export function DayTimeline({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {readOnly && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700 }}>
+            <span data-testid="day-readonly-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 700 }}>
               🔒 Ingediend · alleen-lezen
             </span>
           )}
@@ -422,6 +424,7 @@ export function DayTimeline({
           {onProcessDay && (
             <button
               onClick={onProcessDay}
+              data-testid="process-day"
               className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[0.625rem] font-semibold px-3 py-[5px] rounded-lg transition-colors cursor-pointer flex-shrink-0"
             >
               ▶ Verwerk dag
@@ -527,6 +530,7 @@ export function DayTimeline({
             {/* Blokken — omhullende div voor drag */}
             <div
               ref={blocksContainerRef}
+              data-testid="timeline-canvas"
               className="flex-1 relative"
               style={{
                 minHeight: TOTAL_PX,

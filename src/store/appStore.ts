@@ -97,3 +97,12 @@ export const useAppStore = create<AppState>()((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
 }))
+
+// E2E only: expose the store so the Playwright harness can seed an authenticated
+// session without driving the (faked) SSO UI. Guarded by the build mode, so it is
+// inert in dev and production bundles. See docs/adr/0005 and tests/e2e.
+/* v8 ignore start -- e2e-only seam, never exercised by unit tests */
+if (import.meta.env.MODE === 'e2e') {
+  ;(window as unknown as { __APP_STORE__: typeof useAppStore }).__APP_STORE__ = useAppStore
+}
+/* v8 ignore stop */
