@@ -24,10 +24,12 @@ const CONFIDENCE_COLORS: Record<1 | 2 | 3 | 4 | 5, {
   bg: string; borderStyle: string; borderColor: string; borderLeft: string;
   titleColor: string; subColor: string; badgeBg: string; badgeColor: string
 }> = {
-  5: { bg: '#f0fdf4', borderStyle: 'solid',  borderColor: '#86efac', borderLeft: '#16a34a', titleColor: '#14532d', subColor: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a' },
-  4: { bg: '#f0fdf4', borderStyle: 'solid',  borderColor: '#86efac', borderLeft: '#16a34a', titleColor: '#14532d', subColor: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a' },
+  // Each level gets a distinct shade along a green → amber → red gradient, so
+  // 5 ≠ 4 and 2 ≠ 1 at a glance (not just in the badge number).
+  5: { bg: '#dcfce7', borderStyle: 'solid',  borderColor: '#4ade80', borderLeft: '#15803d', titleColor: '#14532d', subColor: '#15803d', badgeBg: '#bbf7d0', badgeColor: '#15803d' },
+  4: { bg: '#f0fdf4', borderStyle: 'solid',  borderColor: '#86efac', borderLeft: '#22c55e', titleColor: '#166534', subColor: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a' },
   3: { bg: '#fffbeb', borderStyle: 'solid',  borderColor: '#fcd34d', borderLeft: '#d97706', titleColor: '#78350f', subColor: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706' },
-  2: { bg: '#fff1f2', borderStyle: 'dashed', borderColor: '#fca5a5', borderLeft: '#ef4444', titleColor: '#7f1d1d', subColor: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444' },
+  2: { bg: '#fff7ed', borderStyle: 'dashed', borderColor: '#fdba74', borderLeft: '#ea580c', titleColor: '#7c2d12', subColor: '#ea580c', badgeBg: '#ffedd5', badgeColor: '#ea580c' },
   1: { bg: '#fff1f2', borderStyle: 'dashed', borderColor: '#fca5a5', borderLeft: '#ef4444', titleColor: '#7f1d1d', subColor: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444' },
 }
 
