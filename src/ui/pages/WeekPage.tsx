@@ -585,7 +585,7 @@ export function WeekPage() {
               date={week.selectedDate}
               entries={selectedEntries}
               suggestions={daySubmitted ? [] : suggestions}
-              conceptBlocks={historyStore.blocksForDate.filter(b => !b.unplaced)}
+              conceptBlocks={historyStore.blocksForDate.filter(b => !b.unplaced && b.startTime != null)}
               commits={dayCommits}
               linearIssues={dayLinearIssues}
               onBookSuggestion={handleBookSuggestion}
