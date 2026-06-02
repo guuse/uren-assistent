@@ -16,19 +16,22 @@ interface Props {
   readOnly?: boolean
 }
 
-type Tier = 'high' | 'mid' | 'low'
+interface ChipColors { swatch: string; badgeBg: string; badgeColor: string; name: string }
 
-const TIER: Record<Tier, { swatch: string; badgeBg: string; badgeColor: string; name: string }> = {
-  high: { swatch: '#16a34a', badgeBg: '#dcfce7', badgeColor: '#16a34a', name: '#14532d' },
-  mid: { swatch: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706', name: '#78350f' },
-  low: { swatch: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444', name: '#7f1d1d' },
+// One distinct shade per confidence level (matches DayTimeline's gradient) so
+// 5 ≠ 4 and 2 ≠ 1 at a glance, not just in the badge number.
+const CONF_COLORS: Record<1 | 2 | 3 | 4 | 5, ChipColors> = {
+  5: { swatch: '#15803d', badgeBg: '#bbf7d0', badgeColor: '#15803d', name: '#14532d' },
+  4: { swatch: '#22c55e', badgeBg: '#dcfce7', badgeColor: '#16a34a', name: '#166534' },
+  3: { swatch: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706', name: '#78350f' },
+  2: { swatch: '#ea580c', badgeBg: '#ffedd5', badgeColor: '#ea580c', name: '#7c2d12' },
+  1: { swatch: '#ef4444', badgeBg: '#fee2e2', badgeColor: '#ef4444', name: '#7f1d1d' },
 }
+const WARN_COLORS: ChipColors = { swatch: '#d97706', badgeBg: '#fef3c7', badgeColor: '#d97706', name: '#d97706' }
 
-function tierFor(block: ClassifiedBlock): Tier {
-  if (!block.projectId || !block.serviceId) return 'mid' // missing project → amber warn
-  if (block.confidence >= 4) return 'high'
-  if (block.confidence === 3) return 'mid'
-  return 'low'
+function colorsFor(block: ClassifiedBlock): ChipColors {
+  if (!block.projectId || !block.serviceId) return WARN_COLORS // missing project → amber warn
+  return CONF_COLORS[block.confidence] ?? CONF_COLORS[1]
 }
 
 function reasonLabel(block: ClassifiedBlock): string {
@@ -99,8 +102,7 @@ export function LeftoverSidebar({ leftovers, onBook, onDismiss, readOnly = false
       {/* Chips */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {leftovers.map(block => {
-          const tier = tierFor(block)
-          const t = TIER[tier]
+          const t = colorsFor(block)
           const missing = !block.projectId || !block.serviceId
           const isHovered = hovered === block.urlPattern
           const showActions = !readOnly && (isHovered || missing)
