@@ -9,6 +9,39 @@ const SIMPLICATE_BASE_URL = import.meta.env.VITE_SIMPLICATE_BASE_URL as string
 
 export type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
 
+const QUARTER_MIN = 15
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h! * 60 + m!
+}
+
+function minutesToTime(min: number): string {
+  const h = Math.floor(min / 60).toString().padStart(2, '0')
+  const m = (min % 60).toString().padStart(2, '0')
+  return `${h}:${m}`
+}
+
+/**
+ * The VAN/TOT dropdowns only offer quarter-hour options (see TimeSelect), so a
+ * raw block time like 16:11 matches no <option> and the <select> silently falls
+ * back to its first entry — which is why concept blocks showed up as 07:00–07:00.
+ * Snap the start to the nearest quarter and carry the original duration (also
+ * quarter-rounded, min 15m) so both dropdowns land on a real option and the
+ * booked range still reflects the block. With no start, fall back to 09:00–09:30.
+ */
+function snapInitialTimes(start?: string, end?: string): { startTime: string; endTime: string } {
+  if (!start) return { startTime: '09:00', endTime: '09:30' }
+  const startMin = timeToMinutes(start)
+  const snappedStart = Math.round(startMin / QUARTER_MIN) * QUARTER_MIN
+  const rawDuration = end ? timeToMinutes(end) - startMin : 30
+  const duration = Math.max(QUARTER_MIN, Math.round(rawDuration / QUARTER_MIN) * QUARTER_MIN)
+  return {
+    startTime: minutesToTime(snappedStart),
+    endTime: minutesToTime(snappedStart + duration),
+  }
+}
+
 function sortProjects(projects: SimplicateProject[], starredIds: ReadonlySet<string>): { sorted: SimplicateProject[]; lastStarredId: string | undefined } {
   const starred = projects
     .filter(p => starredIds.has(p.id))
@@ -31,8 +64,9 @@ export function useBooking(initial: Partial<HourEntry> = {}) {
   const [serviceId, setServiceId] = useState(initial.projectServiceId ?? '')
   const [hourTypeId, setHourTypeId] = useState(initial.hourTypeId ?? '')
   const [note, setNote] = useState(initial.note ?? '')
-  const [startTime, setStartTime] = useState(initial.startTime ?? '09:00')
-  const [endTime, setEndTime] = useState(initial.endTime ?? '09:30')
+  const snapped = snapInitialTimes(initial.startTime, initial.endTime)
+  const [startTime, setStartTime] = useState(snapped.startTime)
+  const [endTime, setEndTime] = useState(snapped.endTime)
   const [date, setDate] = useState(initial.startDate ?? new Date().toISOString().split('T')[0]!)
   const [services, setServices] = useState<{ id: string; name: string; hourTypeIds: string[] }[]>([])
   const [status, setStatus] = useState<BookingStatus>('idle')

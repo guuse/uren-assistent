@@ -88,6 +88,33 @@ describe('useBooking', () => {
     expect(result.current.missingFields).toContain('project')
   })
 
+  it('snaps a non-quarter start to the nearest quarter and keeps the duration', () => {
+    // A concept block at 16:11–16:41 has times no <select> option matches, so the
+    // dropdowns fell back to their first entry (07:00). Snap to 16:15 + 30m → 16:45.
+    const { result } = renderHook(() => useBooking({ startTime: '16:11', endTime: '16:41' }))
+    expect(result.current.startTime).toBe('16:15')
+    expect(result.current.endTime).toBe('16:45')
+  })
+
+  it('rounds a non-quarter duration up to a whole quarter so TOT lands on an option', () => {
+    const { result } = renderHook(() => useBooking({ startTime: '10:02', endTime: '10:39' }))
+    // 10:02 → 10:00; 37m → 30m → 10:30
+    expect(result.current.startTime).toBe('10:00')
+    expect(result.current.endTime).toBe('10:30')
+  })
+
+  it('leaves already-quarter-aligned times untouched', () => {
+    const { result } = renderHook(() => useBooking({ startTime: '09:00', endTime: '11:00' }))
+    expect(result.current.startTime).toBe('09:00')
+    expect(result.current.endTime).toBe('11:00')
+  })
+
+  it('keeps the default times when no start is provided', () => {
+    const { result } = renderHook(() => useBooking())
+    expect(result.current.startTime).toBe('09:00')
+    expect(result.current.endTime).toBe('09:30')
+  })
+
   it('loads services when a project is selected', async () => {
     const { result } = renderHook(() => useBooking())
     await act(async () => {
