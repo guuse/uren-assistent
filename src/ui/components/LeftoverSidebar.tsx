@@ -109,6 +109,7 @@ export function LeftoverSidebar({ leftovers, onBook, onDismiss, readOnly = false
           return (
             <div
               key={block.urlPattern}
+              data-testid={`leftover-${block.urlPattern}`}
               onMouseEnter={() => setHovered(block.urlPattern)}
               onMouseLeave={() => setHovered(prev => (prev === block.urlPattern ? null : prev))}
               style={{
@@ -134,8 +135,8 @@ export function LeftoverSidebar({ leftovers, onBook, onDismiss, readOnly = false
               </div>
               {showActions && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                  <button onClick={() => onBook(block)} title="Direct boeken" style={iconBtn('#fff', '#16a34a', true)}>✓</button>
-                  <button onClick={() => onDismiss(block)} title="Negeren" style={iconBtn('var(--text-muted)', 'var(--bg)')}>✕</button>
+                  <button data-testid={`leftover-book-${block.urlPattern}`} onClick={() => onBook(block)} title="Direct boeken" style={iconBtn('#fff', '#16a34a', true)}>✓</button>
+                  <button data-testid={`leftover-dismiss-${block.urlPattern}`} onClick={() => onDismiss(block)} title="Negeren" style={iconBtn('var(--text-muted)', 'var(--bg)')}>✕</button>
                 </div>
               )}
             </div>

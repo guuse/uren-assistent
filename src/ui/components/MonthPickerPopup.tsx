@@ -155,6 +155,7 @@ export function MonthPickerPopup({ initialMonth, onSelectDate, onClose, isDateSu
             return (
               <button
                 key={cell.date}
+                data-testid={`picker-day-${cell.date}`}
                 disabled={cell.isWeekend}
                 onClick={() => onSelectDate(cell.date)}
                 title={isSubmitted ? 'Ingediend' : undefined}

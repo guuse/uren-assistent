@@ -154,7 +154,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
       onBooked?.()
     }
     return (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+      <div data-testid="booking-success" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
         <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', padding: 24, width: 320, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ color: 'var(--success)', fontSize: 36 }}>✓</div>
           <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
@@ -176,7 +176,7 @@ export function BookingModal({ initialEntry = {}, title = 'Uren boeken', evidenc
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+    <div data-testid="booking-modal" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.08)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
       <div
         style={{
           background: 'var(--surface)',
